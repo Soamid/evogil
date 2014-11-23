@@ -2,8 +2,8 @@ import collections
 import os
 
 import matplotlib
-from ep.utils import ea_utils
 
+from ep.utils import ea_utils
 import problems.ackley.problem as ackley
 import problems.coemoa_a.problem as zdt1
 import problems.coemoa_b.problem as zdt2
@@ -35,7 +35,7 @@ algos_order = ['spea2', 'nsga2', 'ibea', 'imga_spea2', 'imga_nsga2', 'imga_ibea'
 
 
 def plot_pareto_fronts():
-    problems = [(zdt1, 'ZDT1'), (zdt2, 'ZDT2'),  (zdt4, 'ZDT4'), (zdt6, 'ZDT6')]
+    problems = [(zdt1, 'ZDT1'), (zdt2, 'ZDT2'), (zdt4, 'ZDT4'), (zdt6, 'ZDT6')]
 
     for problem in problems:
         problem, name = problem
@@ -51,9 +51,6 @@ def plot_pareto_fronts():
         fig = plot_front(front, None, figure=fig, save=False)
 
     plot_front(fronts[-1], 'ZDT3', figure=fig, save=True)
-
-
-
 
 
 def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
@@ -126,12 +123,14 @@ def parse_stats(stats_file):
 
 def tex_align_floats(*xs):
     """To align columns, we place '&' instead of dot in floats."""
-    return [str(x).replace('.','&') for x in xs]
+    return [str(x).replace('.', '&') for x in xs]
+
 
 def tex_align_floats_winner(x):
     """To align and boldify the float, use `\\newcommand{\\tb}[2]{\\textbf{#1}&\\textbf{#2}}`
     so to translate 123.456 --> \tb{123}{456}"""
-    return "\\tb{" + str(x).replace('.','}{') + "}"
+    return "\\tb{" + str(x).replace('.', '}{') + "}"
+
 
 def gen_table(results):
     metrics = {"dst": ("Distance from Pareto front", min), "distribution": ("Distribution", max),
@@ -165,7 +164,8 @@ def gen_table(results):
         mark_winner(printable_results, metrics[metric][1])
 
         for res in printable_results:
-            print("\t\t\t{:16} & {:11} & {:11} & {:11} & {:11} & {:11} & {:11} \\\\".format(res[0], *tex_align_floats(*res[1:])))
+            print("\t\t\t{:16} & {:11} & {:11} & {:11} & {:11} & {:11} & {:11} \\\\".format(res[0], *tex_align_floats(
+                *res[1:])))
             if res[0] in ["IBEA", "IMGA+IBEA"]:
                 print("\t\t\\hdashline")
 
@@ -174,7 +174,7 @@ def gen_table(results):
 
 def get_algo_results(results, algo_display, algo, metric):
     return [algo_display,
-            get_last(results, "ackley",   algo, metric),
+            get_last(results, "ackley", algo, metric),
             get_last(results, "coemoa_a", algo, metric),
             get_last(results, "coemoa_b", algo, metric),
             get_last(results, "coemoa_c", algo, metric),
@@ -196,7 +196,44 @@ def get_last(results, problem, algo, metric):
     if not results[(problem, algo, metric)]:
         return None
     else:
-        return results[(problem, algo, metric)][-1][2]
+        _, _, score, error = results[(problem, algo, metric)][-1]
+        return align_to_error(score, error)
+
+
+def align_to_error(result, error):
+
+    if error == 0.0:
+        return result
+    error = str(error)
+
+    dot_pos = error.find('.')
+    non_zero_pos = 0
+    for i in range(len(error)):
+        if error[i] == '.':
+            non_zero_pos -= 1
+        elif error[i] != '0':
+            non_zero_pos = i
+            break
+
+    diff = 1
+    if len(error) > non_zero_pos + diff and error[non_zero_pos + diff] == '.':
+        diff += 1
+    pos = non_zero_pos + diff
+
+    if len(error) < pos + 1 or error[pos] == '0':
+        pos -= diff
+
+    round_n = pos - dot_pos
+    if round_n < 0:
+        round_n = min(round_n + 2, 0)
+
+
+    rounded = round(result, round_n)
+
+    # if rounded != result:
+    #     print('{} : {}, dev: {}, n={}'.format(result, rounded, error, round_n))
+
+    return rounded
 
 
 def plot_legend(series):
@@ -274,7 +311,7 @@ def plot_results(results):
 
 
 if __name__ == '__main__':
-    plot_pareto_fronts()
+    # plot_pareto_fronts()
     stats = parse_stats("stats.txt")
     gen_table(stats)
-    plot_results(stats)
+    # plot_results(stats)
