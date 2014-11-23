@@ -86,8 +86,9 @@ if __name__ == '__main__':
 
                 plt.figure(num=None, facecolor='w', edgecolor='k')
                 # plt.yscale('log')
-                plt.ylabel(metric)
-                plt.xticks(range(1, len(algos) + 1), [algos[a][0] for a in algos_order], rotation=20, size=15)
+                plt.ylabel(metric, fontsize=15)
+                plt.xticks(range(1, len(algos) + 1), [algos[a][0] for a in algos_order], rotation=20)
+                plt.tick_params(axis='both',  labelsize=15)
 
                 result = plt.violinplot(data, showmeans=True,
                                showextrema=True, showmedians=True, widths=0.8)
@@ -108,7 +109,8 @@ if __name__ == '__main__':
 
 
                 plt.tight_layout()
-                os.makedirs('plots_violin', exist_ok=True)
+                os.makedirs(PLOTS_DIR, exist_ok=True)
+                os.makedirs(os.path.join(PLOTS_DIR, 'plots_violin'), exist_ok=True)
                 problem_moea = problem.replace('emoa', 'moea')
                 metric_short = metric.replace('distance from Pareto front', 'dst')
                 fig_path = os.path.join(PLOTS_DIR, 'plots_violin', problem_moea + '_' + metric_short + '.pdf')
