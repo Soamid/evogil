@@ -86,8 +86,11 @@ if __name__ == '__main__':
 
                 plt.figure(num=None, facecolor='w', edgecolor='k')
                 # plt.yscale('log')
+                x_index = range(1, len(algos) + 1)
                 plt.ylabel(metric, fontsize=15)
-                plt.xticks(range(1, len(algos) + 1), [algos[a][0] for a in algos_order], rotation=20)
+                plt.xticks(x_index, [algos[a][0] for a in algos_order], rotation=20)
+                for i in x_index:
+                    plt.axvline(i, lw=0.9, c='#AFAFAF', alpha=0.5)
                 plt.tick_params(axis='both',  labelsize=15)
 
                 result = plt.violinplot(data, showmeans=True,

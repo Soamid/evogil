@@ -58,17 +58,17 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
         f = figure
     else:
         f = plt.figure()
-    plt.axhline(linestyle='--', lw=0.75, c='#7F7F7F')
-    plt.axvline(linestyle='--', lw=0.75, c='#7F7F7F')
+    plt.axhline(linestyle='--', lw=0.9, c='#7F7F7F')
+    plt.axvline(linestyle='--', lw=0.9, c='#7F7F7F')
 
     prto_x = [x[0] for x in pareto_front]
     prto_y = [x[1] for x in pareto_front]
 
     if scattered:
-        plt.scatter(prto_x, prto_y, c='k', s=80, alpha=0.5, edgecolors='none')
+        plt.scatter(prto_x, prto_y, c='k', s=300,  edgecolors='none')
     else:
         plt.margins(y=.1, x=.1)
-        plt.plot(prto_x, prto_y, 'k-', lw=5, alpha=0.5)
+        plt.plot(prto_x, prto_y, 'k-', lw=6)
 
     frame = plt.gca()
 
@@ -264,7 +264,7 @@ def plot_results(results):
 
     for plot_name, plot_data in to_plot.items():
         last_plt = []
-        plt.figure(num=None, figsize=(8.267 / 2.0, 11.692 / 4.0), facecolor='w', edgecolor='k')
+        plt.figure(num=None, facecolor='w', edgecolor='k')
         # plt.title(plot_name)
         (problem, metric) = plot_name
         if metric == 'dst':
@@ -278,10 +278,11 @@ def plot_results(results):
         if metric == 'extent':
             if problem == 'ackley':
                 plt.ylim([-0.5, 4.0])
-        plt.ylabel(metric)
-        plt.xlabel('calls to fitness function')
+        plt.ylabel(metric, fontsize=15)
+        plt.xlabel('calls to fitness function', fontsize=15)
+        plt.tick_params(axis='both',  labelsize=15)
         plot_data = sorted(plot_data, key=lambda x: x[0])
-        lw = 2.5
+        lw = 5
         base_ms = 5
         plot_data = dict(plot_data)
         for algo in algos_order:
@@ -311,7 +312,7 @@ def plot_results(results):
 
 
 if __name__ == '__main__':
-    # plot_pareto_fronts()
-    stats = parse_stats("stats.txt")
-    gen_table(stats)
+    plot_pareto_fronts()
+    # stats = parse_stats("stats.txt")
+    # gen_table(stats)
     # plot_results(stats)
