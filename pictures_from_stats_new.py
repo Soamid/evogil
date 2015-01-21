@@ -278,8 +278,8 @@ def plot_results(results):
         if metric == 'extent':
             if problem == 'ackley':
                 plt.ylim([-0.5, 4.0])
-        plt.ylabel(metric, fontsize=15)
-        plt.xlabel('calls to fitness function', fontsize=15)
+        plt.ylabel(metric, fontsize=20)
+        plt.xlabel('calls to fitness function', fontsize=20)
         plt.tick_params(axis='both',  labelsize=15)
         plot_data = sorted(plot_data, key=lambda x: x[0])
         lw = 5
@@ -312,7 +312,7 @@ def plot_results(results):
 
 
 if __name__ == '__main__':
-    plot_pareto_fronts()
-    # stats = parse_stats("stats.txt")
+    # plot_pareto_fronts()
+    stats = parse_stats("stats.txt")
     # gen_table(stats)
-    # plot_results(stats)
+    plot_results(stats)
