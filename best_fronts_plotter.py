@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from ep.utils import ea_utils
-from pictures_from_stats_new import algos
+from pictures_from_stats_new import algos, algos_order
 
 
 PLOTS_DIR = 'plots'
@@ -13,12 +13,18 @@ RESULTS_DIR = 'pareto_results'
 
 metrics_name_long = "distance_from_pareto"
 
+algo_names = [algos[a][0] for a in algos_order]
+
+
 
 def plot_problem_front(original_front, multimodal=False, scatter=False):
-    f = plt.figure(num=None, facecolor='w', edgecolor='k')
+    f = plt.figure(num=None, facecolor='w', edgecolor='k', figsize=(15, 7))
+    ax = plt.subplot(111)
 
     plt.xlabel('1st objective', fontsize=20)
     plt.ylabel("2nd objective", fontsize=20)
+
+    plt.tick_params(axis='both',  labelsize=15)
 
     plt.axhline(linestyle='--', lw=0.9, c='#7F7F7F')
     plt.axvline(linestyle='--', lw=0.9, c='#7F7F7F')
@@ -32,7 +38,7 @@ def plot_problem_front(original_front, multimodal=False, scatter=False):
     else:
         plot_front(original_front, scatter)
 
-    return f
+    return ax, f
 
 
 def plot_front(series, scatter=False):
@@ -46,10 +52,20 @@ def plot_results(f, best_result):
 
     res_x = [x[0] for x in best_result['result']]
     res_y = [x[1] for x in best_result['result']]
-    plt.scatter(res_x, res_y, marker=markers, color=color)
+    f.scatter(res_x, res_y, marker=markers, color=color, label=name)
 
 
-def save_plot(f):
+def save_plot(ax, f):
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
+    handles, labels = ax.get_legend_handles_labels()
+
+
+    handle_d =  dict(zip(labels, handles))
+    handles_order = [handle_d[l] for l in algo_names if l in handle_d]
+
+    plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
+
     os.makedirs(PLOTS_DIR, exist_ok=True)
     os.makedirs(os.path.join(PLOTS_DIR, RESULTS_DIR), exist_ok=True)
 
@@ -69,7 +85,7 @@ if __name__ == '__main__':
 
         problem_mod = __import__('problems.{}.problem'.format(d_problem.name), fromlist=[d_problem.name])
         original_front = problem_mod.pareto_front
-        f = plot_problem_front(original_front, multimodal=d_problem.name == 'coemoa_c', scatter=d_problem.name == 'ackley')
+        ax, f = plot_problem_front(original_front, multimodal=d_problem.name == 'coemoa_c', scatter=d_problem.name == 'ackley')
 
         for d_algorithm in [p_algo
                             for p_algo in d_problem.iterdir()
@@ -93,7 +109,7 @@ if __name__ == '__main__':
                         if not best_result or test_results["metrics"] < best_result["metrics"]:
                             best_result = test_results
 
-            plot_results(f, best_result)
+            plot_results(ax, best_result)
 
-        save_plot(f)
+        save_plot(ax, f)
 

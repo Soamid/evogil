@@ -267,7 +267,8 @@ def plot_results(results):
 
     for plot_name, plot_data in to_plot.items():
         last_plt = []
-        plt.figure(num=None, facecolor='w', edgecolor='k')
+        plt.figure(num=None, facecolor='w', edgecolor='k' , figsize=(15, 7))
+        ax = plt.subplot(111)
         # plt.title(plot_name)
         (problem, metric) = plot_name
         if metric == 'dst':
@@ -297,20 +298,25 @@ def plot_results(results):
             else:
                 ms = base_ms
 
-            last_plt.append(plt.plot(xs, ys, ls=lines, color=color, label=name, marker=marker, linewidth=lw, ms=ms)[0])
+            last_plt.append(ax.plot(xs, ys, ls=lines, color=color, label=name, linewidth=lw, ms=ms)[0])
 
         problem, metric = plot_name
 
         # plt.legend(loc='best', fontsize=6)
         # plt.show()
-        if not legend_saved:
-            plot_legend(last_plt)
-            legend_saved = True
+        # if not legend_saved:
+        #     plot_legend(last_plt)
+        #     legend_saved = True
+
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
+
+        plt.legend(last_plt, [s.get_label() for s in last_plt], loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
 
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
-        path = os.path.join(PLOTS_DIR, 'plots_bnw', '{}_{}.pdf'.format(problem_moea, metric_short))
+        path = os.path.join(PLOTS_DIR, 'plots_bnw', '{}_{}.eps'.format(problem_moea, metric_short))
         plt.savefig(path)
 
 
