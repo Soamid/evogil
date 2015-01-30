@@ -34,17 +34,17 @@ def plot_problem_front(original_front, multimodal=False, scatter=False):
     if multimodal:
         subfronts = ea_utils.split_front(original_front, 0.05)
         for front in subfronts:
-            plot_front(front, scatter)
+            plot_front(ax, front, scatter)
     else:
-        plot_front(original_front, scatter)
+        plot_front(ax, original_front, scatter)
 
     return ax, f
 
 
-def plot_front(series, scatter=False):
+def plot_front(f, series, scatter=False):
     x = [x[0] for x in series]
     y = [x[1] for x in series]
-    plt.plot(x, y, c='k', lw=6, alpha=0.6)
+    f.plot(x, y, c='0.6', lw=6, zorder=1)
 
 
 def plot_results(f, best_result):
@@ -52,7 +52,8 @@ def plot_results(f, best_result):
 
     res_x = [x[0] for x in best_result['result']]
     res_y = [x[1] for x in best_result['result']]
-    f.scatter(res_x, res_y, marker=markers, color=color, label=name)
+    f.scatter(res_x, res_y, marker=markers, s=60, color=color,  label=name, zorder=2)
+    # f.scatter(res_x, res_y, marker=markers, s=60, edgecolors=color, facecolors='none', label=name, zorder=2)
 
 
 def save_plot(ax, f):
