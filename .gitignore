@@ -14,6 +14,8 @@ problems/*/*/results/*
 *.tgz
 *.txz
 *.pickle
+jsoned/*
+!jsoned/.gitignore
 pickled/*
 !pickled/.gitignore
 *.runlog*

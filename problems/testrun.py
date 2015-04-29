@@ -1,7 +1,7 @@
 import functools
 import logging
 import os
-import pickle
+import json
 import random
 from unittest import TestCase
 import math
@@ -55,7 +55,7 @@ class TestRun(TestCase):
     def gather_function(cls_inst=None, fun_name="unknown_test"):
         """ @type cls_inst : TestRun """
 
-        dir_path = "pickled/{problem}/{algname}/{test}/{budget}".format(
+        dir_path = "jsoned/{problem}/{algname}/{test}/{budget}".format(
             problem=cls_inst.problem_mod.name,
             algname=cls_inst.__class__.alg_name,
             test=fun_name,
@@ -65,20 +65,20 @@ class TestRun(TestCase):
 
         for metric_name, metric_value in cls_inst.metrics_value:
 
-            filename = "{dir}/{metrics}_{time}_{random}.pickle".format(
+            filename = "{dir}/{metrics}_{time}_{random}.json".format(
                 dir=dir_path,
                 metrics=metric_name,
                 time=ea_utils.get_current_time(),
                 random=random.randint(100000,999999))
 
-            with open(filename, "wb") as f:
+            with open(filename, "w") as f:
                 logging.debug("gather_function: pickling to %s (cost: %s)", filename, cls_inst.cost)
-                pickle.dump({"cost": cls_inst.cost,
-                             "problem_mod": cls_inst.problem_mod.name,
-                             "result": cls_inst.result,
-                             "metrics": metric_value,
-                             "algorithm": cls_inst.alg_name},
-                            f)
+                json.dump({"cost": cls_inst.cost,
+                           "problem_mod": cls_inst.problem_mod.name,
+                           "result": cls_inst.result,
+                           "metrics": metric_value,
+                           "algorithm": cls_inst.alg_name},
+                          f)
 
 
     @staticmethod

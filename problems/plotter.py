@@ -1,4 +1,4 @@
-import pickle
+import json
 from matplotlib import pyplot as plt
 import glob
 from collections import defaultdict
@@ -29,13 +29,13 @@ def plot_quality(series, metrics_name, problem_name):
 
 
 def load_gathered(problem, metrics, algorithm="*", date="*"):
-    path = "/".join(["pickled", problem, algorithm, metrics]) + "_" + date + ".pickle"
+    path = "/".join(["jsoned", problem, algorithm, metrics]) + "_" + date + ".json"
 
     series = {}
 
     for filename in glob.glob(path):
         with open(filename, 'rb') as f:
-            result = pickle.load(f)
+            result = json.load(f)
             print(result)
             alg = result["algorithm"]
 

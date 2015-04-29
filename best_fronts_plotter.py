@@ -1,5 +1,5 @@
 import os
-import pickle
+import json
 
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -78,7 +78,7 @@ def save_plot(ax, f):
 if __name__ == '__main__':
 
     global_data = {}
-    root = Path('pickled')
+    root = Path('jsoned')
     for d_problem in [p_problem
                       for p_problem in root.iterdir()
                       if p_problem.is_dir()]:
@@ -104,9 +104,9 @@ if __name__ == '__main__':
                                 if p_budget.is_dir()],
                                key=lambda x: int(x.name))
 
-                for results in d_budget.glob(metrics_name_long + "*.pickle"):
-                    with results.open(mode="rb") as fh:
-                        test_results = pickle.load(fh)
+                for results in d_budget.glob(metrics_name_long + "*.json"):
+                    with results.open(mode="r") as fh:
+                        test_results = json.load(fh)
                         if not best_result or test_results["metrics"] < best_result["metrics"]:
                             best_result = test_results
 

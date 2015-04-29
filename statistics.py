@@ -1,6 +1,6 @@
 import random
 from pathlib import Path
-import pickle
+import json
 from math import sqrt
 import numpy
 
@@ -28,7 +28,7 @@ def bootstrap(population, f, n, k, alpha):
 
 badbench = []
 cost_badbench = []
-root = Path('pickled')
+root = Path('jsoned')
 for d_problem in [p_problem
                   for p_problem in root.iterdir()
                   if p_problem.is_dir()]:
@@ -52,9 +52,9 @@ for d_problem in [p_problem
                                                         ("extent", "extent")]:
                     data = []
                     cost = []
-                    for results in d_budget.glob(metrics_name_long + "*.pickle"):
-                        with results.open(mode="rb") as fh:
-                            test_results = pickle.load(fh)
+                    for results in d_budget.glob(metrics_name_long + "*.json"):
+                        with results.open(mode="r") as fh:
+                            test_results = json.load(fh)
                             data.append(test_results["metrics"])
                             cost.append(test_results["cost"])
                     len_data = len(data)
