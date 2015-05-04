@@ -41,8 +41,7 @@ class TestHGS(TestCase):
                             'sprtn_var': [[], []],
                             'brnch_comp': [0.5, 0.1]},
                 metaepoch_len=10,
-                driver=SGA,
-                stop_conditions=[])
+                driver=SGA)
         print("Property: code_l ∘ decode_l = id")
         for individual in init_population:
             for level in range(3):
@@ -78,7 +77,6 @@ class TestHGS(TestCase):
                             'brnch_comp': [0.5, 0.1]},
                 metaepoch_len=10,
                 driver=SGA,
-                stop_conditions=[],
                 max_children=3,
                 sproutiveness=1)
 
@@ -122,7 +120,6 @@ class TestHGS(TestCase):
                                   'brnch_comp': [1, 0.5, 0.1]},
                       metaepoch_len=10,
                       driver=SGA,
-                      stop_conditions=[],
                       max_children=3,
                       sproutiveness=1)
             hgs.steps(range(5))

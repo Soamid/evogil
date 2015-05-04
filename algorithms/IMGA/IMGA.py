@@ -32,15 +32,11 @@ class IMGA(Driver):
 
 
     def steps(self, _iterator, budget=None):
-        for _ in _iterator:
+        while True:
             print(self.epoch_no)
             self.epoch_no +=1
-
-            self.cost += self.epoch()
-            if budget and self.cost > budget:
-                break
-
-        return self.cost
+            cost = self.epoch()
+            yield cost, self.finish()
 
     def finish(self):
         global_pop = []

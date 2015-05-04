@@ -33,7 +33,6 @@ class HGS(Driver):
                  brnch_comps:      ':: [Float]',
                  metaepoch_len:    ':: Int',
                  driver:           ':: Driver d => {fitnesses :: [FitnessFun], population :: Population} -> d',
-                 stop_conditions:  ':: [(HGS -> State HGS ())]',
                  max_children:     ':: Int'=5,
                  sproutiveness:    ':: Int'=2):
         return cls(dims=dims,
@@ -48,7 +47,6 @@ class HGS(Driver):
                    },
                    metaepoch_len=metaepoch_len,
                    driver=driver,
-                   stop_conditions=stop_conditions,
                    max_children=max_children,
                    sproutiveness=sproutiveness)
 
@@ -67,8 +65,7 @@ class HGS(Driver):
                             brnch_comps=[1, 0.25, 0.05],
                             metaepoch_len=1,
                             max_children=3,
-                            driver=driver,
-                            stop_conditions=[])
+                            driver=driver)
 
     def __init__(self,
                  dims:             ':: [ (Float, Float) ]',
@@ -83,7 +80,6 @@ class HGS(Driver):
                                    '-- |popln_size| = m, number of levels',
                  metaepoch_len:    ':: Int',
                  driver:           ':: Driver d => {fitnesses :: [FitnessFun], population :: Population} -> d',
-                 stop_conditions:  ':: [(HGS -> State HGS ())]',
                  max_children:     ':: Int'=3,
                  sproutiveness:    ':: Int'=1):
 
@@ -99,7 +95,6 @@ class HGS(Driver):
         self.sproutiveness = sproutiveness
         self.max_children = max_children
         self.metaepoch_len = metaepoch_len
-        self.stop_conditions = stop_conditions
         self.driver = driver
 
         self.popln_size = [len(population)] + lvl_params['popln_sizes'][1:]
@@ -151,26 +146,15 @@ class HGS(Driver):
 
     def get_nodes(self, include_finished=False):
         """ Przechodzi drzewo HGS w kolejności level-order. """
-        todo = [self.root]
-        while len(todo) > 0:
-            if not todo[0].finished or include_finished:
-                yield todo[0]
-            todo = todo[1:] + todo[0].sprouts
+        deq = deque([self.root])
 
-    def steps(self, gen, budget=None):
-        self.budget = budget
-        cost = 0
-        for _ in gen:
-            if budget is not None and cost > budget:
-                return cost
-            cost += self.metaepoch()
-            for stop_f in self.stop_conditions:
-                stop_f(hgs=self, root=self.root)
-                if self.finished:
-                    return cost
-        return cost
+        while deq.count() > 0:
+            x = deq.popleft()
+            deq.extend(x.sprouts)
+            if not x.finished or include_finished:
+                yield x
 
-    def metaepoch(self):
+    def steps(self):
         def cost_fun(cs):
             n = 3
             cs_rsort = sorted(cs, reverse=True)
@@ -182,19 +166,23 @@ class HGS(Driver):
                     subtarget += cs_rsort.pop()
                 target_max = max(subtarget, target_max)
             return math.ceil(target_max * 1.2)  # 1.2 to współczynnik pesymizmu. TODO: Gdy nastąpi poniedziałek zmienić na 1.3.
-        cost = []
-        for i in self.get_nodes():
-            if not i.finished:
-                cost.append( i.driver.steps(range(self.metaepoch_len)) )
-                i.metaepochs_ran += 1
-            if i.metaepochs_ran < 0:
-                i.metaepochs_ran = 0
-            i.sprout()
-            i.branch_reduction()
-            cost_fun_res = cost_fun(cost)
-            if self.budget and self.budget < cost_fun_res:
-                return cost_fun_res
-        return cost_fun(cost)
+
+
+        while True:
+            children_costs = []
+            for i in self.get_nodes():
+
+                cost, pop = 0, None
+                for i in range(self.metaepoch_len):
+                    i_cost, i_pop = next(i.step_iter())
+                    cost += i_cost
+                    pop = i_pop
+                
+                children_costs.append(cost)
+
+            cost_fun_res = cost_fun(children_costs)
+            yield cost_fun_res, self.population
+
 
     def rank(self, population):
         return self.root.driver.rank(population)
@@ -212,7 +200,7 @@ class HGS(Driver):
                      population: ':: ScaledPopulation'):
             self.outer = outer
             self.id, self.outer.id_cnt = self.outer.id_cnt, self.outer.id_cnt + 1
-            self.metaepochs_ran = -1
+            self.metaepochs_ran = 0
             self.level = level
             self.sprouts = []
             self.reduced = False
@@ -222,6 +210,16 @@ class HGS(Driver):
                                        fitnesses=outer.fitnesses_per_lvl[level],
                                        mutation_variance=outer.muttn_vars[level],
                                        crossover_variance=outer.csvrs_vars[level])
+
+            self.driver_step_iterator = self.driver.steps()
+
+        def step_iter(self):
+            while True:
+                i = next(self.driver_step_iterator)
+                self.sprout()
+                self.branch_reduction()
+                self.metaepochs_ran += 1
+                yield i        
 
         @property
         def average(self):
@@ -252,7 +250,7 @@ class HGS(Driver):
                 return
             if 1 + self.level >= len(self.outer.popln_size):
                 return
-            if self.metaepochs_ran <= 0:
+            if self.metaepochs_ran < 1:
                 return
 
             sproutiveness = self.outer.sproutiveness
@@ -288,7 +286,8 @@ class HGS(Driver):
                                                                              aep=self.metaepochs_ran))
                     break
 
-        def branch_reduction(self):
+        def branch_reduction(s
+            yield ielf):
             if HGS.global_branch_compare:
                 comparab_sprouts = list(self.outer.get_nodes(include_finished=True))
             else:

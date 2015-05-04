@@ -84,18 +84,14 @@ class SGA(algorithms.utils.driver.Driver):
     def contains_similar(self, indiv: '[Float]', sigmas: '[Float]') -> 'Bool':
         return any(self.are_similar(indiv, x, sigmas) for x, fx in self._population)
 
-    def steps(self, condI: 'Range a', budget=None):
-        if budget:
-            raise NotImplementedError("sorry, budgeting not implemented for SGA yet")
-        for _ in condI:
-            self.step()
-        return 0
+    def steps(self):
+        while True:
+            self.population = [self.mutate(self.crossover([self.select(self._population),
+                                                           self.select(self._population)]))
+                               for _ in self._population]
+            cost = None
+            yield cost, self.population
 
-    def step(self):
-        # calculating fitnesses as side-effect
-        self.population = [self.mutate(self.crossover([self.select(self._population),
-                                                       self.select(self._population)]))
-                           for _ in self._population]
 
     def _calc_fitnesses(self, x):
         return [f(x) for f in self.fitnesses]

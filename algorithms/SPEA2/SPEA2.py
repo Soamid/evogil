@@ -37,22 +37,17 @@ class SPEA2(Driver):
     def finish(self):
         return [x['value'] for x in self.__archive]
 
-    def steps(self, condI, budget=None):
-        cost = 0
-
-        for _ in condI:
+    def steps(self):
+        while True:
             self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
             self.population = [self.mutate(self.crossover(self.select(self.__archive),
                                                           self.select(self.__archive)))
                                for _ in self.__population]
-            cost += len(self.__population)*len(self.fitnesses)
+            cost = len(self.__population)
 
-            if budget is not None and cost > budget:
-                break
-
-        return cost
+            yield cost, self.finish()
 
     def calculate_fitnesses(self, population, archive):
         self.calculate_objectives(population)
