@@ -3,7 +3,7 @@ import os
 
 import matplotlib
 
-from ep.utils import ea_utils
+from algorithms.utils import ea_utils
 import problems.ackley.problem as ackley
 import problems.ZDT1.problem as zdt1
 import problems.ZDT2.problem as zdt2

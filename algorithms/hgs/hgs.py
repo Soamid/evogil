@@ -3,8 +3,8 @@ import functools
 import random
 import math
 
-from ep.utils.driver import Driver
-from ep.utils.ea_utils import euclid_distance, gen_population, paretofront_layers
+from algorithms.utils.driver import Driver
+from algorithms.utils.ea_utils import euclid_distance, gen_population, paretofront_layers
 
 
 class HGS(Driver):

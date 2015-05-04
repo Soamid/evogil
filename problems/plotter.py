@@ -2,7 +2,7 @@ import json
 from matplotlib import pyplot as plt
 import glob
 from collections import defaultdict
-from ep.utils import ea_utils
+from algorithms.utils import ea_utils
 
 EXTENT = "extent"
 DISTRIBUTION = "distribution"

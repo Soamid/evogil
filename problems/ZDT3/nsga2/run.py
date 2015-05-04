@@ -1,8 +1,8 @@
 import unittest
 
 #noinspection PyPep8Naming
-import ep.nsga2.nsga2 as nsga2
-from ep.utils import ea_utils
+import algorithms.nsga2.nsga2 as nsga2
+from algorithms.utils import ea_utils
 from problems.ZDT3 import problem
 
 from problems.testrun import TestRun

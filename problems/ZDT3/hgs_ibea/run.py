@@ -2,10 +2,10 @@ import functools
 import unittest
 
 #noinspection PyPep8Naming
-import ep.hgs.hgs as hgs
+import algorithms.hgs.hgs as hgs
 #noinspection PyPep8Naming
-import ep.ibea.ibea as ibea
-from ep.utils import ea_utils
+import algorithms.ibea.ibea as ibea
+from algorithms.utils import ea_utils
 from problems.ZDT3 import problem
 
 from problems.testrun import TestRun

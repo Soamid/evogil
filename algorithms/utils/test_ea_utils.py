@@ -1,7 +1,7 @@
 from unittest import TestCase
 import itertools
 import operator
-from ep.utils.ea_utils import *
+from algorithms.utils.ea_utils import *
 import problems.kursawe.problem as kursawe
 
 __author__ = 'konrad'

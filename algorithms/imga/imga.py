@@ -1,7 +1,7 @@
 import random
-from ep.imga.topology import TorusTopology, Topology
-from ep.utils.driver import Driver
-from ep.utils import ea_utils
+from algorithms.imga.topology import TorusTopology, Topology
+from algorithms.utils.driver import Driver
+from algorithms.utils import ea_utils
 
 
 class IMGA(Driver):

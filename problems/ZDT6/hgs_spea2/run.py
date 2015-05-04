@@ -1,10 +1,10 @@
 import unittest
 
 #noinspection PyPep8Naming
-import ep.hgs.hgs as hgs
+import algorithms.hgs.hgs as hgs
 #noinspection PyPep8Naming
-import ep.spea2.spea2 as spea2
-from ep.utils import ea_utils
+import algorithms.spea2.spea2 as spea2
+from algorithms.utils import ea_utils
 from problems.ZDT6 import problem
 
 from problems.testrun import TestRun

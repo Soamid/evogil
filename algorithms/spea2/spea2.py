@@ -7,7 +7,7 @@
 import math
 import random
 
-from ep.utils.driver import Driver
+from algorithms.utils.driver import Driver
 
 
 class SPEA2(Driver):

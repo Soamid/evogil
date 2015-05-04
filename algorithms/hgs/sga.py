@@ -1,10 +1,10 @@
 # coding=utf-8
 import random
 import math
-import ep.utils.driver
+import algorithms.utils.driver
 
 
-class SGA(ep.utils.driver.Driver):
+class SGA(algorithms.utils.driver.Driver):
 
     class Tournament:
         def __init__(self, compare_key):

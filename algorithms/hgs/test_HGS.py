@@ -10,9 +10,9 @@ import matplotlib.mlab as ml
 
 import benchmarks
 
-from ep.utils import ea_utils
-from ep.hgs.hgs import HGS
-from ep.hgs.sga import SGA
+from algorithms.utils import ea_utils
+from algorithms.hgs.hgs import HGS
+from algorithms.hgs.sga import SGA
 
 
 #noinspection PyPep8Naming

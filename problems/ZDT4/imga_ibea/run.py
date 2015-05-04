@@ -2,9 +2,9 @@ import functools
 import unittest
 
 #noinspection PyPep8Naming
-from ep.ibea import ibea
-import ep.imga.imga as imga
-from ep.utils import ea_utils
+from algorithms.ibea import ibea
+import algorithms.imga.imga as imga
+from algorithms.utils import ea_utils
 from problems.ZDT4 import problem
 
 from problems.testrun import TestRun

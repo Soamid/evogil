@@ -4,7 +4,7 @@ import json
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from ep.utils import ea_utils
+from algorithms.utils import ea_utils
 from pictures_from_stats_new import algos, algos_order
 
 

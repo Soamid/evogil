@@ -4,7 +4,7 @@ import collections
 import math
 import random
 import sys
-from ep.utils import driver
+from algorithms.utils import driver
 
 
 class NSGA2(driver.Driver):

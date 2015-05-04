@@ -1,8 +1,8 @@
 import functools
 import unittest
-import ep.hgs.hgs as hgs
-import ep.ibea.ibea as ibea
-from ep.utils import ea_utils
+import algorithms.hgs.hgs as hgs
+import algorithms.ibea.ibea as ibea
+from algorithms.utils import ea_utils
 from problems.parabol import problem
 
 

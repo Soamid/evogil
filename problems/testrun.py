@@ -9,7 +9,7 @@ import itertools
 import time
 import unittest
 
-from ep.utils import ea_utils
+from algorithms.utils import ea_utils
 
 
 #noinspection PyPep8Naming

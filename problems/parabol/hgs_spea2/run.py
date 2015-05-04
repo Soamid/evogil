@@ -1,8 +1,8 @@
 import functools
 import unittest
-import ep.hgs.hgs as hgs
-import ep.spea2.spea2 as spea2
-from ep.utils import ea_utils
+import algorithms.hgs.hgs as hgs
+import algorithms.spea2.spea2 as spea2
+from algorithms.utils import ea_utils
 from problems.parabol import problem
 
 

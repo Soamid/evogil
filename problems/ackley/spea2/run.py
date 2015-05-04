@@ -2,8 +2,8 @@ import unittest
 
 #noinspection PyPep8Naming
 import itertools
-import ep.spea2.spea2 as spea2
-from ep.utils import ea_utils
+import algorithms.spea2.spea2 as spea2
+from algorithms.utils import ea_utils
 from problems.ackley import problem
 
 from problems.testrun import TestRun

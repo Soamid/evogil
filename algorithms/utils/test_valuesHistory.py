@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from ep.utils.history import DefaultHistory
+from algorithms.utils.history import DefaultHistory
 
 
 #noinspection PyPep8Naming

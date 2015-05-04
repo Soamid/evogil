@@ -1,8 +1,8 @@
 import unittest
 import itertools
-import ep.imga.imga as imga
-from ep.spea2 import spea2
-from ep.utils import ea_utils
+import algorithms.imga.imga as imga
+from algorithms.spea2 import spea2
+from algorithms.utils import ea_utils
 from problems.kursawe import problem
 
 from problems.testrun import TestRun
