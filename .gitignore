@@ -34,3 +34,5 @@ plots/pareto_fronts/
 plots/plots_violin/
 plots/plots_bnw/
 plots/
+java/target/
+*.iml
