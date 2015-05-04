@@ -6,7 +6,20 @@ Usage:
   evogil.py violin [options]
   evogil.py (stats | statistics) [options]
   evogil.py pictures_from_stats_new [options]
-  evogil.py run_parallel [options]
+  evogil.py run [options]
+  evogil.py summary
+
+Commands:
+  violin
+    Plots violin plots?
+  run
+    Performs benchmarks.
+  results
+    Yields some info about performed benchmarks.
+  stats
+    Generates statistics from benchmarks' results.
+  pictures_from_stats_new
+    Some pictures?
 
 Options:
   -a <algo_name>, --algo <algo_name>       
@@ -73,6 +86,7 @@ import matplotlib.pyplot as plt
 import evotools.stats
 import evotools.violin
 import evotools.run_parallel
+import evotools.benchmark_results
 
 # from ep.utils import ea_utils
 # import problems.ackley.problem as ackley
@@ -86,7 +100,7 @@ import evotools.run_parallel
 if __name__ == '__main__':
     argv = docopt.docopt(__doc__, version='EvoGIL 3.0')
 
-    if argv['run_parallel']:
+    if argv['run']:
         evotools.run_parallel.run_parallel(argv)
     elif argv['statistics'] or argv['stats']:
         evotools.stats.statistics(argv)
@@ -94,4 +108,6 @@ if __name__ == '__main__':
         evotools.violin.violin(argv)
     elif argv['pictures_from_stats_new']:
         pictures_from_stats_new(argv)
+    elif argv['summary']:
+        evotools.benchmark_results.analyse_results()
 

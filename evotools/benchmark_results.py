@@ -6,6 +6,10 @@ import json
 from evotools.config import metric_names
 
 
+def analyse_results():
+    for i in iterate_results():
+        print(len(i['data']), i['d_algorithm'].name, i['d_problem'].name, i['d_budget'].name, i['metrics_name_long'])
+
 def iterate_results():
     root = pathlib.Path('jsoned')
     for d_problem in [p_problem
