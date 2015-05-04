@@ -1,6 +1,6 @@
 import unittest
 import itertools
-import algorithms.imga.imga as imga
+import algorithms.IMGA.IMGA as imga
 from algorithms.spea2 import spea2
 from algorithms.utils import ea_utils
 from problems.kursawe import problem

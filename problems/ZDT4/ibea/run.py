@@ -1,7 +1,7 @@
 import unittest
 
 #noinspection PyPep8Naming
-import algorithms.ibea.ibea as ibea
+import algorithms.IBEA.IBEA as ibea
 from algorithms.utils import ea_utils
 from problems.ZDT4 import problem
 

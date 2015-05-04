@@ -2,8 +2,8 @@ import unittest
 
 #noinspection PyPep8Naming
 import itertools
-import algorithms.hgs.hgs as hgs
-import algorithms.spea2.spea2 as spea2
+import algorithms.HGS.HGS as hgs
+import algorithms.SPEA2.SPEA2 as spea2
 from algorithms.utils import ea_utils
 from problems.kursawe import problem
 

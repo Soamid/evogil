@@ -1,7 +1,7 @@
 import functools
 import unittest
-import algorithms.hgs.hgs as hgs
-import algorithms.nsga2.nsga2 as nsga2
+import algorithms.HGS.HGS as hgs
+import algorithms.NSGAII.NSGAII as nsga2
 from algorithms.utils import ea_utils
 from problems.parabol import problem
 

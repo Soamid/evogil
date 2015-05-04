@@ -3,7 +3,7 @@ import unittest
 
 #noinspection PyPep8Naming
 from algorithms.ibea import ibea
-import algorithms.imga.imga as imga
+import algorithms.IMGA.IMGA as imga
 from algorithms.utils import ea_utils
 from problems.ackley import problem
 

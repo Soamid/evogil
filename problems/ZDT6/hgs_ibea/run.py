@@ -2,9 +2,9 @@ import functools
 import unittest
 
 #noinspection PyPep8Naming
-import algorithms.hgs.hgs as hgs
+import algorithms.HGS.HGS as hgs
 #noinspection PyPep8Naming
-import algorithms.ibea.ibea as ibea
+import algorithms.IBEA.IBEA as ibea
 from algorithms.utils import ea_utils
 from problems.ZDT6 import problem
 

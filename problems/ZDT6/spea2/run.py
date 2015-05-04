@@ -1,7 +1,7 @@
 import unittest
 
 #noinspection PyPep8Naming
-import algorithms.spea2.spea2 as spea2
+import algorithms.SPEA2.SPEA2 as spea2
 from algorithms.utils import ea_utils
 from problems.ZDT6 import problem
 

@@ -1,7 +1,7 @@
 import unittest
 
 #noinspection PyPep8Naming
-import algorithms.imga.imga as imga
+import algorithms.IMGA.IMGA as imga
 from algorithms.spea2 import spea2
 from algorithms.utils import ea_utils
 from problems.ZDT1 import problem
