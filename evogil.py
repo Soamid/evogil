@@ -3,11 +3,15 @@
 
 Usage:
   evogil.py -h | --help 
-  evogil.py violin [options]
   evogil.py (stats | statistics) [options]
-  evogil.py pictures [options]
   evogil.py run [options]
   evogil.py summary
+
+In future possibly we could get those commands working:
+  violin [options]
+  pictures [options]
+  best_fronts_plotter [options]
+  plotter [options]
 
 Commands:
   violin

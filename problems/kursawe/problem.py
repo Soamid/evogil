@@ -1,6 +1,10 @@
 import math
+import pathlib
 
-with open('kursawe.dat', 'r') as f:
+
+kursawe_dat = pathlib.Path('.') / 'problems' / 'kursawe' / 'kursawe.dat'
+
+with kursawe_dat.open('r') as f:
     lines = f.readlines()
 
 pareto_front = [[float(x) for x in line.split()]

@@ -3,10 +3,9 @@ from datetime import datetime
 import random
 import time
 import math
-from contextlib import contextmanager
 import itertools
 
-import matplotlib.pyplot as plt
+
 
 
 def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':
@@ -111,27 +110,27 @@ def distance_from_pareto(solution, pareto):
 
 
 def distribution(solution, sigma):
-    return sum([len([y
-                     for y in solution
-                     if euclid_distance(x, y) > sigma]) / (len(solution) - 1)
-                for x in solution]) / len(solution)
+    return sum(len( y
+                    for y in solution
+                    if euclid_distance(x, y) > sigma
+                   ) / (len(solution) - 1)
+                for x in solution
+              ) / len(solution)
 
 
 def extent(solution):
-    # TODO: czy przypadkiem lista --> gen nie lepsze, tj. sum([...]) --> sum(...) ? max to samo
-    return math.sqrt(sum([max([math.fabs(x[i] - y[i])
-                               for x, y in itertools.product(solution, solution)])
-                          for i in range(len(solution[0]))]))
-
-
-@contextmanager
-def pyplot_figure():
-    fig = plt.figure()
-    yield fig
-    plt.close(fig)
+    return math.sqrt(sum( max( math.fabs(x[i] - y[i])
+                               for x, y
+                               in itertools.product(solution, solution)
+                              )
+                          for i
+                          in range( len(solution[0]) )
+                        )
+                    )
 
 
 def weighted_choice(choices):
+    # http://stackoverflow.com/a/3679747/547223
     choices = list(choices)
     total = sum(w for c, w in choices)
     r = random.uniform(0, total)

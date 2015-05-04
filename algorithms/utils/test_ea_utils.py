@@ -4,8 +4,6 @@ import operator
 from algorithms.utils.ea_utils import *
 import problems.kursawe.problem as kursawe
 
-__author__ = 'konrad'
-
 
 class TestEAUtils(TestCase):
     def test_gen_population(self):
