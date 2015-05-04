@@ -145,7 +145,7 @@ def weighted_choice(choices):
 
 
 def get_current_time():
-    return datetime.today().strftime("%Y-%M-%d.%H%M%S.%f")
+    return datetime.today().strftime("%Y-%m-%d.%H%M%S.%f")
 
 
 def split_front(pareto_front, epsilon):
