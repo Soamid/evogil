@@ -13,7 +13,9 @@ problems/*/*/results/*
 *.tar.*
 *.tgz
 *.txz
+*.tgx
 *.pickle
+*.json
 jsoned/*
 !jsoned/.gitignore
 pickled/*
