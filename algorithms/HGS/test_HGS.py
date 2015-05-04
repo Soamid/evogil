@@ -12,7 +12,7 @@ import benchmarks
 
 from algorithms.utils import ea_utils
 from algorithms.hgs.hgs import HGS
-from algorithms.hgs.sga import SGA
+from algorithms.SGA.sga import SGA
 
 
 #noinspection PyPep8Naming
