@@ -5,7 +5,7 @@ Usage:
   evogil.py -h | --help 
   evogil.py violin [options]
   evogil.py (stats | statistics) [options]
-  evogil.py pictures_from_stats_new [options]
+  evogil.py pictures [options]
   evogil.py run [options]
   evogil.py summary
 
@@ -18,7 +18,7 @@ Commands:
     Yields some info about performed benchmarks.
   stats
     Generates statistics from benchmarks' results.
-  pictures_from_stats_new
+  pictures
     Some pictures?
 
 Options:
@@ -60,45 +60,19 @@ Problems:
   parabol
 """
 
-
-# base
-import json
-import multiprocessing
-import numpy
-import os
-import pathlib
-import random
-import sys
-import time
-import unittest
-from contextlib import contextmanager
-from functools import reduce
-from math import sqrt
-
 # docopt
-import docopt
-
-# numpy + matplotlib
-from numpy.linalg import LinAlgError
-import matplotlib.pyplot as plt
+from docopt import docopt
 
 # self
 import evotools.stats
 import evotools.violin
 import evotools.run_parallel
 import evotools.benchmark_results
-
-# from algorithms.utils import ea_utils
-# import problems.ackley.problem as ackley
-# import problems.ZDT1.problem as zdt1
-# import problems.ZDT2.problem as zdt2
-# import problems.ZDT3.problem as zdt3
-# import problems.ZDT4.problem as zdt4
-# import problems.ZDT6.problem as zdt6
+import evotools.pictures
 
 
 if __name__ == '__main__':
-    argv = docopt.docopt(__doc__, version='EvoGIL 3.0')
+    argv = docopt(__doc__, version='EvoGIL 3.0')
 
     if argv['run']:
         evotools.run_parallel.run_parallel(argv)
@@ -106,8 +80,8 @@ if __name__ == '__main__':
         evotools.stats.statistics(argv)
     elif argv['violin']:
         evotools.violin.violin(argv)
-    elif argv['pictures_from_stats_new']:
-        pictures_from_stats_new(argv)
+    elif argv['pictures']:
+        evotools.pictures.pictures_from_stats(argv)
     elif argv['summary']:
         evotools.benchmark_results.analyse_results()
 

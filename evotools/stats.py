@@ -32,7 +32,7 @@ def bootstrap(population, f, n, k, alpha):
     }
 
 
-def statistics(args):
+def statistics(args, print_stdout=True):
     badbench = []
     cost_badbench = []
     
@@ -57,7 +57,7 @@ def statistics(args):
         metrics_name_long = loop['metrics_name_long']
         metrics_name      = loop['metrics_name']
 
-        def abstract(data_process):
+        def yield_analysis(data_process):
             q1 = numpy.percentile(data_process, 25)
             q3 = numpy.percentile(data_process, 75)
             iq = q3 - q1
@@ -114,11 +114,11 @@ def statistics(args):
 
             return low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd, stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers, stdev_nooutliers_diff, pr_dispersion, dispersion_warn
 
-        low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd, stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers, stdev_nooutliers_diff, pr_dispersion, dispersion_warn = abstract(data)
-        cost_low_inn_fence, cost_upp_inn_fence, cost_low_out_fence, cost_upp_out_fence, cost_stdev, cost_mean, cost_lower, cost_upper, cost_goodbench, cost_btstrpd, cost_stdev, cost_mild_outliers, cost_extr_outliers, cost_metrics_nooutliers, cost_mean_nooutliers_diff, cost_stdev_nooutliers, cost_stdev_nooutliers_diff, cost_pr_dispersion, cost_dispersion_warn = abstract(cost)
+        low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd, stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers, stdev_nooutliers_diff, pr_dispersion, dispersion_warn = yield_analysis(data)
+        cost_low_inn_fence, cost_upp_inn_fence, cost_low_out_fence, cost_upp_out_fence, cost_stdev, cost_mean, cost_lower, cost_upper, cost_goodbench, cost_btstrpd, cost_stdev, cost_mild_outliers, cost_extr_outliers, cost_metrics_nooutliers, cost_mean_nooutliers_diff, cost_stdev_nooutliers, cost_stdev_nooutliers_diff, cost_pr_dispersion, cost_dispersion_warn = yield_analysis(cost)
 
         probname = str(d_problem.name)
-        if not sd_problem:
+        if print_stdout and not sd_problem:
             print("=" * 436)
 
 
@@ -148,15 +148,16 @@ def statistics(args):
             ("σ w/o outliers"             , [10,10,4],    "{cost_stdev_nooutliers:>{0}.3f} ({cost_stdev_nooutliers_diff:>{1}.3f}%)"                          ),
             ("(C INT)/METRICS"            , [7,10,2],     "{cost_pr_dispersion: >{0}.3f}% {cost_dispersion_warn:<{1}}"                                       )
         ]
-        if not sd_testname:
+        if print_stdout and not sd_testname:
             print('..'.join('[{0:^{1}}]'.format(head,sum(width)) for (i, (head,width,var)) in enumerate(fields)) + "..", flush=True)
 
         budg_cost = not sd_budget and str(d_budget.name) or ""
 
         lcls = locals()
-        print(" " + " :: ".join(var.format(*width, **lcls) for (i, (head,width,var)) in enumerate(fields)) + " :: ", flush=True)
+        if print_stdout:
+            print(" " + " :: ".join(var.format(*width, **lcls) for (i, (head,width,var)) in enumerate(fields)) + " :: ", flush=True)
 
-        def abstract_analysis(mean_nooutliers_diff_process, goodbench_process, lower_process, upper_process, data_process, low_inn_fence_process, upp_inn_fence_process, low_out_fence_process, upp_out_fence_process, stdev_process, mean_process, badbench_process, prefix):
+        def stdout_abstract_analysis(mean_nooutliers_diff_process, goodbench_process, lower_process, upper_process, data_process, low_inn_fence_process, upp_inn_fence_process, low_out_fence_process, upp_out_fence_process, stdev_process, mean_process, badbench_process, prefix):
             prefix = " " * prefix
             if goodbench_process != "✓":
                 outliers = len([x for x in data_process if lower_process <= x <= upper_process])
@@ -195,12 +196,11 @@ def statistics(args):
                     print("{prefix}:: #################### ################################################################### ####################".format(prefix=prefix))
                 else:
                     print("{prefix}:: Mean of results changed a little (< 10%), so probably that's all okay".format(prefix=prefix))
-        abstract_analysis(mean_nooutliers_diff, goodbench, lower, upper, data, low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, badbench, prefix=62)
-        abstract_analysis(cost_mean_nooutliers_diff, cost_goodbench, cost_lower, cost_upper, [float(x) for x in cost], cost_low_inn_fence, cost_upp_inn_fence, cost_low_out_fence, cost_upp_out_fence, cost_stdev, cost_mean, cost_badbench, prefix=253)
+        if print_stdout:
+            stdout_abstract_analysis(mean_nooutliers_diff, goodbench, lower, upper, data, low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, badbench, prefix=62)
+            stdout_abstract_analysis(cost_mean_nooutliers_diff, cost_goodbench, cost_lower, cost_upper, [float(x) for x in cost], cost_low_inn_fence, cost_upp_inn_fence, cost_low_out_fence, cost_upp_out_fence, cost_stdev, cost_mean, cost_badbench, prefix=253)
 
-
-
-    if badbench or cost_badbench:
+    if print_stdout and (badbench or cost_badbench):
         print("#" * 436)
         for i in badbench:
             print(">>> " + str(i))

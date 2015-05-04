@@ -320,7 +320,7 @@ def plot_results(results):
         plt.savefig(path)
 
 
-if __name__ == '__main__':
+def pictures_from_stats(argv):
     # plot_pareto_fronts()
     stats = parse_stats("stats.txt")
     # gen_table(stats)
