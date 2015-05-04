@@ -13,28 +13,6 @@ def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':
             for _ in range(count)]
 
 
-def condition_count(cnt=100):
-    for r in range(cnt):
-        yield True
-
-
-def condition_time(t=60.0):
-    start = time.time()
-    while (time.time() - start) < t:
-        yield True
-
-
-def euclid_sqr_distance(xs, ys):
-    return sum((x - y) ** 2 for x, y in zip(xs, ys))
-
-
-def euclid_distance(xs, ys):
-    xs, ys = list(xs), list(ys)
-    if len(xs) != len(ys) or len(xs) == 0:
-        return 9999999
-    return math.sqrt(sum((x - y) ** 2 for x, y in zip(xs, ys)))
-
-
 def dominates(xs, ys) -> 'Bool':
     """
     :param xs: Wektor wyników A.
@@ -103,48 +81,6 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
         #     czyli DUŻO ale nie na tyle, by mi się chciało to pisać.
 
 
-def distance_from_pareto(solution, pareto):
-    return sum([min([euclid_distance(x, y)
-                     for y in pareto])
-                for x in solution]) / len(solution)
-
-
-def distribution(solution, sigma):
-    return sum(len( y
-                    for y in solution
-                    if euclid_distance(x, y) > sigma
-                   ) / (len(solution) - 1)
-                for x in solution
-              ) / len(solution)
-
-
-def extent(solution):
-    return math.sqrt(sum( max( math.fabs(x[i] - y[i])
-                               for x, y
-                               in itertools.product(solution, solution)
-                              )
-                          for i
-                          in range( len(solution[0]) )
-                        )
-                    )
-
-
-def weighted_choice(choices):
-    # http://stackoverflow.com/a/3679747/547223
-    choices = list(choices)
-    total = sum(w for c, w in choices)
-    r = random.uniform(0, total)
-    upto = 0
-    for c, w in choices:
-        if upto + w > r:
-            return c
-        upto += w
-
-    assert False, "Shouldn't get here"
-
-
-def get_current_time():
-    return datetime.today().strftime("%Y-%m-%d.%H%M%S.%f")
 
 
 def split_front(pareto_front, epsilon):
