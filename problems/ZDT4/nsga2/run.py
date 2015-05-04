@@ -3,7 +3,7 @@ import unittest
 #noinspection PyPep8Naming
 import ep.nsga2.nsga2 as nsga2
 from ep.utils import ea_utils
-from problems.coemoa_d import problem
+from problems.ZDT4 import problem
 
 from problems.testrun import TestRun
 

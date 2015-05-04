@@ -5,7 +5,7 @@ import unittest
 from ep.ibea import ibea
 import ep.imga.imga as imga
 from ep.utils import ea_utils
-from problems.coemoa_a import problem
+from problems.ZDT1 import problem
 
 from problems.testrun import TestRun
 

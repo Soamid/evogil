@@ -5,7 +5,7 @@ import ep.hgs.hgs as hgs
 #noinspection PyPep8Naming
 import ep.spea2.spea2 as spea2
 from ep.utils import ea_utils
-from problems.coemoa_c import problem
+from problems.ZDT3 import problem
 
 from problems.testrun import TestRun
 

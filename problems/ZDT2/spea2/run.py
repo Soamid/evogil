@@ -4,7 +4,7 @@ import unittest
 import itertools
 import ep.spea2.spea2 as spea2
 from ep.utils import ea_utils
-from problems.coemoa_b import problem
+from problems.ZDT2 import problem
 
 from problems.testrun import TestRun
 

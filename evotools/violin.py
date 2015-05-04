@@ -72,7 +72,7 @@ def violin(*args, **kwargs):
                         plt.ylim([0.0001, 10])
                     plt.yscale('log')
                 if metric == 'distribution':
-                    if problem == 'ackley' or problem == 'coemoa_b':
+                    if problem == 'ackley' or problem == 'ZDT2':
                         plt.ylim([-0.1, 1.0])
                 if metric == 'extent':
                     if problem == 'ackley':

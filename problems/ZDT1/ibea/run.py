@@ -3,7 +3,7 @@ import unittest
 #noinspection PyPep8Naming
 import ep.ibea.ibea as ibea
 from ep.utils import ea_utils
-from problems.coemoa_a import problem
+from problems.ZDT1 import problem
 
 from problems.testrun import TestRun
 

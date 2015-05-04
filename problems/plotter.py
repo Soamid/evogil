@@ -59,6 +59,6 @@ def load_gathered(problem, metrics, algorithm="*", date="*"):
 
 
 if __name__ == "__main__":
-    result = load_gathered("coemoa_d", DISTANCE_FROM_PARETO)
+    result = load_gathered("ZDT4", DISTANCE_FROM_PARETO)
     plot_quality(*result)
 

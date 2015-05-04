@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
         problem_mod = __import__('problems.{}.problem'.format(d_problem.name), fromlist=[d_problem.name])
         original_front = problem_mod.pareto_front
-        ax, f = plot_problem_front(original_front, multimodal=d_problem.name == 'coemoa_c', scatter=d_problem.name == 'ackley')
+        ax, f = plot_problem_front(original_front, multimodal=d_problem.name == 'ZDT3', scatter=d_problem.name == 'ackley')
 
         for d_algorithm in [p_algo
                             for p_algo in d_problem.iterdir()

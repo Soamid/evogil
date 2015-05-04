@@ -50,12 +50,12 @@ Algorithms:
   spea2
 
 Problems:
+  ZDT1
+  ZDT2
+  ZDT3
+  ZDT4
+  ZDT6
   ackley
-  coemoa_a (ZDT1)
-  coemoa_b (ZDT2)
-  coemoa_c (ZDT3)
-  coemoa_d (ZDT4)
-  coemoa_e (ZDT6)
   kursawe
   parabol
 """
@@ -90,11 +90,11 @@ import evotools.benchmark_results
 
 # from ep.utils import ea_utils
 # import problems.ackley.problem as ackley
-# import problems.coemoa_a.problem as zdt1
-# import problems.coemoa_b.problem as zdt2
-# import problems.coemoa_c.problem as zdt3
-# import problems.coemoa_d.problem as zdt4
-# import problems.coemoa_e.problem as zdt6
+# import problems.ZDT1.problem as zdt1
+# import problems.ZDT2.problem as zdt2
+# import problems.ZDT3.problem as zdt3
+# import problems.ZDT4.problem as zdt4
+# import problems.ZDT6.problem as zdt6
 
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ import unittest
 import ep.imga.imga as imga
 from ep.spea2 import spea2
 from ep.utils import ea_utils
-from problems.coemoa_e import problem
+from problems.ZDT6 import problem
 
 from problems.testrun import TestRun
 

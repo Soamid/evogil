@@ -6,7 +6,7 @@ import ep.hgs.hgs as hgs
 #noinspection PyPep8Naming
 import ep.nsga2.nsga2 as nsga2
 from ep.utils import ea_utils
-from problems.coemoa_a import problem
+from problems.ZDT1 import problem
 
 from problems.testrun import TestRun
 

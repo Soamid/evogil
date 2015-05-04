@@ -5,7 +5,7 @@ import unittest
 import ep.imga.imga as imga
 from ep.nsga2 import nsga2
 from ep.utils import ea_utils
-from problems.coemoa_d import problem
+from problems.ZDT4 import problem
 
 from problems.testrun import TestRun
 

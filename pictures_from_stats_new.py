@@ -5,11 +5,11 @@ import matplotlib
 
 from ep.utils import ea_utils
 import problems.ackley.problem as ackley
-import problems.coemoa_a.problem as zdt1
-import problems.coemoa_b.problem as zdt2
-import problems.coemoa_c.problem as zdt3
-import problems.coemoa_d.problem as zdt4
-import problems.coemoa_e.problem as zdt6
+import problems.ZDT1.problem as zdt1
+import problems.ZDT2.problem as zdt2
+import problems.ZDT3.problem as zdt3
+import problems.ZDT4.problem as zdt4
+import problems.ZDT6.problem as zdt6
 
 
 PLOTS_DIR = 'plots'
@@ -178,11 +178,11 @@ def gen_table(results):
 def get_algo_results(results, algo_display, algo, metric):
     return [algo_display,
             get_last(results, "ackley", algo, metric),
-            get_last(results, "coemoa_a", algo, metric),
-            get_last(results, "coemoa_b", algo, metric),
-            get_last(results, "coemoa_c", algo, metric),
-            get_last(results, "coemoa_d", algo, metric),
-            get_last(results, "coemoa_e", algo, metric)]
+            get_last(results, "ZDT1", algo, metric),
+            get_last(results, "ZDT2", algo, metric),
+            get_last(results, "ZDT3", algo, metric),
+            get_last(results, "ZDT4", algo, metric),
+            get_last(results, "ZDT6", algo, metric)]
 
 
 def mark_winner(printable_results, marker_func):
