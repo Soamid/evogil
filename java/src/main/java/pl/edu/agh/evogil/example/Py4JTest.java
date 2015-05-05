@@ -1,3 +1,5 @@
+package pl.edu.agh.evogil.example;
+
 import py4j.GatewayServer;
 
 public class Py4JTest {

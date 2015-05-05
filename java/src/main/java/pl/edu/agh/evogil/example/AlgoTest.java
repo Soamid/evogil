@@ -1,3 +1,5 @@
+package pl.edu.agh.evogil.example;
+
 import org.uma.jmetal.algorithm.multiobjective.omopso.OMOPSO;
 import org.uma.jmetal.operator.impl.mutation.NonUniformMutation;
 import org.uma.jmetal.operator.impl.mutation.UniformMutation;
