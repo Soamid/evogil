@@ -2,7 +2,7 @@ from py4j.java_gateway import JavaGateway
 import pylab
 import time
 from ep.utils.driver import Driver
-from problems.kursawe import problem as kursawe
+# from problems.kursawe import problem as kursawe
 
 class OMOPSO(Driver):
 
