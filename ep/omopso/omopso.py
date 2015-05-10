@@ -19,18 +19,22 @@ class OMOPSO(Driver):
         self.leader_archive = LeaderArchive(self.leaders_size)
 
 
+    def init_personal_best(self):
+        for p in self.__population:
+            p.best_val = copy.deepcopy(p)
+
     def steps(self, condI, budget=None):
         cost = 0
         gen_no = 0
 
         cost += self.calculate_objectives()
         self.init_leaders()
+        self.init_personal_best()
+        self.leader_archive.crowding()
 
-        i=0
+        # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
 
         for _ in condI:
-            print(i)
-            i+=1
             self.compute_speed()
             self.move()
 
@@ -39,8 +43,12 @@ class OMOPSO(Driver):
             self.mopso_mutation(progress)
 
             cost += self.calculate_objectives()
-            new_bests = self.update_personal_best()
-            self.update_leaders(new_bests)
+            self.update_leaders()
+            self.update_personal_best()
+
+            self.leader_archive.crowding()
+
+            # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
 
             if budget is not None and cost > budget:
                 break
@@ -50,34 +58,23 @@ class OMOPSO(Driver):
 
     def init_leaders(self):
         for p in self.__population:
-            self.leader_archive.add(copy.deepcopy(p))
-
-        self.leader_archive.trim()
-
-        for p in self.leader_archive:
-            self.archive.add(copy.deepcopy(p))
+            if self.leader_archive.add(copy.deepcopy(p)):
+                self.archive.add(copy.deepcopy(p))
 
 
     def update_personal_best(self):
-        updated = []
         for p in self.__population:
+            # print("new: {}, best: {}".format(p.objectives, p.best_val.objectives))
             if p.dominates(p.best_val):
-                p.best_val = p
-                updated.append(p)
-        return updated
+                # print("new best: {}".format(p.objectives))
+                p.best_val = copy.deepcopy(p)
 
 
-    def update_leaders(self, candidates):
-        leaders_update = set()
-        for p in candidates:
+    def update_leaders(self):
+        for p in self.__population:
             new_ind = copy.deepcopy(p)
             if self.leader_archive.add(new_ind):
-                leaders_update.add(new_ind)
-
-        removed = self.leader_archive.trim()
-
-        for p in filter(lambda x: x not in removed, leaders_update):
-            self.archive.add(copy.deepcopy(p))
+                self.archive.add(copy.deepcopy(p))
 
 
     def calculate_objectives(self):
@@ -102,7 +99,8 @@ class OMOPSO(Driver):
 
     def compute_speed(self):
         for p in self.__population:
-            best_global = self.crowding_selector(self.leader_archive)
+            best_global = self.crowding_selector(self.leader_archive) if len(self.leader_archive.archive) > 1 \
+                else self.leader_archive.archive[0]
 
             r1 = random.random()
             r2 = random.random()
@@ -135,7 +133,7 @@ class OMOPSO(Driver):
         self.__population = [Individual(x) for x in pop]
 
     def finish(self):
-        return [x.value for x in self.archive]
+        return [x.value for x in self.archive] if self.archive.archive else self.population
 
 
 class Mutation(object):
@@ -194,14 +192,14 @@ class CrowdingTournament:
 class Individual:
     def __init__(self, value):
         self.value = value
-        self.best_val = self
+        self.best_val = None
         self.speed = [0] * len(value)
         self.crowd_val = 0
         self.objectives = []
 
     def __deepcopy__(self, memo):
         dup = Individual(copy.deepcopy(self.value, memo))
-        dup.best_val = copy.deepcopy(self.best_val, memo) if self.best_val is not self else dup
+        dup.best_val = copy.deepcopy(self.best_val, memo)
         dup.speed = copy.deepcopy(self.speed, memo)
         dup.crowd_val = self.crowd_val
         dup.objectives = copy.deepcopy(self.objectives, memo)
@@ -210,9 +208,9 @@ class Individual:
     def dominates(self, p2, eta=0):
         at_least_one = False
         for i in range(len(self.objectives)):
-            if p2.objectives[i] / (1 + eta) < self.objectives[i]:
+            if p2.objectives[i] < self.objectives[i] / (1 + eta):
                 return False
-            elif p2.objectives[i] / (1 + eta) > self.objectives[i]:
+            elif p2.objectives[i] > self.objectives[i] / (1 + eta):
                 at_least_one = True
 
         return at_least_one
@@ -233,18 +231,17 @@ class Archive(object):
         return self.archive.__iter__()
 
     def add(self, p):
-        new_archive = []
 
         for l in self.archive:
             if l.dominates(p, self.eta):
                 return False
-            elif not p.dominates(l, self.eta):
-                new_archive.append(l)
+            elif p.dominates(l, self.eta):
+                self.archive.remove(l)
             elif l.equal_obj(p):
                 return False
 
-        self.archive = new_archive
         self.archive.append(p)
+        return True
 
 
 class LeaderArchive(Archive):
@@ -252,14 +249,16 @@ class LeaderArchive(Archive):
         super().__init__()
         self.size = size
 
-    def trim(self):
-        removed = set()
-        if len(self.archive) > self.size:
-            self.crowding()
-            self.archive.sort(key=lambda x: x.crowd_val)
-            removed.update(self.archive[self.size:])
-            self.archive = self.archive[:self.size]
-        return removed
+    def add(self, p):
+        added = super().add(p)
+        if added and len(self.archive) > self.size:
+            self.prune()
+        return added
+
+    def prune(self):
+        self.crowding()
+        worst_res = max(self.archive, key=lambda x: x.crowd_val)
+        self.archive.remove(worst_res)
 
     def crowding(self):
         for p in self.archive:
@@ -277,13 +276,10 @@ class LeaderArchive(Archive):
             self.archive[archive_len - 1].crowd_val = float('inf')
 
             for j in range(1, archive_len - 1):
-                dist = self.archive[j].objectives[i] - self.archive[j - 1].objectives[i]
-                dist /= (obj_max - obj_min)
-                self.archive[j].crowd_val += dist
+                if obj_max - obj_min > 0:
+                    dist = self.archive[j].objectives[i] - self.archive[j - 1].objectives[i]
+                    dist /= (obj_max - obj_min)
+                    self.archive[j].crowd_val += dist
+                else:
+                    self.archive[j].crowd_val = float('inf')
 
-
-if __name__ == '__main__':
-    algo = OMOPSO(utils.gen_population(80, problem.dims), problem.fitnesses, problem.dims, 0.5)
-    print(algo.population)
-    algo.steps(range(10))
-    print(algo.finish())
