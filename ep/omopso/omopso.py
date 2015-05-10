@@ -21,8 +21,8 @@ class OMOPSO(Driver):
         self.algorithm = algorithm_factory.createOMOPSO(self.problem, self.swarm_size, max_iterations, self.archive_size,
                                                         self.mutation_probability)
 
-    def steps(self, iterator):
-        max_iterations = len(iterator)
+    def steps(self, iterator, budget=None):
+        max_iterations = 84 #len(iterator)
         self.create_algorithm(max_iterations)
         self.algorithm.run()
 
