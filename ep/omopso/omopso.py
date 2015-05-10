@@ -1,3 +1,4 @@
+import copy
 import random
 
 from ep.utils import ea_utils as utils
@@ -22,15 +23,22 @@ class OMOPSO(Driver):
         cost = 0
         gen_no = 0
 
-        self.calculate_objectives()
+        cost += self.calculate_objectives()
         self.init_leaders()
 
+        i=0
+
         for _ in condI:
+            print(i)
+            i+=1
             self.compute_speed()
             self.move()
-            self.mopso_mutation(gen_no / float(len(condI)))
 
-            self.calculate_objectives()
+            # dirty hack for unknown evolution length
+            progress = cost / budget if budget else gen_no / float(len(condI))
+            self.mopso_mutation(progress)
+
+            cost += self.calculate_objectives()
             new_bests = self.update_personal_best()
             self.update_leaders(new_bests)
 
@@ -42,19 +50,19 @@ class OMOPSO(Driver):
 
     def init_leaders(self):
         for p in self.__population:
-            self.leader_archive.add(Individual(p))
+            self.leader_archive.add(copy.deepcopy(p))
 
         self.leader_archive.trim()
 
         for p in self.leader_archive:
-            self.archive.add(Individual(p))
+            self.archive.add(copy.deepcopy(p))
 
 
     def update_personal_best(self):
         updated = []
         for p in self.__population:
-            if p.dominates(Individual(p.best_val)):
-                p.best_val = p.value
+            if p.dominates(p.best_val):
+                p.best_val = p
                 updated.append(p)
         return updated
 
@@ -62,26 +70,27 @@ class OMOPSO(Driver):
     def update_leaders(self, candidates):
         leaders_update = set()
         for p in candidates:
-            new_ind = Individual(p)
+            new_ind = copy.deepcopy(p)
             if self.leader_archive.add(new_ind):
                 leaders_update.add(new_ind)
 
         removed = self.leader_archive.trim()
 
         for p in filter(lambda x: x not in removed, leaders_update):
-            self.archive.add(Individual(p))
+            self.archive.add(copy.deepcopy(p))
 
 
     def calculate_objectives(self):
         for p in self.__population:
             p.objectives = [o(p.value)
                             for o in self.fitnesses]
+        return len(self.__population)
 
 
     def move(self):
         for p in self.__population:
             for i in range(len(self.dims)):
-                new_x = p.value[i] + p.speed
+                new_x = p.value[i] + p.speed[i]
                 bounded_x = max(new_x, self.dims[i][0])
                 bounded_x = min(bounded_x, self.dims[i][1])
 
@@ -93,23 +102,23 @@ class OMOPSO(Driver):
 
     def compute_speed(self):
         for p in self.__population:
-            best_global = self.crowding_selector(self.leader_archive).value
+            best_global = self.crowding_selector(self.leader_archive)
 
             r1 = random.random()
             r2 = random.random()
-            C1 = random.randrange(1.5, 2.0)
-            C2 = random.randrange(1.5, 2.0)
-            W = random.randrange(0.1, 0.5)
+            C1 = random.uniform(1.5, 2.0)
+            C2 = random.uniform(1.5, 2.0)
+            W = random.uniform(0.1, 0.5)
 
             for j in range(len(self.dims)):
-                p.speed[j] = W * p.speed \
-                             + C1 * r1 * (p.best_val - p.value) \
-                             + C2 * r2 * (best_global.value - p.value)
+                p.speed[j] = W * p.speed[j] \
+                             + C1 * r1 * (p.best_val.value[j] - p.value[j]) \
+                             + C2 * r2 * (best_global.value[j] - p.value[j])
 
 
     def mopso_mutation(self, evolution_progress):
         pop_len = len(self.__population)
-        pop_part = pop_len / 3
+        pop_part = int(pop_len / 3)
         uniform_mutation = UniformMutation(self.mutation_probability, self.mutation_perturbation, self.dims)
         non_uniform_mutation = NonUniformMutation(evolution_progress, self.mutation_probability,
                                                   self.mutation_perturbation, self.dims)
@@ -178,24 +187,29 @@ class CrowdingTournament:
         self.tournament_size = tournament_size
 
     def __call__(self, pool):
-        sub_pool = random.sample(pool, self.tournament_size)
+        sub_pool = random.sample(pool.archive, self.tournament_size)
         return min(sub_pool, key=lambda x: x.crowd_val)
 
 
 class Individual:
-
-
     def __init__(self, value):
         self.value = value
-        self.best_val = value
+        self.best_val = self
         self.speed = [0] * len(value)
         self.crowd_val = 0
         self.objectives = []
 
+    def __deepcopy__(self, memo):
+        dup = Individual(copy.deepcopy(self.value, memo))
+        dup.best_val = copy.deepcopy(self.best_val, memo) if self.best_val is not self else dup
+        dup.speed = copy.deepcopy(self.speed, memo)
+        dup.crowd_val = self.crowd_val
+        dup.objectives = copy.deepcopy(self.objectives, memo)
+        return dup
 
     def dominates(self, p2, eta=0):
         at_least_one = False
-        for i in range(0, len(self.objectives)):
+        for i in range(len(self.objectives)):
             if p2.objectives[i] / (1 + eta) < self.objectives[i]:
                 return False
             elif p2.objectives[i] / (1 + eta) > self.objectives[i]:
