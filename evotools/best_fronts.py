@@ -1,15 +1,15 @@
-import os
 import json
 
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from algorithms.utils import ea_utils
-from pictures_from_stats_new import algos, algos_order
+from evotools import ea_utils
+from evotools.pictures import algos, algos_order
 
+from contextlib import suppress
 
-PLOTS_DIR = 'plots'
-RESULTS_DIR = 'pareto_results'
+PLOTS_DIR = Path('plots')
+RESULTS_DIR = Path('pareto_results')
 
 metrics_name_long = "distance_from_pareto"
 
@@ -56,7 +56,7 @@ def plot_results(f, best_result):
     # f.scatter(res_x, res_y, marker=markers, s=60, edgecolors=color, facecolors='none', label=name, zorder=2)
 
 
-def save_plot(ax, f):
+def save_plot(ax, f, d_problem):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
     handles, labels = ax.get_legend_handles_labels()
@@ -67,15 +67,16 @@ def save_plot(ax, f):
 
     plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
 
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    os.makedirs(os.path.join(PLOTS_DIR, RESULTS_DIR), exist_ok=True)
+    
+    path = Path(PLOTS_DIR) / RESULTS_DIR / '{}.eps'.format(d_problem.name.replace('emoa', 'moea'))
+    with suppress(FileExistsError):
+        path.parent.mkdir(parents=True)
 
-    fig_path = os.path.join(PLOTS_DIR, RESULTS_DIR, '{}.eps'.format(d_problem.name.replace('emoa', 'moea')))
-    plt.savefig(fig_path)
+    plt.savefig(str(path))
     plt.close(f)
 
 
-if __name__ == '__main__':
+def main():
 
     global_data = {}
     root = Path('jsoned')
@@ -112,5 +113,5 @@ if __name__ == '__main__':
 
             plot_results(ax, best_result)
 
-        save_plot(ax, f)
+        save_plot(ax, f, d_problem)
 

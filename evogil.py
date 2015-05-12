@@ -7,10 +7,10 @@ Usage:
   evogil.py summary
   evogil.py (stats | statistics) [options]
   evogil.py pictures [options]
+  evogil.py best_fronts [options]
 
 In future possibly we could get those commands working:
   evogil.py violin [options]
-  evogil.py best_fronts_plotter [options]
   evogil.py plotter [options]
 
 Commands:
@@ -75,6 +75,7 @@ import evotools.violin
 import evotools.run_parallel
 import evotools.benchmark_results
 import evotools.pictures
+import evotools.best_fronts
 
 
 if __name__ == '__main__':
@@ -86,6 +87,8 @@ if __name__ == '__main__':
         evotools.stats.statistics(argv)
     elif argv['pictures']:
         evotools.pictures.pictures_from_stats(argv)
+    elif argv['best_fronts']:
+        evotools.best_fronts.main()
     # elif argv['violin']:
     #     evotools.violin.violin(argv)
     elif argv['summary']:
