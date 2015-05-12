@@ -1,9 +1,7 @@
 import collections
 import os
 
-import matplotlib
-
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 import problems.ackley.problem as ackley
 import problems.ZDT1.problem as zdt1
 import problems.ZDT2.problem as zdt2
@@ -11,9 +9,12 @@ import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 
+from contextlib import suppress
 
-PLOTS_DIR = 'plots'
+from pathlib import Path
+PLOTS_DIR = Path('plots')
 
+import matplotlib
 matplotlib.rcParams.update({'font.size': 8})
 import matplotlib.pyplot as plt
 
@@ -79,7 +80,10 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
     frame.axes.get_yaxis().set_ticklabels([])
 
     if save:
-        plt.savefig(os.path.join(PLOTS_DIR, 'pareto_fronts', name + '.pdf'))
+        path = PLOTS_DIR / 'pareto_fronts' / (name + '.pdf')
+        with suppress(FileExistsError):
+            path.parent.mkdir(parents=True)
+        plt.savefig(str(path))
         plt.close(f)
 
     return f
@@ -245,7 +249,10 @@ def plot_legend(series):
     figlegend.legend(series, [s.get_label() for s in series], 'center', prop={'size': 10},
                      handlelength=8, borderpad=1.2, labelspacing=1, frameon=False)
 
-    figlegend.savefig(os.path.join(PLOTS_DIR, 'plots_bnw', 'legend.eps'))
+    path = PLOTS_DIR / 'plots_bnw' / 'legend.eps'
+    with suppress(FileExistsError):
+        path.parent.mkdir(parents=True)
+    figlegend.savefig(str(path))
 
 
 def plot_results(results):
@@ -316,8 +323,10 @@ def plot_results(results):
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
-        path = os.path.join(PLOTS_DIR, 'plots_bnw', '{}_{}.eps'.format(problem_moea, metric_short))
-        plt.savefig(path)
+        path = PLOTS_DIR / 'plots_bnw' / '{}_{}.eps'.format(problem_moea, metric_short)
+        with suppress(FileExistsError):
+            path.parent.mkdir(parents=True)
+        plt.savefig(str(path))
 
 
 def pictures_from_stats(argv):

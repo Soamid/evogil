@@ -3,27 +3,29 @@
 
 Usage:
   evogil.py -h | --help 
-  evogil.py (stats | statistics) [options]
   evogil.py run [options]
   evogil.py summary
+  evogil.py (stats | statistics) [options]
+  evogil.py pictures [options]
 
 In future possibly we could get those commands working:
-  violin [options]
-  pictures [options]
-  best_fronts_plotter [options]
-  plotter [options]
+  evogil.py violin [options]
+  evogil.py best_fronts_plotter [options]
+  evogil.py plotter [options]
 
 Commands:
-  violin
-    Plots violin plots?
   run
     Performs benchmarks.
-  results
-    Yields some info about performed benchmarks.
+  summary
+    Returns number of results for each (algorithm,problem,budget)
   stats
     Generates statistics from benchmarks' results.
   pictures
     Some pictures?
+  violin
+    Plots violin plots?
+  results
+    Yields some info about performed benchmarks.
 
 Options:
   -a <algo_name>, --algo <algo_name>       
@@ -82,10 +84,10 @@ if __name__ == '__main__':
         evotools.run_parallel.run_parallel(argv)
     elif argv['statistics'] or argv['stats']:
         evotools.stats.statistics(argv)
-    elif argv['violin']:
-        evotools.violin.violin(argv)
     elif argv['pictures']:
         evotools.pictures.pictures_from_stats(argv)
+    # elif argv['violin']:
+    #     evotools.violin.violin(argv)
     elif argv['summary']:
         evotools.benchmark_results.analyse_results()
 
