@@ -18,7 +18,7 @@ class IBEA(driver.Driver):
         self.mating_size_c = mating_population_size
         self.population = population
 
-    def steps(self, generator, budget=None):
+    def steps(self):
         def assign_real_objectives(indivs):
             for ind in indivs:
                 ind.real_objectives = [ f(ind.v)

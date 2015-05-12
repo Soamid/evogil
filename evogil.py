@@ -10,14 +10,11 @@ Usage:
   evogil.py best_fronts [options]
   evogil.py violin [options]
 
-In future possibly we could get those commands working:
-  evogil.py plotter [options]
-
 Commands:
   run
     Performs benchmarks.
   summary
-    Returns number of results for each (algorithm,problem,budget)
+    Returns number of results for each tuple: algorithm, problem, budget.
   stats
     Generates statistics from benchmarks' results.
   pictures
@@ -34,6 +31,10 @@ Options:
   -p <problem_name>, --problem <problem_name>
         Only for selected problem(s) separated by comma. List available
         below in "Problems" section.
+  -g <budget>, --budget <budget>
+        Only for selected budget(s) separated by comma. List of integers.
+        There are some defaults.
+        [default: None]
   -b <bootstrap-iter>, --bootstrap <bootstrap-iter>
         Bootstrap iterations.
         [default: 10000]

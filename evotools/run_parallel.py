@@ -1,10 +1,15 @@
 # base 
 import multiprocessing
 import time
-import unittest
+# import unittest
 import sys
 import collections
 import operator
+
+from importlib import import_module
+from contextlib import suppress
+
+from evotools.ea_utils import gen_population
 
 
 def run_parallel(args):
@@ -78,38 +83,44 @@ def run_parallel(args):
             ]
 
     if args['--algo']:
-        algos = args['--algo'].split(',')
+        algos = args['--algo'].lower().split(',')
         order = [ (problem, algo)
                   for problem, algo
                   in order
-                  if algo in algos
+                  if algo.lower() in algos
                 ]
 
     if args['--problem']:
-        problems = args['--problem'].split(',')
+        problems = args['--problem'].lower().split(',')
         order = [ (problem, algo)
                   for problem, algo
                   in order
-                  if problem in problems
+                  if problem.lower() in problems
                 ]
 
-    order = order * int(args['-N'])
-
-    print("Running following tests:")
+    print("Selected following tests:")
     for problem, algo in order:
         print("  {problem:12} :: {algo:12}".format(**locals()))
+
+    order = [ test
+              for test in order
+              for i in range(int(args['-N']))
+            ]
+    order = [('ackley',   'ibea')] # TODO [kgdk]: REMOVE ME
+
+
     p = multiprocessing.Pool(int(args['-j']))
 
     wall_time = -time.perf_counter()
-    results = p.map(run_parallel__f, order)
+    results = p.map(worker, order)
     wall_time += time.perf_counter()
 
     proc_times = sum(results)
     speedup = proc_times / wall_time
     
-    print("wall time:           {wall_time:7.3f} s\n"\
-          "CPU+user time:       {proc_times:7.3f}s\n"\
-          "est. speedup calc.:  {speedup:7.3f}x"
+    print("wall time:     {wall_time:7.3f} s\n"\
+          "CPU+user time: {proc_times:7.3f}s\n"\
+          "est. speedup:  {speedup:7.3f}x"
           .format(**locals()))
 
     summary = collections.defaultdict(float)
@@ -126,12 +137,89 @@ def run_parallel(args):
         avg_time = timesum / float(args['-N'])
         print("  ({prob_show:16}, {alg_show:16}),  # {avg_time:7.3f}s".format(**locals()))
 
-def run_parallel__f(args):
-    problem, algo = args
-    module_name = '.'.join(['problems', problem, algo, 'run'])
-    
+
+def worker(args):
+    #problem, algo = args # TODO [kgdk]
+    # module_name = '.'.join(['problems', problem, algo, 'run'])
+    algo = 'SGA'
+    problem = 'ackley'
+    budget = 500
+
+    problem_mod = '.'.join(['problems', problem, 'problem'])
+    problem_mod = import_module(problem_mod)
+
+    algo_mod = '.'.join(['algorithms', algo, algo])
+    algo_mod = import_module(algo_mod)
+
+    algo_class = getattr(algo_mod, algo)
+
+
+    # empty config
+    algo_config = {
+        "__metaconfig__populationsize": 10,
+    }
+    # take base config
+    with suppress(KeyError):
+        algo_config.update(options_base[algo])
+    # set some common params
+    algo_config.update({
+        "population": gen_population(40, problem_mod.dims),
+        "dims": problem_mod.dims,
+        "fitnesses": problem_mod.fitnesses
+    })
+    # custom, per problem params
+    with suppress(KeyError):
+        globals()["init_" + problem](algo_config, problem_mod)
+    # custom, per algorithm params
+    with suppress(KeyError):
+        globals()["init_" + algo](algo_config, problem_mod)
+    # custom, per problem+algorithm params
+    with suppress(KeyError):
+        globals()["init_" + algo + "_" + problem](algo_config, problem_mod)
+    # drop trashy arguments
+    algo_config = { k: v
+                    for k, v
+                    in algo_config.items()
+                    if not k.startswith('__metaconfig__')
+                  }
+
+    print("THE CONFIG")
+    print(algo_config)
+
+    gen = algo_class(**algo_config).steps()
+    total_cost, result = 0, None
+
     proc_time = -time.process_time()
-    unittest.main(module=module_name, exit=False, argv=[sys.argv[0]])
+    while total_cost <= budget:
+        cost, result = next(gen)
+        total_cost += cost
+        print("RESULT:", cost, total_cost, result)
     proc_time += time.process_time()
     
     return proc_time
+
+
+options_base = {
+    "IBEA": {
+        "__metaconfig__populationsize": 40,
+        "kappa":0.05,
+        "mating_population_size":0.5
+    },
+    "SGA": {
+        "mutation_variance": 1.0,
+        "crossover_variance": 1.0
+    }
+
+}
+
+
+def init_IBEA(algo_config, problem_mod):
+    var = [ abs(maxa-mina)/100
+            for (mina, maxa)
+            in problem_mod.dims
+          ]
+    algo_config.update({
+        "mutation_variance": var,
+        "crossover_variance": var
+    })
+

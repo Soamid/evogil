@@ -89,7 +89,7 @@ class SGA(algorithms.utils.driver.Driver):
             self.population = [self.mutate(self.crossover([self.select(self._population),
                                                            self.select(self._population)]))
                                for _ in self._population]
-            cost = None
+            cost = 100
             yield cost, self.population
 
 
