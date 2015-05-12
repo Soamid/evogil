@@ -14,6 +14,9 @@ from contextlib import suppress
 from pathlib import Path
 PLOTS_DIR = Path('plots')
 
+import evotools.benchmark_results
+import evotools.stats
+
 import matplotlib
 matplotlib.rcParams.update({'font.size': 8})
 import matplotlib.pyplot as plt
@@ -87,45 +90,6 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
         plt.close(f)
 
     return f
-
-
-def parse_stats(stats_file):
-    stats_lines = []
-    with open(stats_file, encoding="utf8") as f:
-        for line in f.readlines():
-            stats_lines.append(line)
-
-    results = collections.defaultdict(list)
-
-    algo = None
-    budget = None
-    metric = None
-    planned = None
-    for line in stats_lines:
-        if line[0] == '[' or line[0] == '=' or line[0] == '#' or line[0] == '>':
-            continue
-        parts = [x.strip() for x in line.split("::")]
-        if parts[0] == '':
-            continue
-        if not parts[4] == '':
-            planned = int(parts[4])
-        problem = parts[0]
-        if not parts[1] == '':
-            algo = parts[1]
-        if not parts[5] == '':
-            metric = parts[5]
-        if metric == 'dst from pareto':
-            metric = 'dst'
-        if planned == 0:
-            continue
-        key = (problem, algo, metric)
-        score = [float(x) for x in parts[7].split('≤')][1]
-        score_err = float(parts[8])
-        budget = [float(x) for x in parts[15].split('≤')][1]
-        budget_err = float(parts[16])
-        results[key].append((budget, budget_err, score, score_err))
-
-    return results
 
 
 def tex_align_floats(*xs):
@@ -331,6 +295,29 @@ def plot_results(results):
 
 def pictures_from_stats(argv):
     # plot_pareto_fronts()
-    stats = parse_stats("stats.txt")
-    # gen_table(stats)
-    plot_results(stats)
+    
+    results = collections.defaultdict(list)
+    for subres in evotools.benchmark_results.iterate_results():
+        metric = subres['metrics_name']
+        if metric == 'dst from pareto':
+            metric = 'dst'
+
+        data = subres['data']
+        cost = subres['cost']
+
+        bootstrap_size = 10000
+        low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd, stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers, stdev_nooutliers_diff, pr_dispersion, dispersion_warn = evotools.stats.yield_analysis(data, bootstrap_size)
+        cost_low_inn_fence, cost_upp_inn_fence, cost_low_out_fence, cost_upp_out_fence, cost_stdev, cost_mean, cost_lower, cost_upper, cost_goodbench, cost_btstrpd, cost_stdev, cost_mild_outliers, cost_extr_outliers, cost_metrics_nooutliers, cost_mean_nooutliers_diff, cost_stdev_nooutliers, cost_stdev_nooutliers_diff, cost_pr_dispersion, cost_dispersion_warn = evotools.stats.yield_analysis(cost, bootstrap_size)
+
+        budget = cost_btstrpd["metrics"]
+        budget_err = cost_stdev
+
+        score = btstrpd["metrics"]
+        score_err = stdev
+
+        key = (subres['d_problem'].name, subres['d_algorithm'].name, metric)
+        value = (budget, budget_err, score, score_err)
+
+        results[key].append(value)
+
+    plot_results(results)
