@@ -13,103 +13,103 @@ from evotools.ea_utils import gen_population
 from evotools import run_config
 
 from functools import partial
+import traceback
 
 
 def run_parallel(args):
     order = [ 
-              # ('ZDT6', 'hgs_nsga2' ),
-              # ('ZDT4', 'hgs_nsga2' ),
-              # ('ZDT4', 'imga_nsga2'),
-              # ('ZDT3', 'hgs_nsga2' ),
-              # ('ZDT1', 'hgs_nsga2' ),
-              # ('ZDT2', 'hgs_nsga2' ),
-              # ('ZDT4', 'nsga2'     ),
-              # ('ZDT6', 'nsga2'     ),
-              # ('kursawe',  'hgs_nsga2' ),
-              # ('ZDT3', 'nsga2'     ),
-              # ('ZDT1', 'nsga2'     ),
-              # ('ZDT2', 'nsga2'     ),
-              # ('ZDT6', 'imga_nsga2'),
-              # ('ZDT3', 'imga_nsga2'),
-              # ('ZDT2', 'imga_nsga2'),
-              # ('ZDT1', 'imga_nsga2'),
-              ('ZDT2', 'hgs_spea2' ),
-              ('ZDT1', 'hgs_spea2' ),
-              # ('kursawe',  'imga_nsga2'),
-              # ('kursawe',  'nsga2'     ),
-              ('ZDT4', 'hgs_spea2' ),
-              ('ZDT4', 'ibea'      ),
-              ('ZDT4', 'imga_ibea' ),
-              ('kursawe',  'ibea'      ),
-              ('kursawe',  'imga_ibea' ),
-              ('kursawe',  'spea2'     ),
-              ('kursawe',  'imga_spea2'),
-              ('ZDT6', 'ibea'      ),
-              ('ZDT6', 'imga_ibea' ),
-              ('kursawe',  'hgs_spea2' ),
-              ('ZDT3', 'hgs_spea2' ),
-              ('ZDT3', 'ibea'      ),
-              ('ZDT3', 'imga_ibea' ),
-              ('ZDT4', 'imga_spea2'),
-              ('ZDT2', 'imga_ibea' ),
-              ('ZDT2', 'ibea'      ),
-              ('ZDT1', 'ibea'      ),
-              ('kursawe',  'hgs_ibea'  ),
-              ('ZDT1', 'imga_ibea' ),
-              ('ZDT4', 'hgs_ibea'  ),
-              ('ZDT6', 'hgs_spea2' ),
-              ('ZDT3', 'hgs_ibea'  ),
-              ('ZDT1', 'hgs_ibea'  ),
-              ('ZDT2', 'hgs_ibea'  ),
-              ('ZDT1', 'imga_spea2'),
-              ('ZDT2', 'imga_spea2'),
-              ('ZDT3', 'imga_spea2'),
-              ('ZDT6', 'imga_spea2'),
-              # ('ackley',   'imga_nsga2'),
-              # ('ackley',   'hgs_nsga2' ),
-              ('ZDT4', 'spea2'     ),
-              ('ZDT1', 'spea2'     ),
-              ('ZDT6', 'spea2'     ),
-              ('ZDT2', 'spea2'     ),
-              ('ZDT3', 'spea2'     ),
-              # ('ackley',   'nsga2'     ),
-              ('ZDT6', 'hgs_ibea'  ),
-              ('ackley',   'imga_spea2'),
-              ('ackley',   'hgs_spea2' ),
-              ('ackley',   'spea2'     ),
-              ('ackley',   'imga_ibea' ),
-              ('ackley',   'ibea'      ),
-              ('ackley',   'hgs_ibea'  ),
-              ('parabol',  'hgs_spea2' ),
-              ('parabol',  'hgs_ibea'  )
-              # ('parabol',  'hgs_nsga2' )
+              ('ZDT6',     'HGS+NSGAII' , None),
+              ('ZDT4',     'HGS+NSGAII' , None),
+              ('ZDT4',     'IMGA+NSGAII', None),
+              ('ZDT3',     'HGS+NSGAII' , None),
+              ('ZDT1',     'HGS+NSGAII' , None),
+              ('ZDT2',     'HGS+NSGAII' , None),
+              ('ZDT4',     'NSGAII'     , None),
+              ('ZDT6',     'NSGAII'     , None),
+              ('kursawe',  'HGS+NSGAII' , None),
+              ('ZDT3',     'NSGAII'     , None),
+              ('ZDT1',     'NSGAII'     , None),
+              ('ZDT2',     'NSGAII'     , None),
+              ('ZDT6',     'IMGA+NSGAII', None),
+              ('ZDT3',     'IMGA+NSGAII', None),
+              ('ZDT2',     'IMGA+NSGAII', None),
+              ('ZDT1',     'IMGA+NSGAII', None),
+              ('ZDT2',     'HGS+SPEA2'  , None),
+              ('ZDT1',     'HGS+SPEA2'  , None),
+              ('kursawe',  'IMGA+NSGAII', None),
+              ('kursawe',  'NSGAII'     , None),
+              ('ZDT4',     'HGS+SPEA2'  , None),
+              ('ZDT4',     'IBEA'       , None),
+              ('ZDT4',     'IMGA+IBEA'  , None),
+              ('kursawe',  'IBEA'       , None),
+              ('kursawe',  'IMGA+IBEA'  , None),
+              ('kursawe',  'SPEA2'      , None),
+              ('kursawe',  'IMGA+SPEA2' , None),
+              ('ZDT6',     'IBEA'       , None),
+              ('ZDT6',     'IMGA+IBEA'  , None),
+              ('kursawe',  'HGS+SPEA2'  , None),
+              ('ZDT3',     'HGS+SPEA2'  , None),
+              ('ZDT3',     'IBEA'       , None),
+              ('ZDT3',     'IMGA+IBEA'  , None),
+              ('ZDT4',     'IMGA+SPEA2' , None),
+              ('ZDT2',     'IMGA+IBEA'  , None),
+              ('ZDT2',     'IBEA'       , None),
+              ('ZDT1',     'IBEA'       , None),
+              ('kursawe',  'HGS+IBEA'   , None),
+              ('ZDT1',     'IMGA+IBEA'  , None),
+              ('ZDT4',     'HGS+IBEA'   , None),
+              ('ZDT6',     'HGS+SPEA2'  , None),
+              ('ZDT3',     'HGS+IBEA'   , None),
+              ('ZDT1',     'HGS+IBEA'   , None),
+              ('ZDT2',     'HGS+IBEA'   , None),
+              ('ZDT1',     'IMGA+SPEA2' , None),
+              ('ZDT2',     'IMGA+SPEA2' , None),
+              ('ZDT3',     'IMGA+SPEA2' , None),
+              ('ZDT6',     'IMGA+SPEA2' , None),
+              ('ackley',   'IMGA+NSGAII', None),
+              ('ackley',   'HGS+NSGAII' , None),
+              ('ZDT4',     'SPEA2'      , None),
+              ('ZDT1',     'SPEA2'      , None),
+              ('ZDT6',     'SPEA2'      , None),
+              ('ZDT2',     'SPEA2'      , None),
+              ('ZDT3',     'SPEA2'      , None),
+              ('ackley',   'NSGAII'     , None),
+              ('ZDT6',     'HGS+IBEA'   , None),
+              ('ackley',   'IMGA+SPEA2' , None),
+              ('ackley',   'HGS+SPEA2'  , None),
+              ('ackley',   'SPEA2'      , None),
+              ('ackley',   'IMGA+IBEA'  , None),
+              ('ackley',   'IBEA'       , None),
+              ('ackley',   'HGS+IBEA'   , None),
+              ('parabol',  'HGS+SPEA2'  , None),
+              ('parabol',  'HGS+IBEA'   , None),
+              ('parabol',  'HGS+NSGAII' , None)
             ]
 
     if args['--algo']:
         algos = args['--algo'].lower().split(',')
-        order = [ (problem, algo)
-                  for problem, algo
+        order = [ (problem, algo, budget)
+                  for problem, algo, budget
                   in order
                   if algo.lower() in algos
                 ]
 
     if args['--problem']:
         problems = args['--problem'].lower().split(',')
-        order = [ (problem, algo)
-                  for problem, algo
+        order = [ (problem, algo, budget)
+                  for problem, algo, budget
                   in order
                   if problem.lower() in problems
                 ]
 
     print("Selected following tests:")
-    for problem, algo in order:
+    for problem, algo, budget in order:
         print("  {problem:12} :: {algo:12}".format(**locals()))
 
     order = [ test
               for test in order
               for i in range(int(args['-N']))
             ]
-    order = [('ackley',   'ibea')] # TODO [kgdk]: REMOVE ME
 
 
     p = multiprocessing.Pool(int(args['-j']))
@@ -142,31 +142,36 @@ def run_parallel(args):
 
 
 def worker(args):
-    algo = 'IBEA'
-    problem = 'ackley'
-    budget = 500
+    problem, algo, budgets = args
+
+    if not budgets:
+        budgets = run_config.metaconfig_budgets
 
     drivers = algo.split('+')
 
-    final_driver = None
-    for driver_pos, driver in list(enumerate(drivers))[::-1]:
-        final_driver = prepare(driver,
-                               problem,
-                               final_driver,
-                               drivers, driver_pos
-                              )
+    try:
+        final_driver = None
+        for driver_pos, driver in list(enumerate(drivers))[::-1]:
+            final_driver = prepare(driver,
+                                   problem,
+                                   final_driver,
+                                   drivers, driver_pos
+                                  )
+        
+        gen = final_driver().steps()
 
-    gen = final_driver().steps()
+        total_cost, result = 0, None
+        proc_time = -time.process_time()
+        # while total_cost <= budget:
+        #     cost, result = next(gen)
+        #     total_cost += cost
+        #     print("RESULT:", cost, total_cost, result)
+        proc_time += time.process_time()
+        
+        return proc_time
+    except Exception as e:
+        print(traceback.format_exc())
 
-    total_cost, result = 0, None
-    proc_time = -time.process_time()
-    # while total_cost <= budget:
-    #     cost, result = next(gen)
-    #     total_cost += cost
-    #     print("RESULT:", cost, total_cost, result)
-    proc_time += time.process_time()
-    
-    return proc_time
 
 def prepare(algo,
             problem,
@@ -184,8 +189,7 @@ def prepare(algo,
 
     # START WITH META-CONFIG
     config = {
-        "__metaconfig__populationsize": run_config.metaconfig_populationsize,
-        "__metaconfig__budgets": run_config.metaconfig_budgets 
+        "__metaconfig__populationsize": run_config.metaconfig_populationsize
     }
 
     ################################################################################
@@ -364,10 +368,6 @@ def prepare(algo,
         print(descr, config["__metaconfig__populationsize"])
 
     ################################################################################
-    # GET BUDGET!
-    budgets = config["__metaconfig__budgets"]
-
-    ################################################################################
     # DROPPING TRASH
     config = { k: v
                     for k, v
@@ -380,7 +380,6 @@ def prepare(algo,
         if k in ["dims", "population", "fitnesses"]:
             continue
         print("    {:25}: {}".format(k, v))
-    print(    "    {:25}: {}".format("BUDGETS", budgets))
 
     try:
         algo_class(**config)
