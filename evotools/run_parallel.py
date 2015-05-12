@@ -185,6 +185,7 @@ def prepare(algo,
     # START WITH META-CONFIG
     algo_config = {
         "__metaconfig__populationsize": 10,
+        "__metaconfig__budgets": [100, 200, 300, 400, 500]
     }
 
     ################################################################################
@@ -286,7 +287,12 @@ def prepare(algo,
                                          problem_mod.dims
                                         )
         })
-        print(descr)
+        print(descr, algo_config["__metaconfig__populationsize"])
+
+    ################################################################################
+    # GET BUDGET!
+    budgets = algo_config["__metaconfig__budgets"]
+    print("BUDGETS:", budgets)
 
     ################################################################################
     # DROPPING TRASH
