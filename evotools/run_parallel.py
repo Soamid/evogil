@@ -10,6 +10,7 @@ from importlib import import_module
 from contextlib import suppress
 
 from evotools.ea_utils import gen_population
+from evotools import run_config
 
 
 def run_parallel(args):
@@ -141,7 +142,7 @@ def run_parallel(args):
 def worker(args):
     #problem, algo = args # TODO [kgdk]
     # module_name = '.'.join(['problems', problem, algo, 'run'])
-    algo = 'SGA'
+    algo = 'IBEA'
     problem = 'ackley'
     budget = 500
 
@@ -158,24 +159,30 @@ def worker(args):
     algo_config = {
         "__metaconfig__populationsize": 10,
     }
+
     # take base config
     with suppress(KeyError):
-        algo_config.update(options_base[algo])
+        algo_config.update(run_config.options_base[algo])
+    
     # set some common params
     algo_config.update({
         "population": gen_population(40, problem_mod.dims),
         "dims": problem_mod.dims,
         "fitnesses": problem_mod.fitnesses
     })
+    
     # custom, per problem params
-    with suppress(KeyError):
-        globals()["init_" + problem](algo_config, problem_mod)
+    with suppress(AttributeError):
+        getattr(run_config, "init_" + problem)(algo_config, problem_mod)
+    
     # custom, per algorithm params
-    with suppress(KeyError):
-        globals()["init_" + algo](algo_config, problem_mod)
+    with suppress(AttributeError):
+        getattr(run_config, "init_" + algo)(algo_config, problem_mod)
+    
     # custom, per problem+algorithm params
-    with suppress(KeyError):
-        globals()["init_" + algo + "_" + problem](algo_config, problem_mod)
+    with suppress(AttributeError):
+        getattr(run_config, "init_" + algo + "_" + problem)(algo_config, problem_mod)
+    
     # drop trashy arguments
     algo_config = { k: v
                     for k, v
@@ -197,29 +204,4 @@ def worker(args):
     proc_time += time.process_time()
     
     return proc_time
-
-
-options_base = {
-    "IBEA": {
-        "__metaconfig__populationsize": 40,
-        "kappa":0.05,
-        "mating_population_size":0.5
-    },
-    "SGA": {
-        "mutation_variance": 1.0,
-        "crossover_variance": 1.0
-    }
-
-}
-
-
-def init_IBEA(algo_config, problem_mod):
-    var = [ abs(maxa-mina)/100
-            for (mina, maxa)
-            in problem_mod.dims
-          ]
-    algo_config.update({
-        "mutation_variance": var,
-        "crossover_variance": var
-    })
 
