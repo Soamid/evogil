@@ -2,8 +2,8 @@ import unittest
 
 #noinspection PyPep8Naming
 import itertools
-import algorithms.SPEA2.SPEA2 as spea2
-from algorithms.utils import ea_utils
+import algorithms.SPEA2 as SPEA2
+from evotools import ea_utils
 from problems.kursawe import problem
 
 from problems.testrun import TestRun
@@ -30,7 +30,7 @@ class TestRunSPEA2(TestRun):
     def _run_test(self, var, popsize=100, budget=None, steps_gen=range(20)):
         init_population = ea_utils.gen_population(popsize, problem.dims)
 
-        self.alg = spea2.SPEA2(dims=problem.dims,
+        self.alg = SPEA2.SPEA2(dims=problem.dims,
                                population=init_population,
                                fitnesses=problem.fitnesses,
                                mutation_variance=var,

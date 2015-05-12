@@ -4,7 +4,8 @@ import random
 import math
 
 from algorithms.utils.driver import Driver
-from algorithms.utils.ea_utils import euclid_distance, gen_population, paretofront_layers
+from evotools.metrics import euclid_distance
+from evotools.ea_utils import gen_population, paretofront_layers
 
 
 class HGS(Driver):
@@ -286,8 +287,7 @@ class HGS(Driver):
                                                                              aep=self.metaepochs_ran))
                     break
 
-        def branch_reduction(s
-            yield ielf):
+        def branch_reduction(self):
             if HGS.global_branch_compare:
                 comparab_sprouts = list(self.outer.get_nodes(include_finished=True))
             else:

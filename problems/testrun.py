@@ -9,7 +9,9 @@ import itertools
 import time
 import unittest
 
-from algorithms.utils import ea_utils
+from evotools import ea_utils
+from evotools.metrics import distance_from_pareto, distribution, extent
+from evotools.serialization import get_current_time
 
 
 #noinspection PyPep8Naming
@@ -26,15 +28,15 @@ class TestRun(TestCase):
     def distance_from_pareto_metrics(self, *args, **kwargs):
         solution = self.result
         pareto_front = self.problem_mod.pareto_front
-        return ea_utils.distance_from_pareto(solution, pareto_front)
+        return distance_from_pareto(solution, pareto_front)
 
     def distribution_metrics(self, sigma=0.1, *args, **kwargs):
         solution = self.result
-        return ea_utils.distribution(solution, sigma)
+        return distribution(solution, sigma)
 
     def extent_metrics(self, *args, **kwargs):
         solution = self.result
-        return ea_utils.extent(solution)
+        return extent(solution)
 
     metrics = extent_metrics
 
@@ -68,7 +70,7 @@ class TestRun(TestCase):
             filename = "{dir}/{metrics}_{time}_{random}.json".format(
                 dir=dir_path,
                 metrics=metric_name,
-                time=ea_utils.get_current_time(),
+                time=get_current_time(),
                 random=random.randint(100000,999999))
 
             with open(filename, "w") as f:
@@ -197,9 +199,16 @@ class TestRun(TestCase):
 
     def run_alg(self, budget, problem, steps_gen=itertools.count(), **kwargs):
         self.alg.budget = budget or 0
-        self.cost = self.alg.steps(steps_gen, budget)
+
+        result, cost = None, 0
+        gen = self.alg.steps()
+        while cost <= self.alg.budget:
+            cost, result = next(gen)
+
+        self.cost = cost
+
         self.problem_mod = problem
-        self.result = [[fit(x) for fit in problem.fitnesses] for x in self.alg.finish()]
+        self.result = [[fit(x) for fit in problem.fitnesses] for x in result]
         def run_metric(metric):
             passed_args = {
                             k[len(metric)+1:]:v

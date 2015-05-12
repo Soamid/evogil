@@ -5,7 +5,7 @@ import unittest
 import algorithms.HGS.HGS as hgs
 #noinspection PyPep8Naming
 import algorithms.NSGAII.NSGAII as nsga2
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.ackley import problem
 
 from problems.testrun import TestRun
@@ -19,7 +19,7 @@ from problems.testrun import TestRun
 
 
 #noinspection PyPep8Naming
-class TestRunHGSwithNSGA2(TestRun):
+class DisabledRunHGSwithNSGA2(): #TestRun):
     alg_name = "hgs_nsga2"
 
     @TestRun.skipByName()
@@ -39,8 +39,7 @@ class TestRunHGSwithNSGA2(TestRun):
                                     brnch_comps=[0.05, 0.25, 0.01],
                                     metaepoch_len=1,
                                     max_children=2,
-                                    driver=functools.partial(nsga2.NSGA2, mating_population_size=0.5),
-                                    stop_conditions=[])
+                                    driver=functools.partial(nsga2.NSGAII, mating_population_size=0.5))
         self.run_alg(budget, problem)
 
 

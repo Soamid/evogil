@@ -3,8 +3,8 @@ import unittest
 #noinspection PyPep8Naming
 import algorithms.HGS.HGS as hgs
 #noinspection PyPep8Naming
-import algorithms.SPEA2.SPEA2 as spea2
-from algorithms.utils import ea_utils
+import algorithms.SPEA2 as SPEA2
+from evotools import ea_utils
 from problems.ackley import problem
 
 from problems.testrun import TestRun
@@ -38,8 +38,7 @@ class TestRunHGSwithSPEA2(TestRun):
                                     brnch_comps=[0.05, 0.25, 0.01],
                                     metaepoch_len=1,
                                     max_children=2,
-                                    driver=spea2.SPEA2,
-                                    stop_conditions=[])
+                                    driver=SPEA2.SPEA2)
         self.run_alg(budget, problem)
 
 

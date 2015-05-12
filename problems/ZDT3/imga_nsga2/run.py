@@ -4,7 +4,7 @@ import unittest
 #noinspection PyPep8Naming
 import algorithms.IMGA.IMGA as imga
 from algorithms.nsga2 import nsga2
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.ZDT3 import problem
 
 from problems.testrun import TestRun
@@ -17,7 +17,7 @@ from problems.testrun import TestRun
 #
 
 
-class TestRunIMGAWithNSGA2(TestRun):
+class DisabledRunIMGAWithNSGA2(): #TestRun):
     alg_name = "imga_nsga2"
 
     @TestRun.skipByName()
@@ -36,7 +36,7 @@ class TestRunIMGAWithNSGA2(TestRun):
                              islands_number=3,
                              migrants_number=5,
                              epoch_length=5,
-                             driver=functools.partial(nsga2.NSGA2, mating_population_size=0.5)
+                             driver=functools.partial(nsga2.NSGAII, mating_population_size=0.5)
         )
         self.run_alg(budget, problem)
 

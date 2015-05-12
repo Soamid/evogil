@@ -10,7 +10,7 @@ import matplotlib.mlab as ml
 
 import benchmarks
 
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from algorithms.HGS.HGS import HGS
 from algorithms.SGA.SGA import SGA
 

@@ -7,7 +7,7 @@ import sys
 from algorithms.utils import driver
 
 
-class NSGA2(driver.Driver):
+class NSGAII(driver.Driver):
     def __init__(self,
                  population,
                  dims,

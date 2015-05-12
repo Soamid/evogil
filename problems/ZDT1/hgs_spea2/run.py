@@ -3,8 +3,8 @@ import unittest
 #noinspection PyPep8Naming
 import algorithms.HGS.HGS as hgs
 #noinspection PyPep8Naming
-import algorithms.SPEA2.SPEA2 as spea2
-from algorithms.utils import ea_utils
+import algorithms.SPEA2 as SPEA2
+from evotools import ea_utils
 from problems.ZDT1 import problem
 
 from problems.testrun import TestRun
@@ -21,7 +21,7 @@ class TestRunHGSwithSPEA2(TestRun):
                        gather_function=TestRun.gather_function)
     def test_final(self, budget=None):
         self.alg = hgs.HGS.gen_finaltest(problem,
-                                         spea2.SPEA2)
+                                         SPEA2.SPEA2)
         self.run_alg(budget, problem)
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import unittest
 
 #noinspection PyPep8Naming
 import algorithms.IBEA.IBEA as ibea
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.kursawe import problem
 
 from problems.testrun import TestRun
@@ -25,7 +25,7 @@ class TestRunIBEA(TestRun):
         init_population = ea_utils.gen_population(100, problem.dims)
         var = [abs(maxa-mina)/100
                for (mina, maxa) in problem.dims]
-        self.alg = ibea.IBEA(population=init_population,
+        self.alg = IBEA.IBEA(population=init_population,
                              dims=problem.dims,
                              fitnesses=problem.fitnesses,
                              mutation_variance=var,

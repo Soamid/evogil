@@ -1,8 +1,8 @@
 import unittest
 
 #noinspection PyPep8Naming
-import algorithms.SPEA2.SPEA2 as spea2
-from algorithms.utils import ea_utils
+import algorithms.SPEA2 as SPEA2
+from evotools import ea_utils
 from problems.ZDT6 import problem
 
 from problems.testrun import TestRun
@@ -31,7 +31,7 @@ class TestRunSPEA2(TestRun):
         var = [abs(maxa - mina) / var_mult
                for (mina, maxa) in problem.dims]
 
-        self.alg = spea2.SPEA2(dims=problem.dims,
+        self.alg = SPEA2.SPEA2(dims=problem.dims,
                                population=init_population,
                                fitnesses=problem.fitnesses,
                                mutation_variance=var,

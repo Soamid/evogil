@@ -1,7 +1,7 @@
 # coding=utf-8
 import numpy
 import random
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 
 
 class Driver:

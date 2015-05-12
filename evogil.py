@@ -8,9 +8,9 @@ Usage:
   evogil.py (stats | statistics) [options]
   evogil.py pictures [options]
   evogil.py best_fronts [options]
+  evogil.py violin [options]
 
 In future possibly we could get those commands working:
-  evogil.py violin [options]
   evogil.py plotter [options]
 
 Commands:
@@ -89,8 +89,8 @@ if __name__ == '__main__':
         evotools.pictures.pictures_from_stats(argv)
     elif argv['best_fronts']:
         evotools.best_fronts.main()
-    # elif argv['violin']:
-    #     evotools.violin.violin(argv)
+    elif argv['violin']:
+        evotools.violin.violin(argv)
     elif argv['summary']:
         evotools.benchmark_results.analyse_results()
 

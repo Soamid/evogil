@@ -1,7 +1,7 @@
 import random
-from algorithms.imga.topology import TorusTopology, Topology
+from algorithms.IMGA.topology import TorusTopology, Topology
 from algorithms.utils.driver import Driver
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 
 
 class IMGA(Driver):

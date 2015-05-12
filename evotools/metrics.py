@@ -1,4 +1,5 @@
 import itertools
+import math
 
 def distance_from_pareto(solution, pareto):
     return sum([min([euclid_distance(x, y)
@@ -7,12 +8,13 @@ def distance_from_pareto(solution, pareto):
 
 
 def distribution(solution, sigma):
-    return sum(len( y
-                    for y in solution
+    solutionL = list(solution)
+    return sum(sum( 1
+                    for y in solutionL
                     if euclid_distance(x, y) > sigma
-                   ) / (len(solution) - 1)
-                for x in solution
-              ) / len(solution)
+                   ) / (len(solutionL) - 1)
+                for x in solutionL
+              ) / len(solutionL)
 
 
 def extent(solution):

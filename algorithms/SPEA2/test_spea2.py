@@ -55,7 +55,7 @@ import pylab
 
 
 from benchmarks import emoa_c, parabol, kursawe, emoa_a, emoa_b, emoa_d, emoa_e
-from algorithms.utils import ea_utils as utils
+from evotools import ea_utils as utils
 from algorithms.SPEA2.SPEA2 import SPEA2
 
 

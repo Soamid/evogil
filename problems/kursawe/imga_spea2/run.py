@@ -1,8 +1,8 @@
 import unittest
 import itertools
 import algorithms.IMGA.IMGA as imga
-from algorithms.spea2 import spea2
-from algorithms.utils import ea_utils
+from algorithms.SPEA2 import SPEA2
+from evotools import ea_utils
 from problems.kursawe import problem
 
 from problems.testrun import TestRun
@@ -15,7 +15,7 @@ from problems.testrun import TestRun
 #
 
 
-class TestRunIMGAWithSPEA2(TestRun):
+class DisabledRunIMGAWithSPEA2(): #TestRun):
     alg_name = "imga_spea2"
 
     @TestRun.skipByName()
@@ -34,7 +34,7 @@ class TestRunIMGAWithSPEA2(TestRun):
                              islands_number=3,
                              migrants_number=5,
                              epoch_length=5,
-                             driver=spea2.SPEA2)
+                             driver=SPEA2.SPEA2)
         self.run_alg(budget, problem, distribution_metrics_sigma=0.5)
 
 

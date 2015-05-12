@@ -2,9 +2,9 @@ import functools
 import unittest
 
 #noinspection PyPep8Naming
-from algorithms.ibea import ibea
+from algorithms.IBEA import IBEA
 import algorithms.IMGA.IMGA as imga
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.ZDT4 import problem
 
 from problems.testrun import TestRun
@@ -36,7 +36,7 @@ class TestRunIMGAWithIBEA(TestRun):
                              islands_number=3,
                              migrants_number=5,
                              epoch_length=5,
-                             driver=functools.partial(ibea.IBEA, kappa=0.05, mating_population_size=0.5)
+                             driver=functools.partial(IBEA.IBEA, kappa=0.05, mating_population_size=0.5)
         )
         self.run_alg(budget, problem)
 

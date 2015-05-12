@@ -5,7 +5,7 @@ import unittest
 import algorithms.HGS.HGS as hgs
 #noinspection PyPep8Naming
 import algorithms.IBEA.IBEA as ibea
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.ackley import problem
 
 from problems.testrun import TestRun
@@ -38,8 +38,7 @@ class TestRunHGSwithIBEA(TestRun):
                                     brnch_comps=[0.5, 0.125, 0.01],
                                     metaepoch_len=5,
                                     max_children=2,
-                                    driver=functools.partial(ibea.IBEA, kappa=0.05, mating_population_size=0.5),
-                                    stop_conditions=[])
+                                    driver=functools.partial(IBEA.IBEA, kappa=0.05, mating_population_size=0.5))
         self.run_alg(budget, problem)
 
 

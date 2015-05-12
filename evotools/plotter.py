@@ -2,7 +2,8 @@ import json
 from matplotlib import pyplot as plt
 import glob
 from collections import defaultdict
-from algorithms.utils import ea_utils
+from evotools import ea_utils
+from evotools.serialization import get_current_time
 
 EXTENT = "extent"
 DISTRIBUTION = "distribution"
@@ -22,7 +23,7 @@ def plot_quality(series, metrics_name, problem_name):
         plt.plot(costs, values, linestyle='-', marker='o', label=alg)
 
     plt.yscale('log')
-    path = "_".join(["quality", problem_name, metrics_name, ea_utils.get_current_time()])
+    path = "_".join(["quality", problem_name, metrics_name, get_current_time()])
     plt.legend(loc=4)
     plt.savefig(path + ".png")
     plt.close(f)

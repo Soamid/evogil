@@ -2,7 +2,7 @@ import functools
 import unittest
 import algorithms.HGS.HGS as hgs
 import algorithms.NSGAII.NSGAII as nsga2
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.parabol import problem
 
 
@@ -10,7 +10,7 @@ from problems.parabol import problem
 from problems.testrun import TestRun
 
 
-class TestRunHGSwithNSGA2(TestRun):
+class DisabledRunHGSwithNSGA2(): #TestRun):
     alg_name = "hgs_nsga2"
 
     @TestRun.skipByName()
@@ -32,8 +32,7 @@ Służy do szybkiego sprawdzania, czy wszystko się ze sobą zgrywa."""
                                     sprtn_varss=hgs.HGS.make_sigmas(0.7, sclng_coeffs, problem.dims),
                                     brnch_comps=[0.5, 0.125, 0.01],
                                     metaepoch_len=10,
-                                    driver=functools.partial(nsga2.NSGA2, mating_population_size=0.5),
-                                    stop_conditions=[])
+                                    driver=functools.partial(nsga2.NSGAII, mating_population_size=0.5))
         self.run_alg(None, problem, steps_gen=range(2))
 
 if __name__ == '__main__':

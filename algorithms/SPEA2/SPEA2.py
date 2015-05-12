@@ -34,7 +34,7 @@ class SPEA2(Driver):
     def population(self, pop):
         self.__population = [{'value': x} for x in pop]
 
-    def finish(self):
+    def return_archive_result(self):
         return [x['value'] for x in self.__archive]
 
     def steps(self):
@@ -47,7 +47,7 @@ class SPEA2(Driver):
                                for _ in self.__population]
             cost = len(self.__population)
 
-            yield cost, self.finish()
+            yield cost, self.return_archive_result()
 
     def calculate_fitnesses(self, population, archive):
         self.calculate_objectives(population)

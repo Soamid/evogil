@@ -1,8 +1,8 @@
 import functools
 import unittest
 import algorithms.HGS.HGS as hgs
-import algorithms.SPEA2.SPEA2 as spea2
-from algorithms.utils import ea_utils
+import algorithms.SPEA2 as SPEA2
+from evotools import ea_utils
 from problems.parabol import problem
 
 
@@ -33,8 +33,7 @@ Służy do szybkiego sprawdzania, czy wszystko się ze sobą zgrywa."""
                                     brnch_comps=[0.5, 0.125, 0.01],
                                     metaepoch_len=1,
                                     max_children=2,
-                                    driver=spea2.SPEA2,
-                                    stop_conditions=[])
+                                    driver=SPEA2.SPEA2)
         self.run_alg(None, problem, steps_gen=range(5))
 
 

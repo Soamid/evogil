@@ -2,7 +2,7 @@ import unittest
 
 #noinspection PyPep8Naming
 import algorithms.NSGAII.NSGAII as nsga2
-from algorithms.utils import ea_utils
+from evotools import ea_utils
 from problems.ZDT6 import problem
 
 from problems.testrun import TestRun
@@ -16,7 +16,7 @@ from problems.testrun import TestRun
 
 
 #noinspection PyPep8Naming
-class TestRunNSGA2(TestRun):
+class DisabledRunNSGA2(): #TestRun):
     alg_name = "nsga2"
 
     @TestRun.skipByName()
@@ -26,7 +26,7 @@ class TestRunNSGA2(TestRun):
         init_population = ea_utils.gen_population(100, problem.dims)
         var = [abs(maxa-mina)/100
                for (mina, maxa) in problem.dims]
-        self.alg = nsga2.NSGA2(population=init_population,
+        self.alg = nsga2.NSGAII(population=init_population,
                                dims=problem.dims,
                                fitnesses=problem.fitnesses,
                                mutation_variance=var,
