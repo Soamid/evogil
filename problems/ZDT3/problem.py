@@ -25,7 +25,7 @@ def emoa_fitnesses(f1, g, h, dimensions, letter, known_front):
     return ([functools.partial(subfit1, f1=f1),
              functools.partial(subfit2, f1=f1, g=g, h=h)],
             [(0, 1) for _ in range(dimensions)],
-            "coemoa_" + letter,
+            "ZDT3",
             known_front)
 
 
@@ -33,7 +33,7 @@ def emoa_fitnesses2(f1, g, h, dimensions, letter, known_front):
     return ([subfit1,
              functools.partial(subfit2, f1=f1, g=g, h=h)],
             [(0, 1)] + [(-5, 5) for _ in range(dimensions-1)],
-            "coemoa_" + letter,
+            "ZDT3",
             known_front)
 
 

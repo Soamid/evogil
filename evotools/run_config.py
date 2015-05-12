@@ -18,12 +18,27 @@ prob_base = {
 cust_base = {
     ('IBEA', 'ackley'): {
         "__metaconfig__populationsize": 40
+    },
+    ('IBEA', 'ZDT3'): {
+        "kappa": 0.25
     }
 }
 
 
 def init_alg_IBEA(algo_config, problem_mod):
-    var = [ abs(maxa-mina)/100
+    _standard_variance(algo_config, problem_mod)
+
+def init_alg_SPEA2(algo_config, problem_mod):
+    if problem_mod.name in [ "ZDT1", "ZDT2", "ZDT3", "ZDT4", "ZDT6"]:
+        _standard_variance(algo_config, problem_mod,
+                           divider=0.1 # TODO [kgdk]: wtf?
+                          )
+    else:
+        _standard_variance(algo_config, problem_mod)
+
+
+def _standard_variance(algo_config, problem_mod, divider=100):
+    var = [ abs(maxa-mina)/divider
             for (mina, maxa)
             in problem_mod.dims
           ]
@@ -31,3 +46,4 @@ def init_alg_IBEA(algo_config, problem_mod):
         "mutation_variance":  var,
         "crossover_variance": var
     })
+
