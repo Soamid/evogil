@@ -366,7 +366,6 @@ def prepare(algo,
     ################################################################################
     # GET BUDGET!
     budgets = config["__metaconfig__budgets"]
-    print("BUDGETS:", budgets)
 
     ################################################################################
     # DROPPING TRASH
@@ -375,6 +374,13 @@ def prepare(algo,
                     in config.items()
                     if not k.startswith('__metaconfig__')
                   }
+
+    print("FINAL CONFIG:")
+    for k, v in config.items():
+        if k in ["dims", "population", "fitnesses"]:
+            continue
+        print("    {:25}: {}".format(k, v))
+    print(    "    {:25}: {}".format("BUDGETS", budgets))
 
     try:
         algo_class(**config)
