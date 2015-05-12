@@ -12,6 +12,8 @@ from contextlib import suppress
 from evotools.ea_utils import gen_population
 from evotools import run_config
 
+from functools import partial
+
 
 def run_parallel(args):
     order = [ 
@@ -140,68 +142,173 @@ def run_parallel(args):
 
 
 def worker(args):
-    #problem, algo = args # TODO [kgdk]
-    # module_name = '.'.join(['problems', problem, algo, 'run'])
     algo = 'IBEA'
     problem = 'ackley'
     budget = 500
 
+    drivers = algo.split('+')
+
+    final_driver = None
+    for driver_pos, driver in list(enumerate(drivers))[::-1]:
+        final_driver = prepare(driver,
+                               problem,
+                               final_driver,
+                               drivers, driver_pos
+                              )
+
+    gen = final_driver().steps()
+
+    total_cost, result = 0, None
+    proc_time = -time.process_time()
+    # while total_cost <= budget:
+    #     cost, result = next(gen)
+    #     total_cost += cost
+    #     print("RESULT:", cost, total_cost, result)
+    proc_time += time.process_time()
+    
+    return proc_time
+
+def prepare(algo,
+            problem,
+            driver=None,
+            all_drivers=[], driver_pos=0
+           ):
+
+    algo_mod   = '.'.join(['algorithms', algo, algo])
+    algo_mod   = import_module(algo_mod)
+    algo_class = getattr(algo_mod, algo)
+
     problem_mod = '.'.join(['problems', problem, 'problem'])
     problem_mod = import_module(problem_mod)
 
-    algo_mod = '.'.join(['algorithms', algo, algo])
-    algo_mod = import_module(algo_mod)
 
-    algo_class = getattr(algo_mod, algo)
-
-
-    # empty config
+    # START WITH META-CONFIG
     algo_config = {
         "__metaconfig__populationsize": 10,
     }
 
-    # take base config
-    with suppress(KeyError):
-        algo_config.update(run_config.options_base[algo])
-    
-    # set some common params
+    ################################################################################
+    # CUSTOMS FOR PROBLEM
     algo_config.update({
-        "population": gen_population(40, problem_mod.dims),
-        "dims": problem_mod.dims,
-        "fitnesses": problem_mod.fitnesses
+        "dims":       problem_mod.dims,
+        "fitnesses":  problem_mod.fitnesses
     })
     
-    # custom, per problem params
-    with suppress(AttributeError):
-        getattr(run_config, "init_" + problem)(algo_config, problem_mod)
+    ################################################################################
+    descr = "CUSTOMS FOR ALGORITHM"
+    # example key: SPEA2
+    # example key: HGS
+    # example key: IMGA
+    with suppress(KeyError):
+        key = algo
+        algo_config.update( run_config.options_base[ key ] )
+        print(descr, "| by dict key:", key)
     
-    # custom, per algorithm params
-    with suppress(AttributeError):
-        getattr(run_config, "init_" + algo)(algo_config, problem_mod)
+    ################################################################################
+    descr = "CUSTOMS FOR ALGORITHM + SUBDRIVERS"
+    # example key: (SPEA2, ()          )
+    # example key: (HGS,   (SPEA2)     )
+    # example key: (IMGA,  (HGS, SPEA2))
+    with suppress(KeyError):
+        key = (algo,
+               tuple(all_drivers[driver_pos+1:])
+              )
+        algo_config.update( run_config.options_base[ key ] )
+        print(descr, "| by dict key:", key)
+
+    ################################################################################
+    descr = "CUSTOMS FOR PARENTS + ALGORITHM"
+    # example key: ((IMGA, HGS), SPEA2)
+    # example key: ((IMGA),      HGS  )
+    # example key: ((),          IMGA )
+    with suppress(KeyError):
+        key = (tuple(all_drivers[:max(0,driver_pos-1)]),
+               algo
+              )
+        algo_config.update( run_config.options_base[ key ] )
+        print(descr, "| by dict key:", key)
+
+    ################################################################################
+    descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
+    # example key: ((IMGA, HGS), SPEA2, ()          )
+    # example key: ((IMGA),      HGS,   (SPEA2)     )
+    # example key: ((),          IMGA,  (HGS, SPEA2))
+    with suppress(KeyError):
+        key = (tuple(all_drivers[:max(0,driver_pos-1)]),
+               algo,
+               tuple(all_drivers[driver_pos+1:])
+              )
+        algo_config.update( run_config.options_base[ key ] )
+        print(descr, "| by dict key:", key)
     
-    # custom, per problem+algorithm params
+
+    ################################################################################
+    descr = "CUSTOMS FOR ALGORITHM"
+    # example fun: init_SPEA2
+    # example fun: init_HGS
+    # example fun: init_IMGA
     with suppress(AttributeError):
-        getattr(run_config, "init_" + algo + "_" + problem)(algo_config, problem_mod)
+        key = "init_" + algo
+        getattr(run_config, key)(algo_config, problem_mod)
+        print(descr, "| by fun:", key)
     
-    # drop trashy arguments
+    ################################################################################
+    descr = "CUSTOMS FOR ALGORITHM + SUBDRIVERS"
+    # example fun: init_HGS__SPEA2
+    # example fun: init_IMGA__HGS_SPEA2
+    with suppress(AttributeError):
+        key = "init_" + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        getattr(run_config, key)(algo_config, problem_mod)
+        print(descr, "| by fun:", key)
+    
+    ################################################################################
+    descr = "CUSTOMS FOR PARENTS + ALGORITHM"
+    # example fun: init_IMGA_HGS__SPEA2
+    # example fun: init_IMGA__HGS
+    with suppress(AttributeError):
+        key = "init_" + '_'.join(all_drivers[:max(0,driver_pos-1)]) + '__' + algo
+        getattr(run_config, key)(algo_config, problem_mod)
+        print(descr, "| by fun:", key)
+    
+    ################################################################################
+    descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
+    # example fun: init_IMGA__HGS__SPEA2
+    with suppress(AttributeError):
+        key = "init_" + '_'.join(all_drivers[:max(0,driver_pos-1)]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        getattr(run_config, key)(algo_config, problem_mod)
+        print(descr, "| by fun:", key)
+    
+    ################################################################################
+    descr = "GENERATING POPULATION"
+    if "population" not in algo_config:
+        algo_config.update({
+            "population": gen_population(algo_config["__metaconfig__populationsize"],
+                                         problem_mod.dims
+                                        )
+        })
+        print(descr)
+
+    ################################################################################
+    # DROPPING TRASH
     algo_config = { k: v
                     for k, v
                     in algo_config.items()
                     if not k.startswith('__metaconfig__')
                   }
 
-    print("THE CONFIG")
-    print(algo_config)
 
-    gen = algo_class(**algo_config).steps()
-    total_cost, result = 0, None
+    print_dict = algo_config.copy()
+    del print_dict["population"]
+    print("algo:", algo, "algos:", all_drivers[driver_pos:], "problem:", problem, "with sub-driver:", driver, "all_drivers:", all_drivers, "driver_pos:", driver_pos)
+    print(print_dict)
 
-    proc_time = -time.process_time()
-    while total_cost <= budget:
-        cost, result = next(gen)
-        total_cost += cost
-        print("RESULT:", cost, total_cost, result)
-    proc_time += time.process_time()
+    try:
+        algo_class(**algo_config)
+    except Exception as e:
+        print("ERR!")
+        raise e
     
-    return proc_time
+    print("OKAY")
+
+    return partial(algo_class, **algo_config)
 
