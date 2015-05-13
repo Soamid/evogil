@@ -7,7 +7,7 @@ def distance_from_pareto(solution, pareto):
                 for x in solution]) / len(solution)
 
 
-def distribution(solution, sigma):
+def distribution(solution, sigma=0.5):
     solutionL = list(solution)
     return sum(sum( 1
                     for y in solutionL
