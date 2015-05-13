@@ -19,7 +19,16 @@ algo_base = {
         "__metaconfig__popln_sizes":    [50, 12, 4],
         "__metaconfig__brnch_comps":    [1, 0.25, 0.05],
         "__metaconfig__sclng_coeffs":   [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]],
-    }
+    },
+    "IMGA": {
+        "islands_number": 3,
+        "migrants_number": 5,
+        "epoch_length": 5,
+    },
+
+    (("IMGA", ), "IBEA"): {
+        "kappa": 0.05,
+    },
 }
 
 prob_base = {
@@ -30,8 +39,7 @@ prob_base = {
 
 cust_base = {
 
-    # --------------------------------------------------
-    # IBEA
+
     ('IBEA', 'ackley'): {
         "__metaconfig__populationsize": 40,
     },
@@ -40,12 +48,12 @@ cust_base = {
         "kappa": 0.25,
     },
 
+
     (('HGS',), 'IBEA', (), 'ackley'): {
         "kappa": 0.05
     },
 
-    # --------------------------------------------------
-    # HGS
+
     ('HGS', 'ackley'): {
         "__metaconfig__sclng_coeffs": [[4, 4], [2, 2], [1, 1]],
         "__metaconfig__brnch_comps": [0.05, 0.25, 0.01],
@@ -67,6 +75,9 @@ cust_base = {
         "__metaconfig__brnch_comps":    [0.5, 0.125, 0.01]
     },
 
+    ((), 'IMGA', ('IBEA',), 'ackley'): {
+        "__metaconfig__populationsize": 40,
+    },
 }
 
 
@@ -75,9 +86,7 @@ def init_alg_IBEA(algo_config, problem_mod):
 
 def init_alg_SPEA2(algo_config, problem_mod):
     if problem_mod.name in [ "ZDT1", "ZDT2", "ZDT3", "ZDT4", "ZDT6"]:
-        _standard_variance(algo_config, problem_mod,
-                           divider=0.1 # TODO [kgdk]: wtf?
-                          )
+        _standard_variance(algo_config, problem_mod, divider=0.1)
     elif problem_mod.name in ["kursawe"]:
         algo_config.update({
             "mutation_variance":  [0.8, 0.4, 0.2],
@@ -113,6 +122,17 @@ def init_alg_HGS(algo_config, problem_mod):
                 'sprtn_varss':   HGS.make_sigmas(sprtn, algo_config["__metaconfig__sclng_coeffs"], problem_mod.dims),
             }
     })
+
+
+def init_alg_IMGA(algo_config, problem_mod):
+    _standard_variance(algo_config, problem_mod)
+
+
+def init_alg_IMGA__SPEA2(algo_config, problem_mod):
+    if problem_mod.name in ["ackley"]:
+        _standard_variance(algo_config, problem_mod)
+    else:
+        _standard_variance(algo_config, problem_mod, divider=0.1)
 
 
 def _standard_variance(algo_config, problem_mod, divider=100):
