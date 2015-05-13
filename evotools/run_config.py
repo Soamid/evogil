@@ -16,7 +16,6 @@ algo_base = {
         "sproutiveness":                2,
         "max_children":                 3,
         "metaepoch_len":                1,
-        "__metaconfig__populationsize": 50,
         "__metaconfig__popln_sizes":    [50, 12, 4],
         "__metaconfig__brnch_comps":    [1, 0.25, 0.05],
         "__metaconfig__sclng_coeffs":   [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]],
@@ -30,6 +29,9 @@ prob_base = {
 }
 
 cust_base = {
+
+    # --------------------------------------------------
+    # IBEA
     ('IBEA', 'ackley'): {
         "__metaconfig__populationsize": 40,
     },
@@ -38,41 +40,32 @@ cust_base = {
         "kappa": 0.25,
     },
 
+    (('HGS',), 'IBEA', (), 'ackley'): {
+        "kappa": 0.05
+    },
+
+    # --------------------------------------------------
+    # HGS
     ('HGS', 'ackley'): {
-        "__metaconfig__sclng_coeffs":   [[4, 4, 4], [2, 2, 2], [1, 1, 1]],
-        "__metaconfig__brnch_comps":    [0.05, 0.25, 0.01],
-    },
-
-    ('HGS', 'parabol'): {
-        "__metaconfig__popln_sizes":    [3, 2, 1],
-        "__metaconfig__brnch_comps":    [0.5, 0.125, 0.01],
-        "__metaconfig__sclng_coeffs":   [[4, 4], [2, 2], [1, 1]],
-        "max_children":                 2,
-    },
-
-    ((), 'HGS', ('SPEA2',),  'parabol'): {
-        "__metaconfig__popln_sizes":    [75, 10, 5]
-    },
-
-    ((), 'HGS', ('NSGAII',),  'parabol'): {
-        "__metaconfig__sclng_coeffs":   [[20, 20], [5, 5], [1, 1]],
-        "__metaconfig__popln_sizes":    [30, 15, 5],
-        "metaepoch_len":                10,
-    },
-
-    ((), 'HGS', ('IBEA',),  'ackley'): {
-        "max_children":                 2,
-    },
-    
-    ((), 'HGS', ('SPEA2',), 'ackley'): {
-        "max_children":                 2,
-        "__metaconfig__popln_sizes":    [100, 10, 5],
+        "__metaconfig__sclng_coeffs": [[4, 4], [2, 2], [1, 1]],
+        "__metaconfig__brnch_comps": [0.05, 0.25, 0.01],
+        "max_children": 2
     },
 
     ((), 'HGS', ('NSGAII',), 'ackley'): {
-        "max_children":                 2,
         "__metaconfig__popln_sizes":    [75, 10, 5],
-    }
+    },
+
+    ((), 'HGS', ('SPEA2',), 'ackley'): {
+        "__metaconfig__popln_sizes":    [100, 10, 5],
+    },
+
+    ((), 'HGS', ('IBEA',), 'ackley'): {
+        "__metaconfig__popln_sizes":    [20, 9, 5],
+        "__metaconfig__sclng_coeffs":   [[10, 10], [5, 5], [1, 1]],
+        "metaepoch_len":                5,
+        "__metaconfig__brnch_comps":    [0.5, 0.125, 0.01]
+    },
 
 }
 
@@ -86,7 +79,10 @@ def init_alg_SPEA2(algo_config, problem_mod):
                            divider=0.1 # TODO [kgdk]: wtf?
                           )
     elif problem_mod.name in ["kursawe"]:
-        _standard_variance(algo_config, problem_mod, divider=[0.8, 0.4, 0.2])
+        algo_config.update({
+            "mutation_variance":  [0.8, 0.4, 0.2],
+            "crossover_variance": [0.8, 0.4, 0.2],
+        })
     else:
         _standard_variance(algo_config, problem_mod)
 
@@ -104,8 +100,9 @@ def init_alg_HGS(algo_config, problem_mod):
     if problem_mod.name in ["parabol"]:
         csovr, muttn, sprtn = 1, 1, 0.7
     else:
-        csovr, muttn, sprtn = 10, 20, 30
+        csovr, muttn, sprtn = 10, 20, 100
 
+    print("APPLYING SCLNG COEFFS", algo_config["__metaconfig__sclng_coeffs"])
     algo_config.update({
         "lvl_params": {
                 'popln_sizes':   algo_config["__metaconfig__popln_sizes"],
@@ -125,6 +122,6 @@ def _standard_variance(algo_config, problem_mod, divider=100):
           ]
     algo_config.update({
         "mutation_variance":  var,
-        "crossover_variance": var
+        "crossover_variance": var,
     })
 

@@ -234,7 +234,7 @@ def prepare(algo,
     with suppress(KeyError):
         key = algo
         config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "<<", ', '.join(run_config.algo_base[ key ]))
+        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
     
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM + SUBDRIVERS"
@@ -246,33 +246,65 @@ def prepare(algo,
                tuple(all_drivers[driver_pos+1:])
               )
         config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "<<", ', '.join(run_config.algo_base[ key ]))
+        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
 
     ################################################################################
     descr = "CUSTOMS FOR PARENTS + ALGORITHM"
     # example key: ((IMGA, HGS), SPEA2)
-    # example key: ((IMGA),      HGS  )
+    # example key: ((IMGA,),     HGS  )
     # example key: ((),          IMGA )
     with suppress(KeyError):
-        key = (tuple(all_drivers[:max(0,driver_pos-1)]),
+        key = (tuple(all_drivers[:driver_pos]),
                algo
               )
         config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "<<", ', '.join(run_config.algo_base[ key ]))
+        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
 
     ################################################################################
     descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
     # example key: ((IMGA, HGS), SPEA2, ()          )
-    # example key: ((IMGA),      HGS,   (SPEA2)     )
+    # example key: ((IMGA,),     HGS,   (SPEA2)     )
     # example key: ((),          IMGA,  (HGS, SPEA2))
     with suppress(KeyError):
-        key = (tuple(all_drivers[:max(0,driver_pos-1)]),
+        key = (tuple(all_drivers[:driver_pos]),
                algo,
                tuple(all_drivers[driver_pos+1:])
               )
         config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "<<", ', '.join(run_config.algo_base[ key ]))
+        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
     
+    ################################################################################
+    descr = "CUSTOMS (simpl)"
+    # example key: (SPEA2, ackley)
+    # example key: (SPEA2, zdt1)
+    # example key: (HGS, ackley)
+    # example key: (HGS, zdt1)
+    # example key: (IMGA, ackley)
+    # example key: (IMGA, zdt1)
+    with suppress(KeyError):
+        key = ( algo,
+                problem
+              )
+        config.update( run_config.cust_base[ key ] )
+        print(descr, "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]))
+
+    ################################################################################
+    descr = "CUSTOMS"
+    # example key: ((IMGA, HGS), SPEA2, (),           ackley)
+    # example key: ((IMGA, HGS), SPEA2, (),           zdt1)
+    # example key: ((IMGA),      HGS,   (SPEA2),      ackley)
+    # example key: ((IMGA),      HGS,   (SPEA2),      zdt1)
+    # example key: ((),          IMGA,  (HGS, SPEA2), ackley)
+    # example key: ((),          IMGA,  (HGS, SPEA2), zdt1)
+    with suppress(KeyError):
+        key = (tuple(all_drivers[:driver_pos]),
+               algo,
+               tuple(all_drivers[driver_pos+1:]),
+               problem
+              )
+        config.update( run_config.cust_base[ key ] )
+        print(descr, "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]))
+
 
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM"
@@ -298,7 +330,7 @@ def prepare(algo,
     # example fun: init_alg_IMGA_HGS__SPEA2
     # example fun: init_alg_IMGA__HGS
     with suppress(AttributeError):
-        key = "init_alg_" + '_'.join(all_drivers[:max(0,driver_pos-1)]) + '__' + algo
+        key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo
         getattr(run_config, key)(config, problem_mod)
         print(descr, "| by algo fun:", key)
     
@@ -306,7 +338,7 @@ def prepare(algo,
     descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
     # example fun: init_alg_IMGA__HGS__SPEA2
     with suppress(AttributeError):
-        key = "init_alg_" + '_'.join(all_drivers[:max(0,driver_pos-1)]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
         getattr(run_config, key)(config, problem_mod)
         print(descr, "| by algo fun:", key)
 
@@ -320,50 +352,15 @@ def prepare(algo,
     with suppress(KeyError):
         key = problem
         config.update( run_config.prob_base[ key ] )
-        print(descr, "| by prob dict key:", key, "<<", ', '.join(run_config.prob_base[ key ]))
+        print(descr, "| by prob dict key:", key, "\n    <<", ', '.join(run_config.prob_base[ key ]))
 
     ################################################################################
     descr = "CUSTOMS FOR PROBLEM"
     # example fun: init_prob_ackley
     with suppress(AttributeError):
-        key = "init_prob_" + '_'.join(all_drivers[:max(0,driver_pos-1)]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_prob_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
         getattr(run_config, key)(config, problem_mod)
         print(descr, "| by prob fun:", key)
-
-
-
-
-    ################################################################################
-    descr = "CUSTOMS (simpl)"
-    # example key: (SPEA2, ackley)
-    # example key: (SPEA2, zdt1)
-    # example key: (HGS, ackley)
-    # example key: (HGS, zdt1)
-    # example key: (IMGA, ackley)
-    # example key: (IMGA, zdt1)
-    with suppress(KeyError):
-        key = ( algo,
-                problem
-              )
-        config.update( run_config.cust_base[ key ] )
-        print(descr, "| by cust dict key:", key, "<<", ', '.join(run_config.cust_base[ key ]))
-
-    ################################################################################
-    descr = "CUSTOMS"
-    # example key: ((IMGA, HGS), SPEA2, (),           ackley)
-    # example key: ((IMGA, HGS), SPEA2, (),           zdt1)
-    # example key: ((IMGA),      HGS,   (SPEA2),      ackley)
-    # example key: ((IMGA),      HGS,   (SPEA2),      zdt1)
-    # example key: ((),          IMGA,  (HGS, SPEA2), ackley)
-    # example key: ((),          IMGA,  (HGS, SPEA2), zdt1)
-    with suppress(KeyError):
-        key = (tuple(all_drivers[:max(0,driver_pos-1)]),
-               algo,
-               tuple(all_drivers[driver_pos+1:]),
-               problem
-              )
-        config.update( run_config.cust_base[ key ] )
-        print(descr, "| by cust dict key:", key, "<<", ', '.join(run_config.cust_base[ key ]))
 
     ################################################################################
     descr = "CUSTOMS"
@@ -376,7 +373,7 @@ def prepare(algo,
     # example fun: init_cust__IMGA__HGS_SPEA2___ackley
     # example fun: init_cust__IMGA__HGS_SPEA2___zdt1
     with suppress(AttributeError):
-        key = "init_cust_" + '_'.join(all_drivers[:max(0,driver_pos-1)]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_cust_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
         getattr(run_config, key)(config, problem_mod)
         print(descr, "| by cust fun:", key)
 
