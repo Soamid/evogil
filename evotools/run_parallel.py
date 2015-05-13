@@ -118,12 +118,25 @@ def run_parallel(args):
     results = p.map(worker, order)
     wall_time += time.perf_counter()
 
-    proc_times = sum(results)
+    proc_times = sum( res
+                      for res
+                      in results
+                      if res is not None
+                    )
+    errors = sum( 1
+                  for res
+                  in results
+                  if res is None
+                )
+
     speedup = proc_times / wall_time
     
-    print("wall time:     {wall_time:7.3f} s\n"\
-          "CPU+user time: {proc_times:7.3f}s\n"\
-          "est. speedup:  {speedup:7.3f}x"
+    print("########################################")
+    print("SUMMARY:")
+    print("  wall time:     {wall_time:7.3f} s\n"\
+          "  CPU+user time: {proc_times:7.3f}s\n"\
+          "  est. speedup:  {speedup:7.3f}x\n"\
+          "  errors:        {errors:>3}"
           .format(**locals()))
 
     summary = collections.defaultdict(float)
@@ -131,14 +144,16 @@ def run_parallel(args):
         summary[bench] += res
 
 
-    print("Running time list:")
-    for (prob, alg), timesum in sorted(summary.items(),
-                                       key=operator.itemgetter(1),
-                                       reverse=True):
+    print("RUNNING TIME LIST:")
+    for (prob, alg, budgets), timesum in sorted( summary.items(),
+                                                 key=operator.itemgetter(1),
+                                                 reverse=True
+                                               ):
         prob_show = "'" + prob + "'"
         alg_show = "'" + alg + "'"
         avg_time = timesum / float(args['-N'])
-        print("  ({prob_show:16}, {alg_show:16}),  # {avg_time:7.3f}s".format(**locals()))
+        budgets = str(budgets)
+        print("  ({prob_show:16}, {alg_show:16}, {budgets:30}),  # {avg_time:7.3f}s".format(**locals()))
 
 
 def worker(args):
@@ -167,10 +182,11 @@ def worker(args):
         #     total_cost += cost
         #     print("RESULT:", cost, total_cost, result)
         proc_time += time.process_time()
-        
         return proc_time
+        
     except Exception as e:
         print(traceback.format_exc())
+
 
 
 def prepare(algo,
