@@ -4,8 +4,11 @@ metaconfig_budgets = list(range(500, 9500, 1000))
 
 algo_base = {
     "IBEA": {
-        "kappa":                        0.05,
-        "mating_population_size":       0.5
+        "kappa":                  0.05,
+        "mating_population_size": 0.5
+    },
+    "NSGAII": {
+        "mating_population_size": 0.5
     }
 }
 
@@ -28,6 +31,7 @@ cust_base = {
 def init_alg_IBEA(algo_config, problem_mod):
     _standard_variance(algo_config, problem_mod)
 
+
 def init_alg_SPEA2(algo_config, problem_mod):
     if problem_mod.name in [ "ZDT1", "ZDT2", "ZDT3", "ZDT4", "ZDT6"]:
         _standard_variance(algo_config, problem_mod,
@@ -35,6 +39,15 @@ def init_alg_SPEA2(algo_config, problem_mod):
                           )
     else:
         _standard_variance(algo_config, problem_mod)
+
+def init_alg_NSGAII(algo_config, problem_mod):
+    _standard_variance(algo_config, problem_mod)
+
+    if problem_mod.name in ['ackley', 'kursawe', 'ZDT4']:
+        algo_config.update({
+            "__metaconfig__populationsize": 75
+        })
+
 
 
 def _standard_variance(algo_config, problem_mod, divider=100):
