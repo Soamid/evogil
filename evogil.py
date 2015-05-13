@@ -7,7 +7,7 @@ Usage:
   evogil.py summary
   evogil.py (stats | statistics) [options]
   evogil.py pictures [options]
-  evogil.py best_fronts [options]
+  evogil.py best_fronts
   evogil.py violin [options]
 
 Commands:
@@ -26,11 +26,30 @@ Commands:
 
 Options:
   -a <algo_name>, --algo <algo_name>       
-        Only for selected algorithms(s) separated by comma. List available
-        below in "Algorithms" section.
+        Only for selected algorithms(s) separated by comma. You can combine
+        meta-algorithms with others by joining them with '+', eg.
+            HGS+IBEA
+            IMGA+SPEA2
+            HGS+IMGS+HGS+IMGA+IMGA+IMGA+SPEA2 (this should work as well)
+        Available algorithms (list may be out-of-date):
+            NSGAII
+            SPEA2
+            IBEA
+        Available meta-algorithms (list may be out-of-date):
+            HGS
+            IMGA
+        [default: HGS+NSGAII,HGS+SPEA2,HGS+IBEA,IBEA+NSGAII,IBEA+SPEA2,IBEA+IBEA,NSGAII,SPEA2,IBEA]
   -p <problem_name>, --problem <problem_name>
-        Only for selected problem(s) separated by comma. List available
-        below in "Problems" section.
+        Only for selected problem(s) separated by comma.
+        Available problems (list may be out-of-date):
+            ZDT1
+            ZDT2
+            ZDT3
+            ZDT4
+            ZDT6
+            ackley
+            kursawe
+        [default: ZDT1,ZDT2,ZDT3,ZDT4,ZDT6,ackley,kursawe]
   -g <budget>, --budget <budget>
         Only for selected budget(s) separated by comma. List of integers.
         There are some defaults.
@@ -44,27 +63,6 @@ Options:
   -N <iterations>
         Repeat N times.
         [default: 1]
-
-Algorithms:
-  hgs_ibea
-  hgs_nsga2
-  hgs_spea2
-  ibea
-  imga_ibea
-  imga_nsga2
-  imga_spea2
-  nsga2
-  spea2
-
-Problems:
-  ZDT1
-  ZDT2
-  ZDT3
-  ZDT4
-  ZDT6
-  ackley
-  kursawe
-  parabol
 """
 
 # docopt
