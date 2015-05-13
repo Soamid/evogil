@@ -159,7 +159,6 @@ def run_parallel(args):
 
 def worker(args):
     problem, algo, budgets = args
-
     if not budgets:
         budgets = run_config.metaconfig_budgets
 
@@ -196,6 +195,9 @@ def prepare(algo,
             all_drivers=[], driver_pos=0
            ):
 
+    print("################################################################################")
+    print("#   preparing", algo, "for", problem)
+    print("#")
     algo_mod   = '.'.join(['algorithms', algo, algo])
     algo_mod   = import_module(algo_mod)
     algo_class = getattr(algo_mod, algo)
@@ -215,6 +217,14 @@ def prepare(algo,
         "dims":       problem_mod.dims,
         "fitnesses":  problem_mod.fitnesses
     })
+
+    ################################################################################
+    descr = "DRIVER ASSIGNMENT"
+    if driver:
+        config.update({
+            "driver": driver
+        })
+        print(descr)
     
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM"
@@ -394,7 +404,8 @@ def prepare(algo,
 
     print("FINAL CONFIG:")
     for k, v in config.items():
-        if k in ["dims", "population", "fitnesses"]:
+        if k in ["dims", "population", "fitnesses", "driver"]:
+            print("    {:25}…".format(k))
             continue
         print("    {:25}: {}".format(k, v))
 

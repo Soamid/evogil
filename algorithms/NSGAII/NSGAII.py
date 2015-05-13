@@ -37,9 +37,9 @@ class NSGAII(driver.Driver):
         for _ in range(steps):
             self._next_step()
 
-    def steps(self, generator, budget=None):
+    def steps(self, budget=None):
         self.cost = 0
-        for _ in generator:
+        for _ in []:
             self._next_step()
             if budget is not None and self.cost > self.budget:
                 break
