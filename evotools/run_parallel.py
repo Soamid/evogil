@@ -123,11 +123,12 @@ def run_parallel(args):
                       in results
                       if res is not None
                     )
-    errors = sum( 1
-                  for res
-                  in results
-                  if res is None
-                )
+    errors = [ str((alg, prob, budg))
+               for res, (prob, alg, budg)
+               in zip(results, order)
+               if res is None
+             ]
+    errors = '\n                 '.join(errors)
 
     speedup = proc_times / wall_time
     
@@ -141,7 +142,7 @@ def run_parallel(args):
 
     summary = collections.defaultdict(float)
     for bench, res in zip(order, results):
-        summary[bench] += res
+        summary[bench] += res or 0.0
 
 
     print("RUNNING TIME LIST:")
