@@ -37,6 +37,8 @@ def init_alg_SPEA2(algo_config, problem_mod):
         _standard_variance(algo_config, problem_mod,
                            divider=0.1 # TODO [kgdk]: wtf?
                           )
+    elif problem_mod.name in ["kursawe"]:
+        _standard_variance(algo_config, problem_mod, divider=[0.8, 0.4, 0.2])
     else:
         _standard_variance(algo_config, problem_mod)
 
