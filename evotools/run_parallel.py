@@ -173,15 +173,18 @@ def worker(args):
                                    drivers, driver_pos
                                   )
         
-        # gen = final_driver().steps()
+        gen = final_driver().steps()
 
         total_cost, result = 0, None
+
         proc_time = -time.process_time()
-        # while total_cost <= budget:
-        #     cost, result = next(gen)
-        #     total_cost += cost
-        #     print("RESULT:", cost, total_cost, result)
+        while total_cost <= 1000:
+            cost, result = next(gen)
+            total_cost += cost
+            print("RESULT:", cost, total_cost)
+        print(result)
         proc_time += time.process_time()
+        
         return proc_time
         
     except Exception as e:

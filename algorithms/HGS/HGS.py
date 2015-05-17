@@ -2,6 +2,8 @@
 import functools
 import random
 import math
+from collections import deque
+from contextlib import suppress
 
 from algorithms.utils.driver import Driver
 from evotools.metrics import euclid_distance
@@ -149,11 +151,12 @@ class HGS(Driver):
         """ Przechodzi drzewo HGS w kolejności level-order. """
         deq = deque([self.root])
 
-        while deq.count() > 0:
-            x = deq.popleft()
-            deq.extend(x.sprouts)
-            if not x.finished or include_finished:
-                yield x
+        with suppress(IndexError):
+            while True:
+                x = deq.popleft()
+                deq.extend(x.sprouts)
+                if not x.finished or include_finished:
+                    yield x
 
     def steps(self):
         def cost_fun(cs):
@@ -174,7 +177,7 @@ class HGS(Driver):
             for i in self.get_nodes():
 
                 cost, pop = 0, None
-                for i in range(self.metaepoch_len):
+                for _ in range(self.metaepoch_len):
                     i_cost, i_pop = next(i.step_iter())
                     cost += i_cost
                     pop = i_pop
