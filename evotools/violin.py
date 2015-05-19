@@ -1,8 +1,5 @@
 # base
-from functools import reduce
-import json
 import os
-from pathlib import Path
 from contextlib import contextmanager
 
 # numpy + matplotlib
@@ -34,24 +31,9 @@ def violin(*args, **kwargs):
 
     for loop in iterate_results():
         d_problem    = loop['d_problem']
-        sd_problem   = loop['sd_problem']
-        
         d_algorithm  = loop['d_algorithm']
-        sd_algorithm = loop['sd_algorithm']
-        
-        d_testname   = loop['d_testname']
-        sd_testname  = loop['sd_testname']
-        
-        d_budget     = loop['d_budget']
-        sd_budget    = loop['sd_budget']
-
         data         = loop['data']
-        cost         = loop['cost']
-        len_data = len(data)
-
         metrics_name_long = loop['metrics_name_long']
-        metrics_name      = loop['metrics_name']
-
 
         key = (d_problem.name, metrics_name_long)
         if key not in global_data:
@@ -115,4 +97,4 @@ def violin(*args, **kwargs):
         except KeyError as e:
             print('Missing algo: {}, (problem: {}, metrics: {}'.format(e, problem, metric))
         except LinAlgError as e:
-            print('Zero vector? : {}, {}'.format(problem, metric))
+            print('Zero vector? : {}, {}: {}'.format(problem, metric, e))

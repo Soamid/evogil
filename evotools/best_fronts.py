@@ -16,7 +16,6 @@ metrics_name_long = "distance_from_pareto"
 algo_names = [algos[a][0] for a in algos_order]
 
 
-
 def plot_problem_front(original_front, multimodal=False, scatter=False):
     f = plt.figure(num=None, facecolor='w', edgecolor='k', figsize=(15, 7))
     ax = plt.subplot(111)

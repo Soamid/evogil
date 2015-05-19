@@ -81,8 +81,6 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
         #     czyli DUŻO ale nie na tyle, by mi się chciało to pisać.
 
 
-
-
 def split_front(pareto_front, epsilon):
     groups = []
     group = []

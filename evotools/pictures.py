@@ -1,5 +1,4 @@
 import collections
-import os
 
 from evotools import ea_utils
 import problems.ackley.problem as ackley

@@ -2,7 +2,6 @@ import json
 from matplotlib import pyplot as plt
 import glob
 from collections import defaultdict
-from evotools import ea_utils
 from evotools.serialization import get_current_time
 
 EXTENT = "extent"

@@ -1,3 +1,6 @@
+import random
+
+
 def weighted_choice(choices):
     # http://stackoverflow.com/a/3679747/547223
     choices = list(choices)

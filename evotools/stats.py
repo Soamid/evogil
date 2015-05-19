@@ -1,6 +1,5 @@
 # base
 import random
-import json
 from math import sqrt
 
 # numpy
@@ -30,6 +29,7 @@ def bootstrap(population, f, n, k, alpha):
         "to": btstrp[int(1.0 * n * (1 - alpha))],
         "metrics": f(population)
     }
+
 
 def yield_analysis(data_process, boot_size):
     q1 = numpy.percentile(data_process, 25)
