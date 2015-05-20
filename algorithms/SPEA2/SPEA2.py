@@ -8,6 +8,7 @@ import math
 import random
 
 from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivertools import mutate, crossover
 from evotools import ea_utils
 from evotools.metrics import euclid_distance
 
@@ -44,8 +45,11 @@ class SPEA2(DriverLegacy):
             self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
-            self.population = [self.mutate(self.crossover(self.select(self.__archive),
-                                                          self.select(self.__archive)))
+            self.population = [mutate(crossover(self.select(self.__archive),
+                                                self.select(self.__archive)),
+                                      self.dims,
+                                      self.mutation_probability,
+                                      self.mutation_variance)
                                for _ in self.__population]
             cost = len(self.__population)
 

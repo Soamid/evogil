@@ -1,0 +1,2 @@
+class CodeSmell(NotImplementedError):
+    pass

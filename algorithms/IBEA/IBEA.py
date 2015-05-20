@@ -1,4 +1,5 @@
 from algorithms.base.driverlegacy import DriverLegacy
+from evotools.errors import CodeSmell
 
 __author__ = 'Prpht'
 
@@ -171,6 +172,7 @@ class IBEA(DriverLegacy):
             self.v = vector
             self.real_objectives = None
 
+
 if __name__ == "__main__":
     import pylab
     # objectives = [lambda x : (x[0]+5)*(x[0]+5), lambda x : (x[1]-5)*(x[1]-5)]
@@ -186,6 +188,8 @@ if __name__ == "__main__":
                   ]
     kappa = 0.05
     mating_size = 50
+    raise CodeSmell("IBEA does not take those arguments…")
+    # noinspection PyArgumentList
     population = IBEA(objectives, dimensions, individuals, kappa, mating_size)
     for i in range(100):
         population.step()

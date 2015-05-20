@@ -1,4 +1,5 @@
 from algorithms.base.driverlegacy import DriverLegacy
+from evotools.errors import CodeSmell
 
 __author__ = 'Prpht'
 
@@ -185,6 +186,8 @@ if __name__ == "__main__":
     dimensions = [(-10,10), (-10,10)]
     individuals = [[random.uniform(-10,10), random.uniform(-10,10)] for _ in range(50)]
     mating_size = 20
+    raise CodeSmell("NSGAII does not take those arguments…")
+    # noinspection PyArgumentList
     population = NSGAII(objectives, dimensions, individuals, mating_size)
     for i in range(100):
         population.step()

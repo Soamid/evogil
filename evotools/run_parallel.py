@@ -190,12 +190,10 @@ def worker(args):
 
 
 
-def prepare(algo,
-            problem,
-            driver=None,
-            all_drivers=[], driver_pos=0
-           ):
+def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
+    if not all_drivers:
+        all_drivers = []
     print("################################################################################")
     print("#   preparing", algo, "for", problem)
     print("#")
