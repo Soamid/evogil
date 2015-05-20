@@ -25,10 +25,20 @@ class DriverGen:
             self.cost = cost
 
         def finalized_population(self):
+            """
+            :return: Returns finalized population
+            """
             raise NotImplementedError
 
         def get_immigrants(self):
+            """
+            :return: Returns individuals selected from the population.
+            """
             raise NotImplementedError
 
         def send_emigrants(self, emigrants):
+            """
+            :param emigrants: Individuals that shall be assimilated into the population.
+            :return: Does not return. This Proxy object shall be passed back to the generator.
+            """
             raise NotImplementedError

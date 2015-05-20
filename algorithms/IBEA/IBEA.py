@@ -1,6 +1,7 @@
+from algorithms.base.driverlegacy import DriverLegacy
+
 __author__ = 'Prpht'
 
-from algorithms.utils import driver
 import itertools
 import math
 import random
@@ -8,7 +9,7 @@ import sys
 import operator
 
 
-class IBEA(driver.Driver):
+class IBEA(DriverLegacy):
     def __init__(self, population, dims, fitnesses, mutation_variance, crossover_variance, kappa, mating_population_size):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
         self.objectives = fitnesses  # [Indiv -> Float]

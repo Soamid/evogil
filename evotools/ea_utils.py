@@ -1,11 +1,6 @@
 # coding=utf-8
-from datetime import datetime
 import random
-import time
-import math
 import itertools
-
-
 
 
 def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':

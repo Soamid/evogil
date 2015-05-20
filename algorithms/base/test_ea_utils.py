@@ -1,7 +1,11 @@
+import random
 from unittest import TestCase
 import itertools
 import operator
 from algorithms.utils.ea_utils import *
+import time
+from evotools.ea_utils import paretofront_layers, domination_cmp, dominates, gen_population
+from evotools.metrics import euclid_sqr_distance
 import problems.kursawe.problem as kursawe
 
 
@@ -18,16 +22,6 @@ class TestEAUtils(TestCase):
                 self.assertEqual(len(dm), len(dm))
                 for (a, b), c in zip(dm, i):
                     self.assertTrue(a < c < b)
-
-    def test_condition_count(self):
-        self.assertEqual(len(list(condition_count(15))), 15)
-
-    def test_condition_time(self):
-        a = time.time()
-        for _ in condition_time(t=0.5):
-            b = time.time()
-            self.assertTrue(b < a + 0.6)
-        self.assertTrue(time.time() >= a + 0.5)
 
     def test_euclid_distance(self):
         self.assertEqual(euclid_sqr_distance([], []), 0.)

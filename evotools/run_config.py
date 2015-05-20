@@ -136,7 +136,7 @@ def init_alg_IMGA__SPEA2(algo_config, problem_mod):
         _standard_variance(algo_config, problem_mod, divider=0.1)
 
 
-def _standard_variance(algo_config, problem_mod, divider=100):
+def _standard_variance(algo_config, problem_mod, divider=100.0):
     var = [ abs(maxa-mina)/divider
             for (mina, maxa)
             in problem_mod.dims

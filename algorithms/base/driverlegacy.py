@@ -1,7 +1,4 @@
 # coding=utf-8
-import numpy
-import random
-from evotools import ea_utils
 
 
 class DriverLegacy:

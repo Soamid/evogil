@@ -54,7 +54,7 @@ def rank(individuals: 'Iterator Individual', calc_objective):
     return iter(indiv
                 for eqv_class
                 in paretofront_layers(individuals,
-                                      calc_objective=calc_objective)
+                                      fitfun_res=calc_objective)
                 for indiv
                 in eqv_class
     )

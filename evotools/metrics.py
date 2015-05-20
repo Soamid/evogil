@@ -1,6 +1,7 @@
 import itertools
 import math
 
+
 def distance_from_pareto(solution, pareto):
     return sum([min([euclid_distance(x, y)
                      for y in pareto])

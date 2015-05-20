@@ -77,12 +77,10 @@ def save_plot(ax, f, d_problem):
 
 def main():
 
-    global_data = {}
     root = Path('jsoned')
     for d_problem in [p_problem
                       for p_problem in root.iterdir()
                       if p_problem.is_dir()]:
-
 
         problem_mod = __import__('problems.{}.problem'.format(d_problem.name), fromlist=[d_problem.name])
         original_front = problem_mod.pareto_front
@@ -97,7 +95,6 @@ def main():
             for d_testname in [p_testname
                                for p_testname in d_algorithm.iterdir()
                                if p_testname.is_dir()]:
-                sd_testname = False
 
                 d_budget = max([p_budget
                                 for p_budget in d_testname.iterdir()

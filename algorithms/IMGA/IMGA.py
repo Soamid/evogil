@@ -1,10 +1,11 @@
 import random
+
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.utils.driver import Driver
+from algorithms.base.driverlegacy import DriverLegacy
 from evotools import ea_utils
 
 
-class IMGA(Driver):
+class IMGA(DriverLegacy):
     def __init__(self,
                  population,
                  dims,

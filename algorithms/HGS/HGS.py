@@ -5,12 +5,12 @@ import math
 from collections import deque
 from contextlib import suppress
 
-from algorithms.utils.driver import Driver
+from algorithms.base.driverlegacy import DriverLegacy
 from evotools.metrics import euclid_distance
 from evotools.ea_utils import gen_population, paretofront_layers
 
 
-class HGS(Driver):
+class HGS(DriverLegacy):
     # Kilka ustawień HGS-u
     global_branch_compare = False
     global_sprout_test = False

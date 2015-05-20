@@ -31,7 +31,6 @@ def iterate_results():
                                        key=lambda x: int(x.name)):
                     sd_budget = False
 
-
                     results = {}
                     for metrics_name_long, metrics_name in metric_names:
                         data = []

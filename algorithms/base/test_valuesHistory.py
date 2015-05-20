@@ -1,9 +1,7 @@
 from unittest import TestCase
+from algorithms.base.history import DefaultHistory
 
-from algorithms.utils.history import DefaultHistory
 
-
-#noinspection PyPep8Naming
 class TestHistoryBasic(TestCase):
     def setUp(self):
         self.a = DefaultHistory(3, default_factory=None)

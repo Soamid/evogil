@@ -1,13 +1,14 @@
+from algorithms.base.driverlegacy import DriverLegacy
+
 __author__ = 'Prpht'
 
 import collections
 import math
 import random
 import sys
-from algorithms.utils import driver
 
 
-class NSGAII(driver.Driver):
+class NSGAII(DriverLegacy):
     def __init__(self,
                  population,
                  dims,
@@ -184,7 +185,7 @@ if __name__ == "__main__":
     dimensions = [(-10,10), (-10,10)]
     individuals = [[random.uniform(-10,10), random.uniform(-10,10)] for _ in range(50)]
     mating_size = 20
-    population = NSGA2(objectives, dimensions, individuals, mating_size)
+    population = NSGAII(objectives, dimensions, individuals, mating_size)
     for i in range(100):
         population.step()
         print(i)

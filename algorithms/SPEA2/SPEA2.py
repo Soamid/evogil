@@ -7,10 +7,12 @@
 import math
 import random
 
-from algorithms.utils.driver import Driver
+from algorithms.base.driverlegacy import DriverLegacy
+from evotools import ea_utils
+from evotools.metrics import euclid_distance
 
 
-class SPEA2(Driver):
+class SPEA2(DriverLegacy):
     class Tournament:
         def __init__(self):
             self.tournament_size = 2
@@ -82,20 +84,10 @@ class SPEA2(Driver):
                                   if id(p) != id(x) and self.dominates(p, x)])
 
     def dominates(self, p1, p2):
-        at_least_one = False
-        for i in range(0, len(p1['objectives'])):
-            if p2['objectives'][i] < p1['objectives'][i]:
-                return False
-            elif p2['objectives'][i] > p1['objectives'][i]:
-                at_least_one = True
-
-        return at_least_one
+        return ea_utils.dominates(p1, p2)
 
     def euclidean_distance(self, c1, c2):
-        dist_sum = 0.0
-        for i in range(0, len(c1)):
-            dist_sum += (c1[i] - c2[i]) ** 2.0
-        return math.sqrt(dist_sum)
+        return euclid_distance(c1, c2)
 
     def environmental_selection(self, pop, archive):
         union = archive + pop
@@ -114,9 +106,10 @@ class SPEA2(Driver):
 
         return environment
 
+
     def get_domination_index(self, sorted_pop):
-        for i in range(0, len(sorted_pop)):
-            if sorted_pop[i]['fitness'] > 1:
+        for i, p in enumerate(sorted_pop):
+            if p['fitness'] > 1:
                 return i
 
         return len(sorted_pop)
