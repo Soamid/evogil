@@ -13,8 +13,10 @@ from evotools.benchmark_results import iterate_results
 
 @contextmanager
 def plt_figure():
-    yield
-    plt.close('all')
+    try:
+        yield
+    finally:
+        plt.close('all')
 
 
 def prepare_data(data):
