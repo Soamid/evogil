@@ -1,16 +1,14 @@
 import copy
 import random
 
-from ep.utils import ea_utils as utils
 from ep.utils.driver import Driver
-from problems.coemoa_a import problem
 
 
 class OMOPSO(Driver):
     ETA = 0.0075
 
-    def __init__(self, population, fitnesses, dims, mutation_perturbation):
-        super().__init__(population, dims, fitnesses, 0, 0)
+    def __init__(self, population, fitnesses, dims, mutation_perturbation, mutation_variance=0, crossover_variance=0):
+        super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
         self.population = population
         self.leaders_size = len(population)  # parameter?
         self.mutation_perturbation = mutation_perturbation
@@ -48,7 +46,7 @@ class OMOPSO(Driver):
 
             self.leader_archive.crowding()
 
-            # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
+            print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
 
             if budget is not None and cost > budget:
                 break

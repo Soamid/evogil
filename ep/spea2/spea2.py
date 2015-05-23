@@ -47,7 +47,7 @@ class SPEA2(Driver):
             self.population = [self.mutate(self.crossover(self.select(self.__archive),
                                                           self.select(self.__archive)))
                                for _ in self.__population]
-            cost += len(self.__population)*len(self.fitnesses)
+            cost += len(self.__population)
 
             if budget is not None and cost > budget:
                 break
