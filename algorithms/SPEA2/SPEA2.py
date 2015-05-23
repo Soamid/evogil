@@ -23,8 +23,17 @@ class SPEA2(DriverGen):
             sub_pool = random.sample(pool, self.tournament_size)
             return min(sub_pool, key=lambda x: x['fitness'])['value']
 
-    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance):
-        super().__init__(dims, fitnesses, mutation_variance, crossover_variance)
+    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, mutation_probability):
+        super().__init__()
+        
+        # old DriverLegacy.__init__() body:
+        self.fitnesses = fitnesses
+        self.dims = dims
+        self.mutation_variance = mutation_variance
+        self.mutation_probability = mutation_probability
+        self.crossover_variance = crossover_variance
+        self.finished = False
+
         self.__population = [{'value': x} for x in population]
         self.__archive_size = len(population)
         self.__archive = []

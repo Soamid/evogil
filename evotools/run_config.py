@@ -21,6 +21,9 @@ algo_base = {
         "__metaconfig__brnch_comps":    [1, 0.25, 0.05],
         "__metaconfig__sclng_coeffs":   [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]],
     },
+    "SPEA2": {
+        "mutation_probability":   0.05,
+    },
     "IMGA": {
         "islands_number": 3,
         "migrants_number": 5,
