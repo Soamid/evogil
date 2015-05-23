@@ -126,7 +126,6 @@ def run_parallel(args):
                in zip(results, order)
                if res is None
              ]
-    errors = '\n                 '.join(errors)
 
     speedup = proc_times / wall_time
     
@@ -134,9 +133,12 @@ def run_parallel(args):
     print("SUMMARY:")
     print("  wall time:     {wall_time:7.3f} s\n"\
           "  CPU+user time: {proc_times:7.3f}s\n"\
-          "  est. speedup:  {speedup:7.3f}x\n"\
-          "  errors:        {errors:>3}"
+          "  est. speedup:  {speedup:7.3f}x"
           .format(**locals()))
+    if errors:
+        errors = '\n                 '.join(errors)
+        print("  errors:        {errors:>3}"
+              .format(**locals()))
 
     summary = collections.defaultdict(float)
     for bench, res in zip(order, results):
@@ -171,16 +173,17 @@ def worker(args):
                                    drivers, driver_pos
                                   )
         
-        gen = final_driver().steps()
+        gen = final_driver().population_generator()
 
         total_cost, result = 0, None
 
         proc_time = -time.process_time()
-        while total_cost <= 1000:
-            cost, result = next(gen)
-            total_cost += cost
-            print("RESULT:", cost, total_cost)
-        print(result)
+        proxy = None
+        while total_cost <= 300:
+            proxy = next(gen)
+            total_cost += proxy.cost
+            print("RESULT:", proxy.cost, total_cost)
+        print("RES", proxy.finalized_population())
         proc_time += time.process_time()
         
         return proc_time

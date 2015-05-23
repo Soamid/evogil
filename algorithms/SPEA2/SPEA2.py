@@ -7,13 +7,14 @@
 import math
 import random
 
-from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivergen import DriverGen
 from algorithms.base.drivertools import mutate, crossover
 from evotools import ea_utils
 from evotools.metrics import euclid_distance
 
 
-class SPEA2(DriverLegacy):
+class SPEA2(DriverGen):
+    # TODO: extract, as Tournament can be common
     class Tournament:
         def __init__(self):
             self.tournament_size = 2
@@ -23,8 +24,8 @@ class SPEA2(DriverLegacy):
             return min(sub_pool, key=lambda x: x['fitness'])['value']
 
     def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance):
-        super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
-        self.population = population
+        super().__init__(dims, fitnesses, mutation_variance, crossover_variance)
+        self.__population = [{'value': x} for x in population]
         self.__archive_size = len(population)
         self.__archive = []
         self.select = SPEA2.Tournament()
@@ -37,10 +38,22 @@ class SPEA2(DriverLegacy):
     def population(self, pop):
         self.__population = [{'value': x} for x in pop]
 
-    def return_archive_result(self):
-        return [x['value'] for x in self.__archive]
+    class Proxy(DriverGen.Proxy):
+        def __init__(self, archive, population, cost):
+            self.cost = cost
+            self._archive = archive
+            self._population = population
 
-    def steps(self):
+        def send_emigrants(self, emigrants):
+            raise NotImplemented
+
+        def get_immigrants(self):
+            raise NotImplemented
+
+        def finalized_population(self):
+            return [x['value'] for x in self._archive]
+
+    def population_generator(self):
         while True:
             self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
@@ -53,7 +66,7 @@ class SPEA2(DriverLegacy):
                                for _ in self.__population]
             cost = len(self.__population)
 
-            yield cost, self.return_archive_result()
+            yield SPEA2.Proxy(self.__archive, self.__population, cost)
 
     def calculate_fitnesses(self, population, archive):
         self.calculate_objectives(population)

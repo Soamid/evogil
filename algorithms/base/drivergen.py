@@ -1,6 +1,16 @@
 class DriverGen:
-    def __init__(self):
-        pass
+    def __init__(self,
+                 dims,
+                 fitnesses,
+                 mutation_variance,
+                 crossover_variance,
+                 mutation_probability=0.05):
+        self.fitnesses = fitnesses
+        self.dims = dims
+        self.mutation_variance = mutation_variance
+        self.mutation_probability = mutation_probability
+        self.crossover_variance = crossover_variance
+        self.finished = False
 
     def population_generator(self):
         """ Generator.
