@@ -8,10 +8,11 @@ from ep.utils.driver import Driver
 
 
 class SMSEMOA(Driver):
-    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, epoch_length_multiplier=0.5):
+    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, reference_point, epoch_length_multiplier=0.5):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
         self.population = population
         self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
+        self.reference_point = reference_point
 
 
     @property
@@ -29,6 +30,8 @@ class SMSEMOA(Driver):
 
         cost = self.calculate_objectives(self.__population)
 
+        i = 1
+
         for _ in condI:
             for _ in range(self.epoch_length):
                 new_indiv = self.generate(self.__population)
@@ -36,7 +39,10 @@ class SMSEMOA(Driver):
                 self.__population = self.reduce_population(self.__population + [new_indiv])
 
                 if budget is not None and cost > budget:
+                    print(i)
                     return cost
+
+                i+=1
 
         return cost
 
@@ -44,7 +50,7 @@ class SMSEMOA(Driver):
     def calculate_objectives(self, pop):
         for p in pop:
             p.objectives = [o(p.value)
-                               for o in self.fitnesses]
+                            for o in self.fitnesses]
         return len(pop)
 
     def generate(self, pop):
@@ -56,16 +62,21 @@ class SMSEMOA(Driver):
 
     def reduce_population(self, pop):
         sorted_pop = self.nd_sort(pop)
-        worst_front = sorted_pop[len(pop)]
+        worst_front = max(sorted_pop.items(), key=lambda x: x[0])[1]
 
-        hv = HyperVolume([x[1] for x in self.dims])
-        results = [x.objectives for x in worst_front]
+        hv_contribution = self.calculate_hypervolume_contribution(worst_front)
+        min_contributor = min(hv_contribution, key=lambda x: x[1])
+
+        pop.remove(min_contributor[0])
+        return pop
+
+    def calculate_hypervolume_contribution(self, pop):
+        hv = HyperVolume(self.reference_point)
+        results = [x.objectives for x in pop]
 
         hv_global = hv.compute(results)
 
-        min_contributor = min((worst_front[i], hv_global - hv.compute(results[:i] + results[i+1:])) for i in range(len(results)))
-        return min_contributor[0]
-
+        return [(pop[i], hv_global - hv.compute(results[:i] + results[i + 1:])) for i in range(len(results))]
 
     def nd_sort(self, pop):
         dominated_by = collections.defaultdict(set)
@@ -90,7 +101,9 @@ class SMSEMOA(Driver):
                     if how_many_dominates[y] is 0:
                         front[front_no + 1].append(y)
             front_no += 1
+        del front[front_no]
         return front
+
 
 class Individual:
     def __init__(self, value):

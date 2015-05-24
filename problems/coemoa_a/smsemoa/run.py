@@ -34,13 +34,15 @@ class TestRunSMSEMOA(TestRun):
         var = [abs(maxa - mina) / var_mult
                for (mina, maxa) in problem.dims]
 
+        reference_point = tuple(
+            max(problem.pareto_front, key=lambda x: x[i])[i] for i in range(len(problem.pareto_front[0])))
         self.alg = smsemoa.SMSEMOA(dims=problem.dims,
                                    population=init_population,
                                    fitnesses=problem.fitnesses,
                                    mutation_variance=var,
-                                   crossover_variance=var)
+                                   crossover_variance=var,
+                                   reference_point=reference_point)
         self.run_alg(budget, problem)
 
-
-if __name__ == '__main__':
-    unittest.main()
+        if __name__ == '__main__':
+            unittest.main()

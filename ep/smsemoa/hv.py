@@ -17,7 +17,7 @@
 
 __author__ = "Simon Wessing"
 
-
+#TODO Use global hv after evil branch merge!
 class HyperVolume:
     """
     Hypervolume computation based on variant 3 of the algorithm in the paper:
