@@ -4,7 +4,6 @@ import random
 
 import numpy
 import numpy.linalg
-import scipy.special
 
 from ep.utils.driver import Driver
 
@@ -12,20 +11,20 @@ from ep.utils.driver import Driver
 EPSILON = numpy.finfo(float).eps
 random.seed()
 
+import matplotlib.pyplot as plt
+
 
 class ThetaNSGAIII(Driver):
     def __init__(self,
                  population,
                  dims,
                  fitnesses,
-                 mutation_variance,
-                 crossover_variance,
-                 partitions=None,
+                 mutation_variance=0,
+                 crossover_variance=0,
                  theta=5):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
 
         self.theta = theta
-        self.partitions = partitions
 
         self.dims = dims
         self.dims_no = len(dims)
@@ -33,13 +32,6 @@ class ThetaNSGAIII(Driver):
         self.objective_no = len(self.objectives)
 
         self.population_size = len(population)
-        if self.partitions is None:
-            self.partitions = 1
-            while int(scipy.special.binom(self.objective_no + self.partitions - 1.0,
-                                          self.partitions)) <= self.population_size:
-                self.partitions += 1
-            self.partitions -= 1
-
         self.reference_points = self.generate_reference_points()
         self.reference_point_lengths = [numpy.linalg.norm(point) for point in self.reference_points]
 
@@ -48,18 +40,24 @@ class ThetaNSGAIII(Driver):
 
         self.cost = 0
         self.primary_cost_included = False
+        self.budget = None
+
         self.ideal_point = [float('inf') for _ in range(self.objective_no)]
         self.update_ideal_point(self.individuals)
 
-        self.budget = None
-
-        self.mutation_rate = 1.0 / self.dims_no
+        # TODO: remove debug
+        # plt.scatter([x.v[0] for x in self.individuals], [x.v[1] for x in self.individuals], c='g')
+        # plt.scatter([x.objectives[0] for x in self.individuals], [x.objectives[1] for x in self.individuals], c='b')
+        # plt.scatter([self.ideal_point[0]], [self.ideal_point[1]], c='r')
+        # plt.show()
 
         self.clusters = [[] for _ in self.reference_points]
 
+        self.crossover_rate = 0.9
+        self.mutation_rate = 1.0 / len(self.dims)
+
     def generate_reference_points(self):
-        point_no = int(scipy.special.binom(self.objective_no + self.partitions - 1.0, self.partitions))
-        return [generate_reference_point(self.objective_no) for _ in range(point_no)]
+        return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
 
     @property
     def population(self):
@@ -99,12 +97,90 @@ class ThetaNSGAIII(Driver):
 
     def next_step(self):
         offspring_inds = self.make_offspring_individuals()
+
+        # TODO: remove debug
+        # plt.scatter([x.v[0] for x in offspring_inds], [x.v[1] for x in offspring_inds], c='b', marker='^')
+        # plt.show()
+
         self.update_ideal_point(offspring_inds)
+
+        # TODO: remove debug
+        # plt.scatter([x.objectives[0] for x in offspring_inds],
+        #             [x.objectives[1] for x in offspring_inds], c='g', marker='^')
+        # plt.scatter([self.ideal_point[0]], [self.ideal_point[1]], c='r')
+        # plt.show()
+
         offspring_inds.extend(self.individuals)
         self.normalize(offspring_inds)
+
+        # TODO: remove debug
+        # plt.scatter([x.normalized_objectives[0] for x in offspring_inds],
+        #             [x.normalized_objectives[1] for x in offspring_inds])
+        # plt.scatter([x[0] for x in self.reference_points], [x[1] for x in self.reference_points], c='k', marker='+')
+        # plt.show()
+
         self.clustering(offspring_inds)
+
+        # TODO: remove debug
+        # for i, cluster in enumerate(self.clusters):
+        # c = None
+        # k = 7
+        # if i % k == 0:
+        # c = 'r'
+        # elif i % k == 1:
+        #         c = 'g'
+        #     elif i % k == 2:
+        #         c = 'b'
+        #     elif i % k == 3:
+        #         c = 'y'
+        #     elif i % k == 4:
+        #         c = 'k'
+        #     elif i % k == 5:
+        #         c = 'c'
+        #     elif i % k == 6:
+        #         c = 'm'
+        #
+        #     if len(cluster) > 0:
+        #         plt.scatter([x.normalized_objectives[0] for x in cluster],
+        #                     [x.normalized_objectives[1] for x in cluster], c=c, marker='s')
+        #         plt.scatter([self.reference_points[i][0]], [self.reference_points[i][1]], c=c, marker='o', s=500)
+        # plt.scatter([x[0] for x in self.reference_points], [x[1] for x in self.reference_points], c='k', marker='o')
+        # plt.xlim([-0.2, 1.2])
+        # plt.ylim([-0.2, 1.2])
+        # plt.show()
+        #
+        # plt.scatter([x.objectives[0] for x in offspring_inds], [x.objectives[1] for x in offspring_inds],
+        #             c='g', s=400)
+
         self.calculate_theta_fitness()
         fronts = theta_non_dominated_sort(offspring_inds)
+
+        # TODO: remove debug
+        # for i in fronts.keys():
+        #     front = fronts[i]
+        #     c = None
+        #     k = 7
+        #     if i == 1:
+        #         c = 'r'
+        #     elif i == 2:
+        #         c = 'g'
+        #     elif i == 3:
+        #         c = 'b'
+        #     elif i == 4:
+        #         c = 'y'
+        #     elif i == 5:
+        #         c = 'm'
+        #     elif i == 6:
+        #         c = 'c'
+        #     else:
+        #         c = 'k'
+        #
+        # plt.scatter([x.normalized_objectives[0] for x in front], [x.normalized_objectives[1] for x in front],
+        #             c=c, marker='s', s=100)
+        # plt.xlim([-0.2, 1.2])
+        # plt.ylim([-0.2, 1.2])
+        # plt.show()
+
         self.create_final_population(fronts)
 
     def make_offspring_individuals(self):
@@ -112,7 +188,8 @@ class ThetaNSGAIII(Driver):
         for _ in range(int(self.population_size / 2)):
             parent_a = random.choice(self.individuals)
             parent_b = random.choice(self.individuals)
-            child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims)
+            child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims,
+                                                          crossover_rate=self.crossover_rate)
             polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate)
             polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate)
             offspring_inds.append(child_a)
@@ -126,6 +203,10 @@ class ThetaNSGAIII(Driver):
                 if defiled_point[i] < objective:
                     defiled_point[i] = objective
 
+        # TODO: remove debug
+        # plt.scatter([defiled_point[0]], [defiled_point[1]], c='r')
+        # plt.show()
+
         for ind in individuals:
             ind.normalized_objectives = numpy.array(
                 [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i])
@@ -134,37 +215,51 @@ class ThetaNSGAIII(Driver):
     def clustering(self, individuals):
         self.clusters = [[] for _ in self.reference_points]
         for ind in individuals:
-            min_projection = float('inf')
+            min_rejection = float('inf')
             min_i = -1
             for i, reference_point in enumerate(self.reference_points):
-                projection = scalar_projection(ind, reference_point, self.reference_point_lengths[i])
-                if projection < min_projection:
-                    min_projection = projection
+                rejection = scalar_rejection(ind, reference_point, self.reference_point_lengths[i])
+                if rejection < min_rejection:
+                    min_rejection = rejection
                     min_i = i
             self.clusters[min_i].append(ind)
             ind.cluster = min_i
-            ind.projection = min_projection
+            ind.rejection = min_rejection
 
     def calculate_theta_fitness(self):
         for i, cluster in enumerate(self.clusters):
             for ind in cluster:
-                ind.theta_fitness = ind.projection + self.theta * scalar_rejection(ind, self.reference_points[i],
-                                                                                   self.reference_point_lengths[i])
+                ind.theta_fitness = scalar_projection(ind, self.reference_points[i],
+                                                      self.reference_point_lengths[i]) + self.theta * ind.rejection
 
     def create_final_population(self, fronts):
         new_inds = []
         new_size = len(new_inds)
         i = 1
         while new_size + len(fronts[i]) <= self.population_size:
-            # print(i)
             new_inds.extend(fronts[i])
             new_size = len(new_inds)
             i += 1
         new_inds.extend(random.sample(fronts[i], self.population_size - len(new_inds)))
+
+        # TODO remove debug
+        # for front in fronts.values():
+        # plt.scatter([x.v[0] for x in front], [x.v[1] for x in front], c='k', s=100)
+        # plt.scatter([x.v[0] for x in new_inds], [x.v[1] for x in new_inds], c='r', s=50)
+        # plt.xlim(-12, 12)
+        # plt.ylim(-12, 12)
+        # plt.show()
+        #
+        # for front in fronts.values():
+        # plt.scatter([x.objectives[0] for x in front], [x.objectives[1] for x in front], c='k', s=100)
+        # plt.scatter([x.objectives[0] for x in new_inds], [x.objectives[1] for x in new_inds], c='r', s=50)
+        # plt.xlim(-15., 5.)
+        # plt.ylim(-15., 25.)
+        # plt.show()
+
         self.individuals = new_inds
 
     def finish(self):
-        print(len(self.individuals))
         return [x.v for x in self.individuals]
 
 
@@ -237,12 +332,12 @@ def scalar_rejection(ind, reference_point, reference_point_length):
 
 
 def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta=30):
-    child_a = Individual(parent_a.v)
-    child_b = Individual(parent_b.v)
+    child_a = Individual([x for x in parent_a.v])
+    child_b = Individual([x for x in parent_b.v])
 
     if random.random() > crossover_rate:
-        child_a.objectives = parent_a.objectives
-        child_b.objectives = parent_b.objectives
+        child_a.objectives = [x for x in parent_a.objectives]
+        child_b.objectives = [x for x in parent_b.objectives]
         return child_a, child_b
 
     for i, dim in enumerate(dims):
@@ -324,4 +419,30 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20):
 
 
 if __name__ == '__main__':
-    pass
+    objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
+                  lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3)
+                  + math.pow(abs(x[1]), 0.8) + 5 * math.pow(math.sin(x[1]), 3)]
+    dimensions = [(-10, 10), (-10, 10)]
+    my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
+
+    popu = ThetaNSGAIII(my_individuals, dimensions, objectives, theta=0)
+    # population.steps(range(100))
+
+    for j in range(100):
+        popu.next_step()
+        print(j)
+
+        effect = popu.finish()
+        X = [popu.objectives[0](x) for x in effect]
+        Y = [popu.objectives[1](x) for x in effect]
+        plt.scatter(X, Y)
+        # pylab.xlim(-10.,250.)
+        # pylab.ylim(-10.,250.)
+        plt.xlim(-15., 5.)
+        plt.ylim(-15., 25.)
+
+        file = ""
+        if j < 10:
+            file += "0"
+        plt.savefig("pictures//" + file + str(j) + ".png")
+        plt.clf()
