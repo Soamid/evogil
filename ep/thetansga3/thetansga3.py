@@ -20,22 +20,30 @@ class ThetaNSGAIII(Driver):
                  fitnesses,
                  mutation_variance,
                  crossover_variance,
-                 partitions,
-                 theta):
+                 partitions=None,
+                 theta=5):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
 
         self.theta = theta
+        self.partitions = partitions
 
         self.dims = dims
         self.dims_no = len(dims)
         self.objectives = fitnesses
         self.objective_no = len(self.objectives)
 
-        self.reference_points = self.generate_reference_points(partitions)
+        self.population_size = len(population)
+        if self.partitions is None:
+            self.partitions = 0
+            while int(scipy.special.binom(self.objective_no + self.partitions - 1.0,
+                                          self.partitions)) <= self.population_size:
+                self.partitions += 1
+            self.partitions -= 1
+
+        self.reference_points = self.generate_reference_points()
         self.reference_point_lengths = [numpy.linalg.norm(point) for point in self.reference_points]
 
         self.individuals = []
-        self.population_size = 0
         self.population = population
 
         self.ideal_point = [float('inf') for _ in range(self.objective_no)]
@@ -48,8 +56,8 @@ class ThetaNSGAIII(Driver):
 
         self.clusters = [[] for _ in self.reference_points]
 
-    def generate_reference_points(self, partitions):
-        point_no = int(scipy.special.binom(self.objective_no + partitions - 1.0, partitions))
+    def generate_reference_points(self):
+        point_no = int(scipy.special.binom(self.objective_no + self.partitions - 1.0, self.partitions))
         return [generate_reference_point(self.objective_no) for _ in range(point_no)]
 
     @property
@@ -138,7 +146,7 @@ class ThetaNSGAIII(Driver):
         for i, cluster in enumerate(self.clusters):
             for ind in cluster:
                 ind.theta_fitness = ind.projection + self.theta * scalar_rejection(ind, self.reference_points[i],
-                                                                           self.reference_point_lengths[i])
+                                                                                   self.reference_point_lengths[i])
 
     def create_final_population(self, fronts):
         new_inds = []
