@@ -34,7 +34,7 @@ class ThetaNSGAIII(Driver):
 
         self.population_size = len(population)
         if self.partitions is None:
-            self.partitions = 0
+            self.partitions = 1
             while int(scipy.special.binom(self.objective_no + self.partitions - 1.0,
                                           self.partitions)) <= self.population_size:
                 self.partitions += 1
@@ -153,12 +153,19 @@ class ThetaNSGAIII(Driver):
 
     def create_final_population(self, fronts):
         new_inds = []
-        i = 0
-        while len(new_inds) + len(fronts[i]) <= self.population_size:
+        new_size = len(new_inds)
+        i = 1
+        while new_size + len(fronts[i]) <= self.population_size:
+            # print(i)
             new_inds.extend(fronts[i])
+            new_size = len(new_inds)
             i += 1
         new_inds.extend(random.sample(fronts[i], self.population_size - len(new_inds)))
         self.individuals = new_inds
+
+    def finish(self):
+        print(len(self.individuals))
+        return [x.v for x in self.individuals]
 
 
 class Individual:
@@ -180,11 +187,11 @@ def theta_non_dominated_sort(individuals):
             elif dominates(y, x):
                 how_many_dominates[x] += 1
         if how_many_dominates[x] == 0:
-            nsga_rank[x] = 0
-            front[0].append(x)
+            nsga_rank[x] = 1
+            front[1].append(x)
 
-    front_no = 0
-    while len(front[front_no]) == 0:
+    front_no = 1
+    while not len(front[front_no]) == 0:
         for x in front[front_no]:
             for y in dominated_by[x]:
                 how_many_dominates[y] -= 1

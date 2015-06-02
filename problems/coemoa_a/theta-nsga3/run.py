@@ -3,7 +3,7 @@ import unittest
 #noinspection PyPep8Naming
 import ep.thetansga3.thetansga3 as thetansga3
 from ep.utils import ea_utils
-from problems.coemoa_e import problem
+from problems.coemoa_a import problem
 
 from problems.testrun import TestRun
 
@@ -16,12 +16,12 @@ from problems.testrun import TestRun
 
 
 #noinspection PyPep8Naming
-class TestRunThetaNSGA3(TestRun):
+class TestRunNSGA2(TestRun):
     alg_name = "theta-nsga3"
 
     @TestRun.skipByName()
-    @TestRun.map_param('budget', range(500, 95000, 10000),
-                   gather_function=TestRun.gather_function)
+    @TestRun.map_param('budget', range(500, 9500, 1000),
+                       gather_function=TestRun.gather_function)
     def test_quick(self, budget=None):
         init_population = ea_utils.gen_population(100, problem.dims)
         var = [abs(maxa-mina)/100
