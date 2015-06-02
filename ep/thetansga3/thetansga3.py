@@ -46,10 +46,11 @@ class ThetaNSGAIII(Driver):
         self.individuals = []
         self.population = population
 
+        self.cost = 0
+        self.primary_cost_included = False
         self.ideal_point = [float('inf') for _ in range(self.objective_no)]
         self.update_ideal_point(self.individuals)
 
-        self.cost = None
         self.budget = None
 
         self.mutation_rate = 1.0 / self.dims_no
@@ -77,7 +78,7 @@ class ThetaNSGAIII(Driver):
         for ind in individuals:
             if ind.objectives is None:
                 self.cost += 1
-                ind.objectives = {objective: objective(ind.v) for objective in self.objectives}
+                ind.objectives = [objective(ind.v) for objective in self.objectives]
 
     def update_ideal_point(self, individuals):
         self._calculate_objectives(individuals)
@@ -87,26 +88,28 @@ class ThetaNSGAIII(Driver):
                     self.ideal_point[i] = objective
 
     def steps(self, generator, budget=None):
-        self.cost = 0
+        if self.primary_cost_included:
+            self.cost = 0
         for _ in generator:
             self.next_step()
             if budget is not None and self.cost > self.budget:
                 break
+        self.primary_cost_included = True
         return self.cost
 
     def next_step(self):
         offspring_inds = self.make_offspring_individuals()
         self.update_ideal_point(offspring_inds)
-        combined_inds = offspring_inds.extend(self.individuals)
-        self.normalize(combined_inds)
-        self.clustering(combined_inds)
-        self.calculate_thetas()
-        fronts = theta_non_dominated_sort(combined_inds)
+        offspring_inds.extend(self.individuals)
+        self.normalize(offspring_inds)
+        self.clustering(offspring_inds)
+        self.calculate_theta_fitness()
+        fronts = theta_non_dominated_sort(offspring_inds)
         self.create_final_population(fronts)
 
     def make_offspring_individuals(self):
         offspring_inds = []
-        for _ in range(self.population_size / 2):
+        for _ in range(int(self.population_size / 2)):
             parent_a = random.choice(self.individuals)
             parent_b = random.choice(self.individuals)
             child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims)
@@ -126,7 +129,7 @@ class ThetaNSGAIII(Driver):
         for ind in individuals:
             ind.normalized_objectives = numpy.array(
                 [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i])
-                 for i, obj in enumerate(self.objectives)])
+                 for i, obj in enumerate(ind.objectives)])
 
     def clustering(self, individuals):
         self.clusters = [[] for _ in self.reference_points]
@@ -270,6 +273,8 @@ def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta
             temp = child_a.v[i]
             child_a.v[i] = child_b.v[i]
             child_b.v[i] = temp
+
+    return child_a, child_b
 
 
 def get_beta_q(rand, alpha, eta):
