@@ -9,7 +9,6 @@ algo_base = {
     "IBEA": {
         "kappa":                  0.05,
         "mating_population_size": 0.5,
-        "mutation_probability":   0.05,
     },
     "NSGAII": {
         "mating_population_size": 0.5,
