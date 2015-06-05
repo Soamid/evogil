@@ -80,16 +80,17 @@ import evotools.best_fronts
 if __name__ == '__main__':
     argv = docopt(__doc__, version='EvoGIL 3.0')
 
-    if argv['run']:
-        evotools.run_parallel.run_parallel(argv)
-    elif argv['statistics'] or argv['stats']:
-        evotools.stats.statistics(argv)
-    elif argv['pictures']:
-        evotools.pictures.pictures_from_stats(argv)
-    elif argv['best_fronts']:
-        evotools.best_fronts.main()
-    elif argv['violin']:
-        evotools.violin.violin(argv)
-    elif argv['summary']:
-        evotools.benchmark_results.analyse_results()
+    run_dict = {
+        'run':         evotools.run_parallel.run_parallel,
+        'statistics':  evotools.stats.statistics,
+        'stats':       evotools.stats.statistics,
+        'pictures':    evotools.pictures.pictures_from_stats,
+        'best_fronts': evotools.best_fronts.main,
+        'violin':      evotools.violin.violin,
+        'summary':     evotools.benchmark_results.analyse_results,
+    }
 
+    for k, v in run_dict.items():
+        if argv[k]:
+            v(argv)
+            break

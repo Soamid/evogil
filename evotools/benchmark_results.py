@@ -6,7 +6,7 @@ import json
 from evotools.config import metric_names
 
 
-def analyse_results():
+def analyse_results(argv):
     for i in iterate_results():
         print(len(i['data']), i['d_algorithm'].name, i['d_problem'].name, i['d_budget'].name, i['metrics_name_long'])
 
