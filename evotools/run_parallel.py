@@ -229,7 +229,7 @@ def worker(args):
         return results, proc_time[-1]
 
     except Exception as e:
-        print(traceback.format_exc())
+        logger.exception("Some error", exc_info=e)
 
 
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
