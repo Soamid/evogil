@@ -3,7 +3,7 @@
 
 Usage:
   evogil.py -h | --help 
-  evogil.py run [options]
+  evogil.py run <budget> [options]
   evogil.py summary
   evogil.py (stats | statistics) [options]
   evogil.py pictures [options]
@@ -12,7 +12,7 @@ Usage:
 
 Commands:
   run
-    Performs benchmarks.
+    Performs benchmarks. Param: budget(s), list of integers separated by comma.
   summary
     Returns number of results for each tuple: algorithm, problem, budget.
   stats
@@ -50,10 +50,6 @@ Options:
             ackley
             kursawe
         [default: ZDT1,ZDT2,ZDT3,ZDT4,ZDT6,ackley,kursawe]
-  -g <budget>, --budget <budget>
-        Only for selected budget(s) separated by comma. List of integers.
-        There are some defaults.
-        [default: None]
   -b <bootstrap-iter>, --bootstrap <bootstrap-iter>
         Bootstrap iterations.
         [default: 10000]

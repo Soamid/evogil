@@ -8,6 +8,7 @@ import operator
 
 from importlib import import_module
 from contextlib import suppress
+from algorithms.base.drivergen import DriverGen
 
 from evotools.ea_utils import gen_population
 from evotools import run_config
@@ -22,153 +23,165 @@ logger = get_logger(__name__)
 
 
 def run_parallel(args):
+    budgets = sorted([int(budget) for budget in args['<budget>'].split(',')])
+    logger.debug("Budgets: %s", budgets)
+
     order = [
-              ('ZDT6',     'HGS+NSGAII' , None),
-              ('ZDT4',     'HGS+NSGAII' , None),
-              ('ZDT4',     'IMGA+NSGAII', None),
-              ('ZDT3',     'HGS+NSGAII' , None),
-              ('ZDT1',     'HGS+NSGAII' , None),
-              ('ZDT2',     'HGS+NSGAII' , None),
-              ('ZDT4',     'NSGAII'     , None),
-              ('ZDT6',     'NSGAII'     , None),
-              ('kursawe',  'HGS+NSGAII' , None),
-              ('ZDT3',     'NSGAII'     , None),
-              ('ZDT1',     'NSGAII'     , None),
-              ('ZDT2',     'NSGAII'     , None),
-              ('ZDT6',     'IMGA+NSGAII', None),
-              ('ZDT3',     'IMGA+NSGAII', None),
-              ('ZDT2',     'IMGA+NSGAII', None),
-              ('ZDT1',     'IMGA+NSGAII', None),
-              ('ZDT2',     'HGS+SPEA2'  , None),
-              ('ZDT1',     'HGS+SPEA2'  , None),
-              ('kursawe',  'IMGA+NSGAII', None),
-              ('kursawe',  'NSGAII'     , None),
-              ('ZDT4',     'HGS+SPEA2'  , None),
-              ('ZDT4',     'IBEA'       , None),
-              ('ZDT4',     'IMGA+IBEA'  , None),
-              ('kursawe',  'IBEA'       , None),
-              ('kursawe',  'IMGA+IBEA'  , None),
-              ('kursawe',  'SPEA2'      , None),
-              ('kursawe',  'IMGA+SPEA2' , None),
-              ('ZDT6',     'IBEA'       , None),
-              ('ZDT6',     'IMGA+IBEA'  , None),
-              ('kursawe',  'HGS+SPEA2'  , None),
-              ('ZDT3',     'HGS+SPEA2'  , None),
-              ('ZDT3',     'IBEA'       , None),
-              ('ZDT3',     'IMGA+IBEA'  , None),
-              ('ZDT4',     'IMGA+SPEA2' , None),
-              ('ZDT2',     'IMGA+IBEA'  , None),
-              ('ZDT2',     'IBEA'       , None),
-              ('ZDT1',     'IBEA'       , None),
-              ('kursawe',  'HGS+IBEA'   , None),
-              ('ZDT1',     'IMGA+IBEA'  , None),
-              ('ZDT4',     'HGS+IBEA'   , None),
-              ('ZDT6',     'HGS+SPEA2'  , None),
-              ('ZDT3',     'HGS+IBEA'   , None),
-              ('ZDT1',     'HGS+IBEA'   , None),
-              ('ZDT2',     'HGS+IBEA'   , None),
-              ('ZDT1',     'IMGA+SPEA2' , None),
-              ('ZDT2',     'IMGA+SPEA2' , None),
-              ('ZDT3',     'IMGA+SPEA2' , None),
-              ('ZDT6',     'IMGA+SPEA2' , None),
-              ('ackley',   'IMGA+NSGAII', None),
-              ('ackley',   'HGS+NSGAII' , None),
-              ('ZDT4',     'SPEA2'      , None),
-              ('ZDT1',     'SPEA2'      , None),
-              ('ZDT6',     'SPEA2'      , None),
-              ('ZDT2',     'SPEA2'      , None),
-              ('ZDT3',     'SPEA2'      , None),
-              ('ackley',   'NSGAII'     , None),
-              ('ZDT6',     'HGS+IBEA'   , None),
-              ('ackley',   'IMGA+SPEA2' , None),
-              ('ackley',   'HGS+SPEA2'  , None),
-              ('ackley',   'SPEA2'      , None),
-              ('ackley',   'IMGA+IBEA'  , None),
-              ('ackley',   'IBEA'       , None),
-              ('ackley',   'HGS+IBEA'   , None),
-              ('parabol',  'HGS+SPEA2'  , None),
-              ('parabol',  'HGS+IBEA'   , None),
-              ('parabol',  'HGS+NSGAII' , None)
-            ]
+        ('ZDT6', 'HGS+NSGAII'),
+        ('ZDT4', 'HGS+NSGAII'),
+        ('ZDT4', 'IMGA+NSGAII'),
+        ('ZDT3', 'HGS+NSGAII'),
+        ('ZDT1', 'HGS+NSGAII'),
+        ('ZDT2', 'HGS+NSGAII'),
+        ('ZDT4', 'NSGAII'),
+        ('ZDT6', 'NSGAII'),
+        ('kursawe', 'HGS+NSGAII'),
+        ('ZDT3', 'NSGAII'),
+        ('ZDT1', 'NSGAII'),
+        ('ZDT2', 'NSGAII'),
+        ('ZDT6', 'IMGA+NSGAII'),
+        ('ZDT3', 'IMGA+NSGAII'),
+        ('ZDT2', 'IMGA+NSGAII'),
+        ('ZDT1', 'IMGA+NSGAII'),
+        ('ZDT2', 'HGS+SPEA2'),
+        ('ZDT1', 'HGS+SPEA2'),
+        ('kursawe', 'IMGA+NSGAII'),
+        ('kursawe', 'NSGAII'),
+        ('ZDT4', 'HGS+SPEA2'),
+        ('ZDT4', 'IBEA'),
+        ('ZDT4', 'IMGA+IBEA'),
+        ('kursawe', 'IBEA'),
+        ('kursawe', 'IMGA+IBEA'),
+        ('kursawe', 'SPEA2'),
+        ('kursawe', 'IMGA+SPEA2'),
+        ('ZDT6', 'IBEA'),
+        ('ZDT6', 'IMGA+IBEA'),
+        ('kursawe', 'HGS+SPEA2'),
+        ('ZDT3', 'HGS+SPEA2'),
+        ('ZDT3', 'IBEA'),
+        ('ZDT3', 'IMGA+IBEA'),
+        ('ZDT4', 'IMGA+SPEA2'),
+        ('ZDT2', 'IMGA+IBEA'),
+        ('ZDT2', 'IBEA'),
+        ('ZDT1', 'IBEA'),
+        ('kursawe', 'HGS+IBEA'),
+        ('ZDT1', 'IMGA+IBEA'),
+        ('ZDT4', 'HGS+IBEA'),
+        ('ZDT6', 'HGS+SPEA2'),
+        ('ZDT3', 'HGS+IBEA'),
+        ('ZDT1', 'HGS+IBEA'),
+        ('ZDT2', 'HGS+IBEA'),
+        ('ZDT1', 'IMGA+SPEA2'),
+        ('ZDT2', 'IMGA+SPEA2'),
+        ('ZDT3', 'IMGA+SPEA2'),
+        ('ZDT6', 'IMGA+SPEA2'),
+        ('ackley', 'IMGA+NSGAII'),
+        ('ackley', 'HGS+NSGAII'),
+        ('ZDT4', 'SPEA2'),
+        ('ZDT1', 'SPEA2'),
+        ('ZDT6', 'SPEA2'),
+        ('ZDT2', 'SPEA2'),
+        ('ZDT3', 'SPEA2'),
+        ('ackley', 'NSGAII'),
+        ('ZDT6', 'HGS+IBEA'),
+        ('ackley', 'IMGA+SPEA2'),
+        ('ackley', 'HGS+SPEA2'),
+        ('ackley', 'SPEA2'),
+        ('ackley', 'IMGA+IBEA'),
+        ('ackley', 'IBEA'),
+        ('ackley', 'HGS+IBEA'),
+        ('parabol', 'HGS+SPEA2'),
+        ('parabol', 'HGS+IBEA'),
+        ('parabol', 'HGS+NSGAII')
+    ]
+    logger.debug("Problems * algorithms: %s",
+                 order)
 
     if args['--algo']:
         algos = args['--algo'].lower().split(',')
-        order = [ (problem, algo, budget)
-                  for problem, algo, budget
-                  in order
-                  if algo.lower() in algos
-                ]
+        logger.debug("Selecting algorithms by name: %s",
+                     algos)
+        order = [(problem, algo)
+                 for problem, algo
+                 in order
+                 if algo.lower() in algos
+        ]
+        logger.debug("Selected: %s",
+                     order)
 
     if args['--problem']:
         problems = args['--problem'].lower().split(',')
-        order = [ (problem, algo, budget)
-                  for problem, algo, budget
-                  in order
-                  if problem.lower() in problems
-                ]
+        logger.debug("Selecting problems by name: %s",
+                     problems)
+        order = [(problem, algo)
+                 for problem, algo
+                 in order
+                 if problem.lower() in problems
+        ]
+        logger.debug("Selected: %s",
+                     order)
 
-    print("Selected following tests:")
-    for problem, algo, budget in order:
-        print("  {problem:12} :: {algo:12}".format(**locals()))
+    logger.info("Selected following tests: %s",
+                ', '.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
+                          for problem, algo in order))
 
-    order = [ test
-              for test in order
-              for i in range(int(args['-N']))
-            ]
+    logger.debug("Duplicating problems (-N flag)")
+    order = [(test, budgets)
+             for test in order
+             for i in range(int(args['-N']))
+    ]
 
-
+    logger.debug("Creating the pool")
     p = multiprocessing.Pool(int(args['-j']))
 
-    wall_time = -time.perf_counter()
-    results = p.map(worker, order)
-    wall_time += time.perf_counter()
+    wall_time = []
+    with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
+        results = p.map(worker, order, chunksize=1)
 
-    proc_times = sum( res
-                      for res
-                      in results
-                      if res is not None
-                    )
-    errors = [ str((alg, prob, budg))
-               for res, (prob, alg, budg)
-               in zip(results, order)
-               if res is None
-             ]
+    proc_times = sum(proc_time
+                     for res, proc_time
+                     in results
+                     if res is not None
+    )
+    errors = [str((alg, prob))
+              for comp_result, (prob, alg)
+              in zip(results, order)
+              if comp_result is None
+    ]
 
-    speedup = proc_times / wall_time
+    speedup = proc_times / wall_time[0]
 
-    print("########################################")
-    print("SUMMARY:")
-    print("  wall time:     {wall_time:7.3f} s\n"\
-          "  CPU+user time: {proc_times:7.3f}s\n"\
-          "  est. speedup:  {speedup:7.3f}x"
-          .format(**locals()))
-    if errors:
+    logger.info("""########################################
+SUMMARY:
+  wall time:     %7.3f
+  CPU+user time: %7.3f
+  est. speedup:  %7.3f""", wall_time[0], proc_times, speedup)
+
+    if logger.isEnabledFor(logging.DEBUG) and errors:
         errors = '\n                 '.join(errors)
-        print("  errors:        {errors:>3}"
-              .format(**locals()))
+        logger.error("Errors encountered: {errors:>3}".format(**locals()))
 
     summary = collections.defaultdict(float)
-    for bench, res in zip(order, results):
-        summary[bench] += res or 0.0
+    for (bench, _), (res, proc_time) in zip(order, results):
+        summary[bench] += proc_time or 0.0
 
-
-    print("RUNNING TIME LIST:")
-    for (prob, alg, budgets), timesum in sorted( summary.items(),
-                                                 key=operator.itemgetter(1),
-                                                 reverse=True
-                                               ):
-        prob_show = "'" + prob + "'"
-        alg_show = "'" + alg + "'"
-        avg_time = timesum / float(args['-N'])
-        budgets = str(budgets)
-        print("  ({prob_show:16}, {alg_show:16}, {budgets:30}),  # {avg_time:7.3f}s".format(**locals()))
+    if logger.isEnabledFor(logging.INFO):
+        logger.info("Running time:")
+        res = []
+        for (prob, alg), timesum in sorted(summary.items(),
+                                           key=operator.itemgetter(1),
+                                           reverse=True
+        ):
+            prob_show = "'" + prob + "'"
+            alg_show = "'" + alg + "'"
+            avg_time = timesum / float(args['-N'])
+            res.append("  ({prob_show:16}, {alg_show:16}),  # {avg_time:7.3f}s".format(**locals()))
+        logger.info('\n'.join(res))
 
 
 def worker(args):
     logger.debug("Starting the worker. args:%s", args)
-    problem, algo, budgets = args
-    if not budgets:
-        budgets = run_config.metaconfig_budgets
+    (problem, algo), budgets = args
 
     drivers = algo.split('+')
 
@@ -179,27 +192,41 @@ def worker(args):
                                    problem,
                                    final_driver,
                                    drivers, driver_pos
-                                  )
+            )
 
-        gen = final_driver().population_generator()
-
+        logger.debug("Creating the driver used to perform computation")
+        driver = final_driver()
         total_cost, result = 0, None
 
         proc_time = []
+        results = []
         with log_time(system_time, logger, "Processing done in {time_res}s", out=proc_time):
-            proxy = None
-            logger.debug("Starting processing")
-            while total_cost <= 100:
-                logger.debug("Waiting for proxy")
-                with log_time(system_time, logger, "Got proxy in {time_res}s"):
-                    proxy = next(gen)
-                logger.debug("Proxy.cost:%d", proxy.cost)
-                total_cost += proxy.cost
-                logger.debug("total_cost:%d", total_cost)
-            logger.debug("End loop, total_cost:%d", total_cost)
-            logger.debug("Final population: %s", proxy.finalized_population())
+            if isinstance(driver, DriverGen):
+                max_budget = max(budgets)
+                gen = driver.population_generator()
+                proxy = None
+                logger.debug("Starting processing")
 
-        return proc_time[-1]
+                while total_cost <= max_budget:
+                    logger.debug("Waiting for next proxy")
+                    with log_time(system_time, logger, "Got proxy in {time_res}s"):
+                        proxy = gen.send(proxy)
+                    logger.debug("Proxy.cost: %d", proxy.cost)
+                    total_cost += proxy.cost
+                    logger.debug("total_cost: %d", total_cost)
+                    if total_cost >= budgets[0]:
+                        logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
+                                     total_cost,
+                                     budgets[0])
+                        results.append(proxy.finalized_population())
+                logger.debug("End loop, total_cost:%d", total_cost)
+                logger.debug("Final population: %s", proxy.finalized_population())
+            else:
+                e = NotImplementedError()
+                logger.exception("Oops. The driver type is not recognized", exc_info=e)
+                raise e
+
+        return results, proc_time[-1]
 
     except Exception as e:
         print(traceback.format_exc())
@@ -214,8 +241,8 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     logger.debug("Preparing %s for %s", algo, problem)
     logger.debug("driver:%s", driver)
 
-    algo_mod   = '.'.join(['algorithms', algo, algo])
-    algo_mod   = import_module(algo_mod)
+    algo_mod = '.'.join(['algorithms', algo, algo])
+    algo_mod = import_module(algo_mod)
     algo_class = getattr(algo_mod, algo)
 
     problem_mod = '.'.join(['problems', problem, 'problem'])
@@ -254,7 +281,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         update = run_config.algo_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[key]),
+                     "| by algo dict key:", key, "\n    <<", ', '.join(update),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -266,12 +293,12 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example key: (IMGA,  (HGS, SPEA2))
     with suppress(KeyError):
         key = (algo,
-               tuple(all_drivers[driver_pos+1:])
-               )
+               tuple(all_drivers[driver_pos + 1:])
+        )
         update = run_config.algo_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]),
+                     "| by algo dict key:", key, "\n    <<", ', '.join(update),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -284,11 +311,11 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     with suppress(KeyError):
         key = (tuple(all_drivers[:driver_pos]),
                algo
-              )
+        )
         update = run_config.algo_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]),
+                     "| by algo dict key:", key, "\n    <<", ', '.join(update),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -301,12 +328,12 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     with suppress(KeyError):
         key = (tuple(all_drivers[:driver_pos]),
                algo,
-               tuple(all_drivers[driver_pos+1:])
-              )
+               tuple(all_drivers[driver_pos + 1:])
+        )
         update = run_config.algo_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]),
+                     "| by algo dict key:", key, "\n    <<", ', '.join(update),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -322,11 +349,11 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     with suppress(KeyError):
         key = ( algo,
                 problem
-              )
+        )
         update = run_config.cust_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]),
+                     "| by cust dict key:", key, "\n    <<", ', '.join(update),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -342,13 +369,13 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     with suppress(KeyError):
         key = (tuple(all_drivers[:driver_pos]),
                algo,
-               tuple(all_drivers[driver_pos+1:]),
+               tuple(all_drivers[driver_pos + 1:]),
                problem
-              )
+        )
         update = run_config.cust_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]),
+                     "| by cust dict key:", key, "\n    <<", ', '.join(update),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -366,7 +393,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                      "| by algo fun:",
                      key,
                      updater
-                     )
+        )
         updater(config, problem_mod)
         logger.debug("config: %s", config)
 
@@ -375,14 +402,14 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example fun: init_alg_HGS__SPEA2
     # example fun: init_alg_IMGA__HGS_SPEA2
     with suppress(AttributeError):
-        key = "init_alg_" + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_alg_" + algo + '__' + '_'.join(all_drivers[driver_pos + 1:])
         updater = getattr(run_config, key)
         logger.debug("%s %s: %s: %s",
                      descr,
                      "| by algo fun:",
                      key,
                      updater
-                     )
+        )
         updater(config, problem_mod)
         logger.debug("config: %s", config)
 
@@ -398,7 +425,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                      "| by algo fun:",
                      key,
                      updater
-                     )
+        )
         updater(config, problem_mod)
         logger.debug("config: %s", config)
 
@@ -406,14 +433,15 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
     # example fun: init_alg_IMGA__HGS__SPEA2
     with suppress(AttributeError):
-        key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(
+            all_drivers[driver_pos + 1:])
         updater = getattr(run_config, key)
         logger.debug("%s %s: %s: %s",
                      descr,
                      "| by algo fun:",
                      key,
                      updater
-                     )
+        )
         updater(config, problem_mod)
         logger.debug("config: %s", config)
 
@@ -426,7 +454,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         update = run_config.prob_base[key]
         logger.debug("%s %s: %s",
                      descr,
-                     "| by prob dict key:", key, "\n    <<", ', '.join(run_config.prob_base[ key ]),
+                     "| by prob dict key:", key, "\n    <<", ', '.join(run_config.prob_base[key]),
                      update)
         config.update(update)
         logger.debug("config: %s", config)
@@ -435,14 +463,15 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     descr = "CUSTOMS FOR PROBLEM"
     # example fun: init_prob_ackley
     with suppress(AttributeError):
-        key = "init_prob_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_prob_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(
+            all_drivers[driver_pos + 1:])
         updater = getattr(run_config, key)
         logger.debug("%s %s: %s: %s",
                      descr,
                      "| by prob fun:",
                      key,
                      updater
-                     )
+        )
         updater(config, problem_mod)
         logger.debug("config: %s", config)
 
@@ -457,14 +486,15 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example fun: init_cust__IMGA__HGS_SPEA2___ackley
     # example fun: init_cust__IMGA__HGS_SPEA2___zdt1
     with suppress(AttributeError):
-        key = "init_cust_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
+        key = "init_cust_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(
+            all_drivers[driver_pos + 1:])
         updater = getattr(run_config, key)
         logger.debug("%s %s: %s: %s",
                      descr,
                      "| by cust fun:",
                      key,
                      updater
-                     )
+        )
         updater(config, problem_mod)
         logger.debug("config: %s", config)
 
@@ -488,12 +518,12 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                       for k, v
                       in config.items()
                       if k.startswith('__metaconfig__')
-                      })
+                     })
     config = {k: v
               for k, v
               in config.items()
               if not k.startswith('__metaconfig__')
-             }
+    }
 
     try:
         algo_class(**config)
