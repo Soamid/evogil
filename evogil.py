@@ -69,7 +69,9 @@ Options:
 from docopt import docopt
 
 # self
+from evotools.log_helper import get_logger, init_loggers
 import evotools.stats
+from evotools.timing import system_time, log_time
 import evotools.violin
 import evotools.run_parallel
 import evotools.benchmark_results
@@ -77,8 +79,15 @@ import evotools.pictures
 import evotools.best_fronts
 
 
+init_loggers()
+logger = get_logger('evogil')
+
+
 if __name__ == '__main__':
-    argv = docopt(__doc__, version='EvoGIL 3.0')
+    logger.debug("Starting the evogil. Parsing arguments.")
+    with log_time(system_time, logger, "Parsing done in {time_res}s"):
+        argv = docopt(__doc__, version='EvoGIL 3.0')
+    logger.debug("Parsing result: %s", argv)
 
     run_dict = {
         'run':         evotools.run_parallel.run_parallel,
@@ -91,6 +100,8 @@ if __name__ == '__main__':
     }
 
     for k, v in run_dict.items():
+        logger.debug("run_dict: k,v = %s,%s", k, v)
         if argv[k]:
+            logger.debug("run_dict match. argv[k]=%s", argv[k])
             v(argv)
             break

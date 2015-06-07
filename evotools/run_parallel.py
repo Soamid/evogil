@@ -1,4 +1,6 @@
-# base 
+# base
+import copy
+import logging
 import multiprocessing
 import time
 import collections
@@ -12,10 +14,15 @@ from evotools import run_config
 
 from functools import partial
 import traceback
+from evotools.log_helper import get_logger
+from evotools.timing import log_time, process_time
+from evotools.timing import system_time
+
+logger = get_logger(__name__)
 
 
 def run_parallel(args):
-    order = [ 
+    order = [
               ('ZDT6',     'HGS+NSGAII' , None),
               ('ZDT4',     'HGS+NSGAII' , None),
               ('ZDT4',     'IMGA+NSGAII', None),
@@ -128,7 +135,7 @@ def run_parallel(args):
              ]
 
     speedup = proc_times / wall_time
-    
+
     print("########################################")
     print("SUMMARY:")
     print("  wall time:     {wall_time:7.3f} s\n"\
@@ -158,6 +165,7 @@ def run_parallel(args):
 
 
 def worker(args):
+    logger.debug("Starting the worker. args:%s", args)
     problem, algo, budgets = args
     if not budgets:
         budgets = run_config.metaconfig_budgets
@@ -172,34 +180,40 @@ def worker(args):
                                    final_driver,
                                    drivers, driver_pos
                                   )
-        
+
         gen = final_driver().population_generator()
 
         total_cost, result = 0, None
 
-        proc_time = -time.process_time()
-        proxy = None
-        while total_cost <= 300:
-            proxy = next(gen)
-            total_cost += proxy.cost
-            print("RESULT:", proxy.cost, total_cost)
-        print("RES", proxy.finalized_population())
-        proc_time += time.process_time()
-        
-        return proc_time
-        
+        proc_time = []
+        with log_time(system_time, logger, "Processing done in {time_res}s", out=proc_time):
+            proxy = None
+            logger.debug("Starting processing")
+            while total_cost <= 100:
+                logger.debug("Waiting for proxy")
+                with log_time(system_time, logger, "Got proxy in {time_res}s"):
+                    proxy = next(gen)
+                logger.debug("Proxy.cost:%d", proxy.cost)
+                total_cost += proxy.cost
+                logger.debug("total_cost:%d", total_cost)
+            logger.debug("End loop, total_cost:%d", total_cost)
+            logger.debug("Final population: %s", proxy.finalized_population())
+
+        return proc_time[-1]
+
     except Exception as e:
         print(traceback.format_exc())
 
 
-
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
+    logger.debug("Starting preparation")
 
     if not all_drivers:
         all_drivers = []
-    print("################################################################################")
-    print("#   preparing", algo, "for", problem)
-    print("#")
+
+    logger.debug("Preparing %s for %s", algo, problem)
+    logger.debug("driver:%s", driver)
+
     algo_mod   = '.'.join(['algorithms', algo, algo])
     algo_mod   = import_module(algo_mod)
     algo_class = getattr(algo_mod, algo)
@@ -207,27 +221,29 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     problem_mod = '.'.join(['problems', problem, 'problem'])
     problem_mod = import_module(problem_mod)
 
-
     # START WITH META-CONFIG
+    logger.debug("Starting with config containing meta-parameters")
     config = {
         "__metaconfig__populationsize": run_config.metaconfig_populationsize
     }
+    logger.debug("config: %s", config)
 
     ################################################################################
     # CUSTOMS FOR PROBLEM
-    config.update({
-        "dims":       problem_mod.dims,
-        "fitnesses":  problem_mod.fitnesses
-    })
+    update = {"dims": problem_mod.dims, "fitnesses": problem_mod.fitnesses}
+    logger.debug("Per-problem config: %s", update)
+    config.update(update)
+    logger.debug("config: %s", config)
 
     ################################################################################
     descr = "DRIVER ASSIGNMENT"
     if driver:
-        config.update({
-            "driver": driver
-        })
-        print(descr)
-    
+        update = {"driver": driver}
+        config.update(update)
+        logger.debug("Assigning driver: %s", update)
+        config.update(update)
+        logger.debug("config: %s", config)
+
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM"
     # example key: SPEA2
@@ -235,9 +251,14 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example key: IMGA
     with suppress(KeyError):
         key = algo
-        config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
-    
+        update = run_config.algo_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[key]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
+
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM + SUBDRIVERS"
     # example key: (SPEA2, ()          )
@@ -246,9 +267,14 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     with suppress(KeyError):
         key = (algo,
                tuple(all_drivers[driver_pos+1:])
-              )
-        config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
+               )
+        update = run_config.algo_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS FOR PARENTS + ALGORITHM"
@@ -259,8 +285,13 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         key = (tuple(all_drivers[:driver_pos]),
                algo
               )
-        config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
+        update = run_config.algo_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
@@ -272,9 +303,14 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                algo,
                tuple(all_drivers[driver_pos+1:])
               )
-        config.update( run_config.algo_base[ key ] )
-        print(descr, "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]))
-    
+        update = run_config.algo_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by algo dict key:", key, "\n    <<", ', '.join(run_config.algo_base[ key ]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
+
     ################################################################################
     descr = "CUSTOMS (simpl)"
     # example key: (SPEA2, ackley)
@@ -287,8 +323,13 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         key = ( algo,
                 problem
               )
-        config.update( run_config.cust_base[ key ] )
-        print(descr, "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]))
+        update = run_config.cust_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS"
@@ -304,9 +345,13 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                tuple(all_drivers[driver_pos+1:]),
                problem
               )
-        config.update( run_config.cust_base[ key ] )
-        print(descr, "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]))
-
+        update = run_config.cust_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by cust dict key:", key, "\n    <<", ', '.join(run_config.cust_base[ key ]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM"
@@ -315,37 +360,62 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example fun: init_alg_IMGA
     with suppress(AttributeError):
         key = "init_alg_" + algo
-        getattr(run_config, key)(config, problem_mod)
-        print(descr, "| by algo fun:", key)
-    
+        updater = getattr(run_config, key)
+        logger.debug("%s %s: %s: %s",
+                     descr,
+                     "| by algo fun:",
+                     key,
+                     updater
+                     )
+        updater(config, problem_mod)
+        logger.debug("config: %s", config)
+
     ################################################################################
     descr = "CUSTOMS FOR ALGORITHM + SUBDRIVERS"
     # example fun: init_alg_HGS__SPEA2
     # example fun: init_alg_IMGA__HGS_SPEA2
     with suppress(AttributeError):
         key = "init_alg_" + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
-        getattr(run_config, key)(config, problem_mod)
-        print(descr, "| by algo fun:", key)
-    
+        updater = getattr(run_config, key)
+        logger.debug("%s %s: %s: %s",
+                     descr,
+                     "| by algo fun:",
+                     key,
+                     updater
+                     )
+        updater(config, problem_mod)
+        logger.debug("config: %s", config)
+
     ################################################################################
     descr = "CUSTOMS FOR PARENTS + ALGORITHM"
     # example fun: init_alg_IMGA_HGS__SPEA2
     # example fun: init_alg_IMGA__HGS
     with suppress(AttributeError):
         key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo
-        getattr(run_config, key)(config, problem_mod)
-        print(descr, "| by algo fun:", key)
-    
+        updater = getattr(run_config, key)
+        logger.debug("%s %s: %s: %s",
+                     descr,
+                     "| by algo fun:",
+                     key,
+                     updater
+                     )
+        updater(config, problem_mod)
+        logger.debug("config: %s", config)
+
     ################################################################################
     descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
     # example fun: init_alg_IMGA__HGS__SPEA2
     with suppress(AttributeError):
         key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
-        getattr(run_config, key)(config, problem_mod)
-        print(descr, "| by algo fun:", key)
-
-
-
+        updater = getattr(run_config, key)
+        logger.debug("%s %s: %s: %s",
+                     descr,
+                     "| by algo fun:",
+                     key,
+                     updater
+                     )
+        updater(config, problem_mod)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS FOR PROBLEM"
@@ -353,16 +423,28 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example key: zdt1
     with suppress(KeyError):
         key = problem
-        config.update( run_config.prob_base[ key ] )
-        print(descr, "| by prob dict key:", key, "\n    <<", ', '.join(run_config.prob_base[ key ]))
+        update = run_config.prob_base[key]
+        logger.debug("%s %s: %s",
+                     descr,
+                     "| by prob dict key:", key, "\n    <<", ', '.join(run_config.prob_base[ key ]),
+                     update)
+        config.update(update)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS FOR PROBLEM"
     # example fun: init_prob_ackley
     with suppress(AttributeError):
         key = "init_prob_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
-        getattr(run_config, key)(config, problem_mod)
-        print(descr, "| by prob fun:", key)
+        updater = getattr(run_config, key)
+        logger.debug("%s %s: %s: %s",
+                     descr,
+                     "| by prob fun:",
+                     key,
+                     updater
+                     )
+        updater(config, problem_mod)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "CUSTOMS"
@@ -376,45 +458,58 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     # example fun: init_cust__IMGA__HGS_SPEA2___zdt1
     with suppress(AttributeError):
         key = "init_cust_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(all_drivers[driver_pos+1:])
-        getattr(run_config, key)(config, problem_mod)
-        print(descr, "| by cust fun:", key)
-
-
-
-
+        updater = getattr(run_config, key)
+        logger.debug("%s %s: %s: %s",
+                     descr,
+                     "| by cust fun:",
+                     key,
+                     updater
+                     )
+        updater(config, problem_mod)
+        logger.debug("config: %s", config)
 
     ################################################################################
     descr = "GENERATING POPULATION"
     if "population" not in config:
-        config.update({
-            "population": gen_population(config["__metaconfig__populationsize"],
-                                         problem_mod.dims
-                                        )
-        })
-        print(descr, config["__metaconfig__populationsize"])
+        initial_population = gen_population(config["__metaconfig__populationsize"], problem_mod.dims)
+        update = {"population": initial_population}
+        logger.debug("%s (size: %s, dims: %s): %s",
+                     descr,
+                     config["__metaconfig__populationsize"],
+                     problem_mod.dims,
+                     initial_population)
+        config.update(update)
 
     ################################################################################
     # DROPPING TRASH
-    config = { k: v
-                    for k, v
-                    in config.items()
-                    if not k.startswith('__metaconfig__')
-                  }
-
-    print("FINAL CONFIG:")
-    for k, v in config.items():
-        if k in ["dims", "population", "fitnesses", "driver"]:
-            print("    {:25}…".format(k))
-            continue
-        print("    {:25}: {}".format(k, v))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("dropping trash from config: %s",
+                     {k: v
+                      for k, v
+                      in config.items()
+                      if k.startswith('__metaconfig__')
+                      })
+    config = {k: v
+              for k, v
+              in config.items()
+              if not k.startswith('__metaconfig__')
+             }
 
     try:
         algo_class(**config)
     except Exception as e:
-        print("CLASS CREATION: ERR!")
+        logger.exception("Class creation error.", exc_info=e)
         raise e
     else:
-        print("CLASS CREATION: OK")
+        logger.info("Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
+                    algo,
+                    problem,
+                    driver,
+                    all_drivers,
+                    driver_pos)
 
-    return partial(algo_class, **config)
+    instance = partial(algo_class, **config)
+    logger.info("Dropping this dummy obj, returning partial instead: %s",
+                instance)
+    return instance
 
