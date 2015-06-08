@@ -16,7 +16,6 @@ class OMOPSO(Driver):
         self.archive = Archive(self.ETA)
         self.leader_archive = LeaderArchive(self.leaders_size)
 
-
     def init_personal_best(self):
         for p in self.__population:
             p.best_val = copy.deepcopy(p)
