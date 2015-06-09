@@ -2,15 +2,15 @@ import math
 import itertools
 
 n = 30
+eps = 0.1
 p_no = 150
 
 xy_series_no = int(math.sqrt(p_no))
 x_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
-y_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
+z_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
 
-pareto_front = [(x, y, math.pow(-x ** 2 - y ** 2 + 1, 1 / 3)) for x, y in itertools.product(x_points, y_points) if
-                x ** 2 + y ** 2 <= 1]
-pareto_set = []
+pareto_front = [(x, 1 - x - z, z) for x, z in itertools.product(x_points, z_points) if
+                x <= 0.25 * (1 - z) or x >= 0.75 * (1 - z)]
 
 J1 = [j for j in range(3, n + 1) if (j - 1) % 3]
 J2 = [j for j in range(3, n + 1) if (j - 2) % 3]
@@ -22,17 +22,17 @@ def base_fit(x, J):
 
 
 def fit_1(x):
-    return math.cos(0.5 * x[0] * math.pi) * math.cos(0.5 * x[1] * math.pi) + base_fit(x, J1)
+    return 0.5 * (max(0, (1 + eps) * (1 - 4 * (2 * x[0] - 1) ** 2)) + 2 * x[0]) * x[1] + base_fit(x, J1)
 
 
 def fit_2(x):
-    return math.cos(0.5 * x[0] * math.pi) * math.sin(0.5 * x[1] * math.pi) + base_fit(x, J2)
+    return 0.5 * (max(0, (1 + eps) * (1 - 4 * (2 * x[0] - 1) ** 2)) - 2 * x[0] + 2) * x[1] + base_fit(x, J2)
 
 
 def fit_3(x):
-    return math.sin(0.5 * x[0] * math.pi) + base_fit(x, J3)
+    return 1 - x[1] + base_fit(x, J3)
 
 
-name = 'UF8'
+name = 'UF9'
 fitnesses = [fit_1, fit_2, fit_3]
 dims = [(0, 1)] * 2 + [(-2, 2)] * (n - 2)
