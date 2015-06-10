@@ -39,33 +39,40 @@ class RunResult:
         self.path = Path('results',
                          problem,
                          algo,
-                         "{rundate}__{runid}".format(**locals()))
+                         "{rundate}__{runid:0>7}".format(**locals()))
         self.budgets = {}
 
-    def store(self, budget, population):
+    def store(self, budget, population, population_fitnesses):
         with suppress(FileExistsError):
             self.path.mkdir(parents=True)
 
         store_path = self.path / "{budget}.json".format(**locals())
         with store_path.open(mode='w') as fh:
-            json.dump({"population": population}, fh)
+            json_store = {"population": population,
+                          "fitnesses": population_fitnesses}
+            json.dump(json_store, fh)
 
-        self.budgets[budget] = RunResult.RunResultBudget(budget, population, store_path)
+        self.budgets[budget] = RunResult.RunResultBudget(budget,
+                                                         population,
+                                                         population_fitnesses,
+                                                         store_path)
 
     def load(self, budget):
         if budget in self.budgets:
             return self.budgets[budget]
 
         store_path = self.path / "{budget}.json".format(**locals())
-        population = self._load_file(store_path)
-        res = RunResult.RunResultBudget(budget, population, store_path)
+        population_json = self._load_file(store_path)
+        res = RunResult.RunResultBudget(budget,
+                                        population_json["population"],
+                                        population_json["fitnesses"],
+                                        store_path)
         return self.budgets.setdefault(budget, res)
 
     @staticmethod
     def _load_file(path):
         with path.open(mode='r') as fh:
-            population_json = json.load(fh)
-            return population_json["population"]
+            return json.load(fh)
 
     def preload_all_budgets(self):
         self.budgets = {}
@@ -75,20 +82,24 @@ class RunResult:
                     match = re.fullmatch("(?P<budget>[0-9]+)\.json",
                                          candidate.name)
                     budget = int(match.groupdict()["budget"])
-                    population = self._load_file(candidate)
-                    res = RunResult.RunResultBudget(budget, population, candidate)
+                    population_json = self._load_file(candidate)
+                    res = RunResult.RunResultBudget(budget,
+                                                    population_json["population"],
+                                                    population_json["fitnesses"],
+                                                    candidate)
                     self.budgets[budget] = res
                 except (AttributeError, IsADirectoryError, KeyError):
                     pass
 
     class RunResultBudget:
-        def __init__(self, budget, population, path):
+        def __init__(self, budget, population, fitnesses, path):
             self.budget = budget
             self.population = population
+            self.fitnesses = fitnesses
             self.path = path
             self.metrics = {}
 
-        def _get_metric(self, metric_name, metric_mod=None, metric_params=None):
+        def _get_metric(self, metric_name, metric_mod_name=None, metric_params=None):
             if metric_name in self.metrics:
                 return self.metrics[metric_name]
 
@@ -98,19 +109,33 @@ class RunResult:
                 with metric_path.open(mode='r') as fh:
                     res = json.load(fh)
                     metric_val = res["value"]
+                    if res["metric"]["params"] != metric_params:
+                        e = Exception("You have changed params of the metric. "
+                                      "recalculating / per-param storage not implemented")
+                        logger.exception("Metric params do not match", exc_info=e)
+                        raise e
                 self.metrics[metric_name] = metric_val
                 return metric_val
             except FileNotFoundError:
                 pass
 
-            if not metric_mod:
-                metric_mod = ["evotools", "metrics"]
+            if not metric_mod_name:
+                metric_mod_name = ["evotools", "metrics"]
             if not metric_params:
                 metric_params = {}
-            metric_mod = import_module('.'.join(metric_mod))
+            metric_mod = import_module('.'.join(metric_mod_name))
             metric_fun = getattr(metric_mod, metric_name)
+            metric_val = metric_fun(self.fitnesses, **metric_params)
 
-            metric_val = metric_fun(self.population, **metric_params)
+            with metric_path.open(mode='w') as fh:
+                json_store = {"value": metric_val,
+                              "metric": {
+                                  "name": metric_name,
+                                  "module": metric_mod_name,
+                                  "params": metric_params}
+                              }
+                json.dump(json_store, fh)
+
             return self.metrics.setdefault(metric_name, metric_val)
 
         def distance_from_pareto(self, pareto):

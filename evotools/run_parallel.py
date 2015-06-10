@@ -20,6 +20,7 @@ from evotools import run_config
 from functools import partial
 import traceback
 from evotools.log_helper import get_logger
+from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
 
@@ -130,9 +131,9 @@ def run_parallel(args):
                           for problem, algo in order))
 
     logger.debug("Duplicating problems (-N flag)")
-    order = [(test, budgets)
+    order = [(test, budgets, runid)
              for test in order
-             for i in range(int(args['-N']))
+             for runid in range(int(args['-N']))
     ]
 
     logger.debug("Creating the pool")
@@ -145,10 +146,13 @@ def run_parallel(args):
     proc_times = sum(proc_time
                      for res, proc_time
                      in results
-                     if res is not None
-    )
-    errors = [str((alg, prob))
-              for comp_result, (prob, alg)
+                     if res is not None)
+    # errors = [proc_time
+    #           for (res, proc_time), (test, budgets, runid)
+    #           in zip(results, order)
+    #           if res is None]
+    errors = [str((test, budgets, runid))
+              for comp_result, (test, budgets, runid)
               in zip(results, order)
               if comp_result is None
     ]
@@ -166,7 +170,7 @@ SUMMARY:
         logger.error("Errors encountered: {errors:>3}".format(**locals()))
 
     summary = collections.defaultdict(float)
-    for (bench, _), (res, proc_time) in zip(order, results):
+    for (bench, _, _), (res, proc_time) in zip(order, results):
         summary[bench] += proc_time or 0.0
 
     if logger.isEnabledFor(logging.INFO):
@@ -185,7 +189,7 @@ SUMMARY:
 
 def worker(args):
     logger.debug("Starting the worker. args:%s", args)
-    (problem, algo), budgets = args
+    (problem, algo), budgets, runid = args
 
     logger.debug("Getting random seed")
     # basically we duplicate the code of https://github.com/python/cpython/blob/master/Lib/random.py#L111 because
@@ -198,6 +202,8 @@ def worker(args):
     random.seed(random_seed)
 
     drivers = algo.split('+')
+
+    runres = RunResult(algo, problem, runid=runid)
 
     try:
         final_driver, problem_mod = None, None
@@ -234,8 +240,10 @@ def worker(args):
                         logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
                                      total_cost,
                                      budgets[0])
-                        result = (total_cost, proxy.finalized_population())
-                        results.append(result)
+                        finalpop = proxy.finalized_population()
+                        finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+                        runres.store(total_cost, finalpop, finalpop_fit)
+                        results.append((total_cost, finalpop))
                 logger.debug("End loop, total_cost:%d", total_cost)
                 logger.debug("Final population: %s", proxy.finalized_population())
 
@@ -249,10 +257,11 @@ def worker(args):
                         with log_time(process_time, logger,
                                       "Iteration with budget {0} in {{time_res}}s CPU time".format(budget)):
                             logger.debug("Running with budget=%d", budget)
-                            cost = driver.steps(itertools.count(), budget)
-                        finalpop = [[fit(x) for fit in problem_mod.fitnesses] for x in driver.finish()]
-                        result = (cost, finalpop)
-                        results.append(result)
+                            total_cost = driver.steps(itertools.count(), budget)
+                        finalpop = driver.finish()
+                        finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+                        runres.store(total_cost, finalpop, finalpop_fit)
+                        results.append((total_cost, finalpop))
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", driver, exc_info=e)
