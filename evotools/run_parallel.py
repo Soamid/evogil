@@ -2,6 +2,8 @@
 import copy
 import logging
 import multiprocessing
+import os
+import random
 import time
 import collections
 import operator
@@ -184,6 +186,16 @@ SUMMARY:
 def worker(args):
     logger.debug("Starting the worker. args:%s", args)
     (problem, algo), budgets = args
+
+    logger.debug("Getting random seed")
+    # basically we duplicate the code of https://github.com/python/cpython/blob/master/Lib/random.py#L111 because
+    # in case os.urandom is not available, random.seed defaults to epoch time. That would set the seed equal in each
+    # process, which is not acceptable.
+    try:
+        random_seed = int.from_bytes(os.urandom(2500), 'big')
+    except NotImplementedError:
+        random_seed = int(time.time() * 256 + os.getpid())  # that's not enough for MT, but will have to do for now.
+    random.seed(random_seed)
 
     drivers = algo.split('+')
 
