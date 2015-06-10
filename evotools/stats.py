@@ -7,6 +7,7 @@ import numpy
 
 # self
 from evotools.benchmark_results import iterate_results
+from evotools.serialization import RunResult
 
 
 def sample_wr(population, k):
@@ -39,8 +40,10 @@ def yield_analysis(data_process, boot_size):
     upp_inn_fence = q3 + 1.5*iq
     low_out_fence = q1 - 3*iq
     upp_out_fence = q3 + 3*iq
-    # noinspection PyRedeclaration
-    extr_outliers = len([x for x in data_process if (x < low_out_fence or upp_out_fence < x)])
+    # noinspection PyRedeclaratione
+    extr_outliers = len([x
+                         for x in data_process
+                         if (x < low_out_fence or upp_out_fence < x)])
     # noinspection PyRedeclaration
     mild_outliers = len([x for x in data_process if (x < low_inn_fence or upp_inn_fence < x)]) - extr_outliers
     extr_outliers = extr_outliers > 0 and "{0:6.2f}%".format(extr_outliers * 100.0 / len(data_process)) or "--"
@@ -52,6 +55,7 @@ def yield_analysis(data_process, boot_size):
         stdev_nooutliers = sqrt(average(variance_nooutliers))
     except ValueError:
         stdev_nooutliers = -float("inf")
+        mean_nooutliers = float("inf")
 
     btstrpd = bootstrap(data_process, average, boot_size, int(len(data_process) * 0.66), 0.025)
 
@@ -65,7 +69,7 @@ def yield_analysis(data_process, boot_size):
         if len([x for x in data_process if lower <= x <= upper]) < 0.95 * len(data_process):
             goodbench = "╳╳╳╳╳"
     except ValueError:
-        stdev = float("inf")
+        stdev = lower = upper = mean = float("inf")
         goodbench = "?"
 
     try:
@@ -86,23 +90,184 @@ def yield_analysis(data_process, boot_size):
     except ZeroDivisionError:
         pr_dispersion = float("+Infinity")
 
-    return low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd, stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers, stdev_nooutliers_diff, pr_dispersion, dispersion_warn
+    return {
+        "low_inn_fence": low_inn_fence,
+        "upp_inn_fence": upp_inn_fence,
+        "low_out_fence": low_out_fence,
+        "upp_out_fence": upp_out_fence,
+        "stdev": stdev,
+        "mean": mean,
+        "lower": lower,
+        "upper": upper,
+        "goodbench": goodbench,
+        "btstrpd": btstrpd,
+        "mild_outliers": mild_outliers,
+        "extr_outliers": extr_outliers,
+        "metrics_nooutliers": metrics_nooutliers,
+        "mean_nooutliers_diff": mean_nooutliers_diff,
+        "stdev_nooutliers": stdev_nooutliers,
+        "stdev_nooutliers_diff": stdev_nooutliers_diff,
+        "pr_dispersion": pr_dispersion,
+        "dispersion_warn": dispersion_warn
+    }
+    # return low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd,
+    # stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers,
+    # stdev_nooutliers_diff, pr_dispersion, dispersion_warn
+
 
 def statistics(args, print_stdout=True):
     badbench = []
     cost_badbench = []
-    
-    for loop in iterate_results():
+
+    for result_set in RunResult.each_result():
+        results = result_set["results"]
+        """:type : list[RunResult.RunResultBudget] """
+
+        for metrics_name, metrics_name_long, metric_res in [("distribution", "distribution", [x.distribution()
+                                                                                              for x in results])]:
+            analysis_result = yield_analysis(metric_res,
+                                             int(args['--bootstrap']))
+            analysis_cost = yield_analysis([x.cost for x in results],
+                                           int(args['--bootstrap']))
+
+            budg_cost = str(result_set["budget"])
+            probname = str(result_set["problem"])
+            algoname = str(result_set["algo"])
+            len_data = len(results)
+            test_name = "therun"  # TODO @kgadek
+
+            btstrpd = analysis_result["btstrpd"]
+            cost_btstrpd = analysis_cost["btstrpd"]
+
+            fields = [
+                ("PROBLEM",                     [9],             "{probname:{0}}"                                                                                   ),
+                ("ALGO",                        [10],            "{algoname:{0}}"                                                                                   ),
+                ("TEST",                        [24],            "{test_name:{0}}"                                                                                  ),
+                ("N",                           [2],             "{len_data:>{0}}"                                                                                  ),
+                ("Budgt",                       [5],             "{budg_cost!s:>{0}}"                                                                               ),
+                ("METRICS OY",                  [15],            "{metrics_name:^{0}}"                                                                              ),
+                ("✓",                           [5],             "{analysis_result[goodbench]:^{0}}"                                                                                 ),
+                ("RESULT, confidence interval", [10, 10, 10, 6], "{btstrpd[from]: >0{0}.3f} ≤ {btstrpd[metrics]: >{1}.3f} ≤ {btstrpd[to]: >0{2}.3f}"                ),
+                ("σ",                           [10],            "{analysis_result[stdev]: >{0}.3f}"                                                                                 ),
+                ("OUTLIERS",                    [7, 7, 12],      "{analysis_result[mild_outliers]:>{0}} mild {analysis_result[extr_outliers]:>{1}} extr."                                             ),
+                ("RES w/o outliers",            [10, 10, 4],     "{analysis_result[metrics_nooutliers]:>{0}.3f} ({analysis_result[mean_nooutliers_diff]:>+{1}.3f}%)"                                  ),
+                ("σ w/o outliers",              [10, 10, 4],     "{analysis_result[stdev_nooutliers]:>{0}.3f} ({analysis_result[stdev_nooutliers_diff]:>{1}.3f}%)"                                    ),
+                ("(C INT)/METRICS",             [7, 10, 2],      "{analysis_result[pr_dispersion]: >{0}.3f}% {analysis_result[dispersion_warn]:<{1}}"                                                 ),
+                ("OX",                          [5],             "cost "                                                                                            ),
+                ("✓",                           [5],             "{analysis_cost[goodbench]:^{0}}"                                                                            ),
+                ("RESULT, confidence interval", [10, 10, 10, 6], "{btstrpd[from]: >0{0}.3f} ≤ {btstrpd[metrics]: >{1}.3f} ≤ {btstrpd[to]: >0{2}.3f}" ),
+                ("σ",                           [10],            "{analysis_cost[stdev]: <{0}.3f}"                                                                            ),
+                ("OUTLIERS",                    [7, 7, 12],      "{analysis_cost[mild_outliers]:>{0}} mild {analysis_cost[extr_outliers]:>{1}} extr."                                   ),
+                ("RES w/o outliers",            [10, 10, 4],     "{analysis_cost[metrics_nooutliers]:>{0}.3f} ({analysis_cost[mean_nooutliers_diff]:>+{1}.3f}%)"                        ),
+                ("σ w/o outliers",              [10, 10, 4],     "{analysis_cost[stdev_nooutliers]:>{0}.3f} ({analysis_cost[stdev_nooutliers_diff]:>{1}.3f}%)"                          ),
+                ("(C INT)/METRICS",             [7, 10, 2],      "{analysis_cost[pr_dispersion]: >{0}.3f}% {analysis_cost[dispersion_warn]:<{1}}"                                       )
+            ]
+
+            if print_stdout:
+                print("=" * 436)
+                blah = []
+                for i, (head, width, var) in enumerate(fields):
+                    blah.append(var.format(*width, **locals()))
+                print(" "
+                      + " :: ".join(blah)
+                      + " :: ", flush=True)
+
+                def stdout_abstract_analysis(mean_nooutliers_diff_process, goodbench_process, lower_process,
+                                             upper_process, data_process, low_inn_fence_process, upp_inn_fence_process,
+                                             low_out_fence_process, upp_out_fence_process, stdev_process, mean_process,
+                                             badbench_process, prefix):
+                    prefix = " " * prefix
+                    if goodbench_process != "✓":
+                        outliers = len([x for x in data_process if lower_process <= x <= upper_process])
+                        print(
+                            "{prefix}:: Suspicious result analysis:\n"
+                            "{prefix}::             {0:>2} / {1:2} ({4:7.3f}%) out of [ {2:>18.13} ; {3:<18.13} ]\n"
+                            "{prefix}::                                                            Δ {7:<18.13}\n"
+                            "{prefix}::                               Bounds: [ {5:>18.13} ; {6:<18.13} ]\n"
+                            "{prefix}::                                                            Δ {8:<18.13}".format(
+                                outliers,
+                                len(data_process),
+                                lower_process,
+                                upper_process,
+                                100.0 * outliers / len(data_process),
+                                min(data_process),
+                                max(data_process),
+                                upper_process - lower_process,
+                                max(data_process)-min(data_process),
+                                prefix=prefix)
+                        )
+                        print("{prefix}:: Values".format(prefix=prefix))
+
+                        def aux(x):
+                            try:
+                                return abs(x - mean_process) * 100.0 / stdev_process
+                            except ZeroDivisionError:
+                                return float("inf")
+                        print(''.join(
+                            "{prefix}:: {0:>30.20}  = avg {1:<+30} = avg {3:+8.3f}% ⨉ σ | {2:17} {4:17} {5:17}\n".format(
+                                x,
+                                x - mean_process,
+                                (lower_process <= x <= upper_process) and "(out of mean±3σ)" or "",
+                                aux(x),
+                                ((low_out_fence_process <= x < low_inn_fence_process) or (upp_inn_fence_process <= x < upp_out_fence_process)) and " (mild outlier)" or "",
+                                ((x < low_out_fence_process) or (upp_out_fence_process < x)) and "(EXTREME outlier)" or "",
+                                prefix=prefix
+                            )
+                            for x in data_process),
+                              end=''
+                        )
+                        if abs(mean_nooutliers_diff_process) > 10.:
+                            badbench_process.append(d_budget)
+                            print("{prefix}:: #################### ################################################################### ####################".format(prefix=prefix))
+                            print("{prefix}:: #################### Mean of results changed a lot (> 10%), so probably UNTRUSTED result ####################".format(prefix=prefix))
+                            print("{prefix}:: #################### ################################################################### ####################".format(prefix=prefix))
+                        else:
+                            print("{prefix}:: Mean of results changed a little (< 10%), so probably that's all okay".format(prefix=prefix))
+                currdict = analysis_result
+                stdout_abstract_analysis(analysis_result["mean_nooutliers_diff"],
+                                         analysis_result["goodbench"],
+                                         analysis_result["lower"],
+                                         analysis_result["upper"],
+                                         metric_res,
+                                         analysis_result["low_inn_fence"],
+                                         analysis_result["upp_inn_fence"],
+                                         analysis_result["low_out_fence"],
+                                         analysis_result["upp_out_fence"],
+                                         analysis_result["stdev"],
+                                         analysis_result["mean"],
+                                         badbench,
+                                         prefix=62)
+                currdict = analysis_cost
+                stdout_abstract_analysis(analysis_cost["mean_nooutliers_diff"],
+                                         analysis_cost["goodbench"],
+                                         analysis_cost["lower"],
+                                         analysis_cost["upper"],
+                                         [float(x.cost) for x in results],
+                                         analysis_cost["low_inn_fence"],
+                                         analysis_cost["upp_inn_fence"],
+                                         analysis_cost["low_out_fence"],
+                                         analysis_cost["upp_out_fence"],
+                                         analysis_cost["stdev"],
+                                         analysis_cost["mean"],
+                                         cost_badbench,
+                                         prefix=253)
+
+                print("#" * 436)
+                for i in badbench:
+                    print(">>> " + str(i))
+
+
+    for loop in []:
 
         d_problem    = loop['d_problem']
         sd_problem   = loop['sd_problem']
-        
+
         d_algorithm  = loop['d_algorithm']
         sd_algorithm = loop['sd_algorithm']
-        
+
         d_testname   = loop['d_testname']
         sd_testname  = loop['sd_testname']
-        
+
         d_budget     = loop['d_budget']
         sd_budget    = loop['sd_budget']
 

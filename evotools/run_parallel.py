@@ -224,26 +224,28 @@ def worker(args):
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, DriverGen):
                 logger.info("The driver %s is DriverGen-based", driver)
-                max_budget = max(budgets)
                 gen = driver.population_generator()
                 proxy = None
                 logger.debug("Starting processing")
 
-                while total_cost <= max_budget:
-                    logger.debug("Waiting for next proxy")
-                    with log_time(process_time, logger, "Got proxy in {time_res}s CPU time"):
-                        proxy = gen.send(proxy)
-                    logger.debug("Proxy.cost: %d", proxy.cost)
-                    total_cost += proxy.cost
-                    logger.debug("total_cost: %d", total_cost)
-                    if total_cost >= budgets[0]:
-                        logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
-                                     total_cost,
-                                     budgets[0])
-                        finalpop = proxy.finalized_population()
-                        finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                        runres.store(total_cost, finalpop, finalpop_fit)
-                        results.append((total_cost, finalpop))
+                for budget in budgets:
+                    logger.debug("Next budget step is %d", budget)
+                    while True:  # loop until budget met or exceeded
+                        logger.debug("Waiting for next proxy")
+                        with log_time(process_time, logger, "Got proxy in {time_res}s CPU time"):
+                            proxy = gen.send(proxy)
+                        logger.debug("Proxy.cost: %d", proxy.cost)
+                        total_cost += proxy.cost
+                        logger.debug("total_cost: %d", total_cost)
+                        if total_cost >= budget:
+                            logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
+                                         total_cost,
+                                         budgets[0])
+                            finalpop = proxy.finalized_population()
+                            finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+                            runres.store(budget, total_cost, finalpop, finalpop_fit)
+                            results.append((total_cost, finalpop))
+                            break
                 logger.debug("End loop, total_cost:%d", total_cost)
                 logger.debug("Final population: %s", proxy.finalized_population())
 
@@ -260,8 +262,8 @@ def worker(args):
                             total_cost = driver.steps(itertools.count(), budget)
                         finalpop = driver.finish()
                         finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                        runres.store(total_cost, finalpop, finalpop_fit)
-                        results.append((total_cost, finalpop))
+                        runres.store(budget, total_cost, finalpop, finalpop_fit)
+                        results.append((budget, finalpop))
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", driver, exc_info=e)

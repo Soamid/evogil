@@ -1,3 +1,4 @@
+from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from importlib import import_module
@@ -29,6 +30,23 @@ class RunResult:
             except AttributeError:
                 pass
 
+    @staticmethod
+    def each_result():
+        with suppress(FileNotFoundError):
+            for problem in (Path('results')).iterdir():
+                for algo in problem.iterdir():
+                    by_budget = defaultdict(list)
+                    for run in RunResult.each_run(algo.name, problem.name):
+                        for runbudget in run.each_budget():
+                            by_budget[runbudget.budget].append(runbudget)
+                    for budget in sorted(by_budget):
+                        yield {
+                            "problem": problem,
+                            "algo": algo,
+                            "budget": budget,
+                            "results": by_budget[budget]
+                        }
+
     def __init__(self, algo, problem, rundate=None, runid=None):
         if not rundate:
             rundate = datetime.today().strftime("%Y-%M-%d.%H%M%S.%f")
@@ -42,17 +60,19 @@ class RunResult:
                          "{rundate}__{runid:0>7}".format(**locals()))
         self.budgets = {}
 
-    def store(self, budget, population, population_fitnesses):
+    def store(self, budget, cost, population, population_fitnesses):
         with suppress(FileExistsError):
             self.path.mkdir(parents=True)
 
         store_path = self.path / "{budget}.json".format(**locals())
         with store_path.open(mode='w') as fh:
             json_store = {"population": population,
-                          "fitnesses": population_fitnesses}
+                          "fitnesses": population_fitnesses,
+                          "cost": cost}
             json.dump(json_store, fh)
 
         self.budgets[budget] = RunResult.RunResultBudget(budget,
+                                                         cost,
                                                          population,
                                                          population_fitnesses,
                                                          store_path)
@@ -64,6 +84,7 @@ class RunResult:
         store_path = self.path / "{budget}.json".format(**locals())
         population_json = self._load_file(store_path)
         res = RunResult.RunResultBudget(budget,
+                                        population_json["cost"],
                                         population_json["population"],
                                         population_json["fitnesses"],
                                         store_path)
@@ -81,19 +102,28 @@ class RunResult:
                 try:
                     match = re.fullmatch("(?P<budget>[0-9]+)\.json",
                                          candidate.name)
+
                     budget = int(match.groupdict()["budget"])
                     population_json = self._load_file(candidate)
+
                     res = RunResult.RunResultBudget(budget,
+                                                    population_json["cost"],
                                                     population_json["population"],
                                                     population_json["fitnesses"],
                                                     candidate)
+
                     self.budgets[budget] = res
-                except (AttributeError, IsADirectoryError, KeyError):
+                except (AttributeError, IsADirectoryError):
                     pass
 
+    def each_budget(self):
+        for budget in sorted(self.budgets):
+            yield self.budgets[budget]
+
     class RunResultBudget:
-        def __init__(self, budget, population, fitnesses, path):
+        def __init__(self, budget, cost, population, fitnesses, path):
             self.budget = budget
+            self.cost = cost
             self.population = population
             self.fitnesses = fitnesses
             self.path = path
@@ -146,8 +176,3 @@ class RunResult:
 
         def extent(self):
             return self._get_metric("extent")
-
-    def each_result(self):
-        for budget in sorted(self.budgets):
-            res = self.budgets[budget]
-            yield res
