@@ -1,4 +1,5 @@
 # coding=utf-8
+from algorithms.base.drivertools import crossover, mutate
 
 
 class DriverLegacy:
@@ -34,3 +35,8 @@ class DriverLegacy:
         """
         raise NotImplementedError
 
+    def crossover(self, xs, ys):
+        return crossover(xs, ys)
+
+    def mutate(self, xs):
+        return mutate(xs, self.dims, self.mutation_probability, self.mutation_variance)

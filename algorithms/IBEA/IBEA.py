@@ -1,118 +1,77 @@
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools.errors import CodeSmell
 
-__author__ = 'Prpht'
-
 import itertools
 import math
 import random
 import sys
-import operator
 
 
 class IBEA(DriverLegacy):
     def __init__(self, population, dims, fitnesses, mutation_variance, crossover_variance, kappa, mating_population_size):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
-        self.objectives = fitnesses  # [Indiv -> Float]
+        self.cost = 0
+        self.objectives = fitnesses
         self.indicator = self.EPlusIndicator(self)
         self.generation_counter = 0
         self.k = kappa
         self.mating_size_c = mating_population_size
         self.population = population
 
-    def steps(self):
-        def assign_real_objectives(indivs):
-            for ind in indivs:
-                ind.real_objectives = [ f(ind.v)
-                                        for f
-                                        in self.objectives
-                                      ]
-            return len(indivs)
+    def step(self, steps=1):
+        for _ in range(steps):
+            self._next_step()
 
-        cost = assign_real_objectives(self.individuals)
-
-        while True:
-            self._scale_objectives()
-            self._calculate_fitness()
-            self._environmental_selection()
-
-            yield cost, [ x.v
-                          for x
-                          in self.individuals
-                        ]
-            cost = 0
-
-            self._mating_selection(0.9)
-            self._crossover()
-            self._mutation()#(0.05)
-
-            cost += assign_real_objectives( self.mating_individuals )
-            self.individuals += self.mating_individuals
-
-            self.generation_counter += 1
+    def steps(self, generator, budget=None):
+        self.cost = 0
+        for _ in generator:
+            self._next_step()
+            if budget is not None and self.cost > self.budget:
+                break
+        self._scale_objectives()
+        self._calculate_fitness()
+        self._environmental_selection()
+        return self.cost
 
     def get_indivs_inorder(self):
-        return self.rank(self.population, operator.attrgetter('real_objectives'))
+        return self.rank(self.population, self.calculate_objectives)
 
     def finish(self):
-        return [ x.v
-                 for x
-                 in self.individuals
-               ]
+        self._scale_objectives()
+        self._calculate_fitness()
+        self._environmental_selection()
+        return [x.v for x in self.individuals]
+
+    def _next_step(self):
+        self._scale_objectives()
+        self._calculate_fitness()
+        self._environmental_selection()
+        self._mating_selection(0.9)
+        self._crossover()
+        self._mutation()#(0.05)
+        self.individuals += self.mating_individuals
+        self.generation_counter += 1
 
     def _scale_objectives(self):
         min_max = lambda x : (min(x), max(x))
-
-        # :: [( Indiv -> Float, Int, (Float, Float) )]
-        measured = [ (objective, obj_id, min_max([ ind.real_objectives[obj_id]
-                                                   for ind
-                                                   in self.individuals
-                                                 ]) )
-                     for obj_id, objective
-                     in enumerate(self.objectives)
-                   ]
-        # :: [ Indiv -> Float ]
-        self.scaled_objectives = [ self._scale(obj_id, min_o, max_o)
-                                   for objective, obj_id, (min_o, max_o)
-                                   in measured
-                                 ]
-
-        return len(self.individuals)
+        self.cost += len(self.individuals)
+        measured = [(objective, min_max([objective(ind.v) for ind in self.individuals])) for objective in self.objectives]
+        self.scaled_objectives = [self._scale(objective, min_o, max_o) for objective, (min_o, max_o) in measured]
 
     @staticmethod
-    # (Int, Float, Float) -> (Indiv -> Float)
-    def _scale(fun_id, min_o, max_o):
+    def _scale(fun, min_o, max_o):
         def scaled(x):
-            return (x.real_objectives[fun_id] - min_o)/(max_o - min_o + sys.float_info.epsilon)
+            return (fun(x) - min_o)/(max_o - min_o + sys.float_info.epsilon)
         return scaled
 
     def _calculate_fitness(self):
-        # :: Dict (Individual, Individual) Float
-        self.indicators = { (x1, x2) : self.indicator(x1.v, x2.v)
-                            for x1, x2
-                            in itertools.product(self.individuals, self.individuals)  # yyy chyba chodziło o permutations?
-                          }
-        # :: Float
-        self.c = max([ abs(x)
-                       for x
-                       in self.indicators.values()
-                     ])
-        # :: Dict Individual Float
-        self.fitness = { x1 : sum([ (-1)*math.exp((-1)*(self.indicators[(x2,x1)]/abs(self.c*self.k + sys.float_info.epsilon)))
-                                    for x2
-                                    in self.individuals
-                                    if x2 != x1
-                                  ])
-                         for x1
-                         in self.individuals
-                       }
+        self.indicators = {(x1, x2) : self.indicator(x1.v, x2.v) for x1, x2 in itertools.product(self.individuals, self.individuals)}
+        self.c = max([abs(x) for x in self.indicators.values()])
+        self.fitness = {x1 : sum([(-1)*math.exp((-1)*(self.indicators[(x2,x1)]/abs(self.c*self.k + sys.float_info.epsilon))) for x2 in self.individuals if x2 != x1]) for x1 in self.individuals}
 
     def _environmental_selection(self):
         while len(self.individuals) > self.population_size:
-            self.individuals = sorted( self.individuals,
-                                       key=lambda x : self.fitness[x],
-                                       reverse=True
-                                     )
+            self.individuals = sorted(self.individuals, key=lambda x : self.fitness[x], reverse=True)
             removed = self.individuals.pop()
             for x in self.individuals:
                 self.fitness[x] += math.exp((-1)*(self.indicators[(removed, x)] / abs(self.c * self.k + sys.float_info.epsilon)))
@@ -120,26 +79,13 @@ class IBEA(DriverLegacy):
     def _mating_selection(self, p):
         coin = lambda : random.random() < p
         better = lambda x1, x2 : self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin() else self.fitness[x1] > self.fitness[x2] and x1 or x2
-        self.mating_individuals = [ better(random.choice(self.individuals),
-                                           random.choice(self.individuals)
-                                          )
-                                    for _
-                                    in range(2*self.mating_size)
-                                  ]
+        self.mating_individuals = [better(random.choice(self.individuals), random.choice(self.individuals)) for _ in range(2*self.mating_size)]
 
     def _crossover(self):
-        self.mating_individuals = [ self.crossover( self.mating_individuals[i].v,
-                                                    self.mating_individuals[self.mating_size+i].v
-                                                  )
-                                    for i
-                                    in range(self.mating_size)
-                                  ]
+        self.mating_individuals = [self.crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size+i].v) for i in range(self.mating_size)]
 
     def _mutation(self):
-        self.mating_individuals = [ self.Individual(self.mutate(x))
-                                    for x
-                                    in self.mating_individuals
-                                  ]
+        self.mating_individuals = [self.Individual(self.mutate(x)) for x in self.mating_individuals]
 
     @property
     def population(self):
@@ -147,30 +93,24 @@ class IBEA(DriverLegacy):
 
     @population.setter
     def population(self, pop):
-        # :: [Individual]
-        self.individuals = [ self.Individual(x)
-                             for x
-                             in pop
-                           ]
+        self.individuals = [self.Individual(x) for x in pop]
         self.population_size = len(self.individuals)
         self.mating_size = int(self.mating_size_c*self.population_size)
 
-    class EPlusIndicator:
-        # :: IBEA -> EPlusIndicator
-        def __init__(self, population):
-            self.population = population  # aculy is Dolan… or rather "parent", ie. the IBEA containing this EPlusIndicator
+    def calculate_objectives(self, ind):
+        self.cost += 1
+        return [objective(ind) for objective in self.objectives]
 
-        # :: (Indiv, Indiv) -> Float
+    class EPlusIndicator:
+        def __init__(self, population):
+            self.population = population
+
         def __call__(self, x1, x2):
-            return max([ objective(x1) - objective(x2)
-                         for objective 
-                         in self.population.scaled_objectives  # [ Indiv -> Float ]
-                       ])
+            return max([objective(x1) - objective(x2) for objective in self.population.scaled_objectives])
 
     class Individual:
         def __init__(self, vector):
             self.v = vector
-            self.real_objectives = None
 
 
 if __name__ == "__main__":

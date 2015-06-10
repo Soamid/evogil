@@ -8,7 +8,9 @@ import operator
 
 from importlib import import_module
 from contextlib import suppress
+import itertools
 from algorithms.base.drivergen import DriverGen
+from algorithms.base.driverlegacy import DriverLegacy
 
 from evotools.ea_utils import gen_population
 from evotools import run_config
@@ -186,12 +188,12 @@ def worker(args):
     drivers = algo.split('+')
 
     try:
-        final_driver = None
+        final_driver, problem_mod = None, None
         for driver_pos, driver in list(enumerate(drivers))[::-1]:
-            final_driver = prepare(driver,
-                                   problem,
-                                   final_driver,
-                                   drivers, driver_pos
+            final_driver, problem_mod = prepare(driver,
+                                                problem,
+                                                final_driver,
+                                                drivers, driver_pos
             )
 
         logger.debug("Creating the driver used to perform computation")
@@ -200,8 +202,10 @@ def worker(args):
 
         proc_time = []
         results = []
-        with log_time(system_time, logger, "Processing done in {time_res}s", out=proc_time):
+
+        with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, DriverGen):
+                logger.info("The driver %s is DriverGen-based", driver)
                 max_budget = max(budgets)
                 gen = driver.population_generator()
                 proxy = None
@@ -209,7 +213,7 @@ def worker(args):
 
                 while total_cost <= max_budget:
                     logger.debug("Waiting for next proxy")
-                    with log_time(system_time, logger, "Got proxy in {time_res}s"):
+                    with log_time(process_time, logger, "Got proxy in {time_res}s CPU time"):
                         proxy = gen.send(proxy)
                     logger.debug("Proxy.cost: %d", proxy.cost)
                     total_cost += proxy.cost
@@ -218,12 +222,28 @@ def worker(args):
                         logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
                                      total_cost,
                                      budgets[0])
-                        results.append(proxy.finalized_population())
+                        result = (total_cost, proxy.finalized_population())
+                        results.append(result)
                 logger.debug("End loop, total_cost:%d", total_cost)
                 logger.debug("Final population: %s", proxy.finalized_population())
+
+            elif isinstance(driver, DriverLegacy):
+                logger.info("The driver %s is DriverLegacy-based", driver)
+                with log_time(process_time, logger, "All iterations in {time_res}s CPU time"):
+                    for budget in budgets:
+                        logger.debug("Re-creating the driver used to perform computation")
+                        driver = final_driver()
+                        driver.budget = budget
+                        with log_time(process_time, logger,
+                                      "Iteration with budget {0} in {{time_res}}s CPU time".format(budget)):
+                            logger.debug("Running with budget=%d", budget)
+                            cost = driver.steps(itertools.count(), budget)
+                        finalpop = [[fit(x) for fit in problem_mod.fitnesses] for x in driver.finish()]
+                        result = (cost, finalpop)
+                        results.append(result)
             else:
                 e = NotImplementedError()
-                logger.exception("Oops. The driver type is not recognized", exc_info=e)
+                logger.exception("Oops. The driver type is not recognized, got %s", driver, exc_info=e)
                 raise e
 
         return results, proc_time[-1]
@@ -279,10 +299,9 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     with suppress(KeyError):
         key = algo
         update = run_config.algo_base[key]
-        logger.debug("%s %s: %s",
+        logger.debug("%s %s: %s: %s",
                      descr,
-                     "| by algo dict key:", key, "\n    <<", ', '.join(update),
-                     update)
+                     "| by algo dict key:", key, ', '.join(update))
         config.update(update)
         logger.debug("config: %s", config)
 
@@ -541,5 +560,5 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     instance = partial(algo_class, **config)
     logger.info("Dropping this dummy obj, returning partial instead: %s",
                 instance)
-    return instance
+    return instance, problem_mod
 
