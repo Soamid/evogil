@@ -1,5 +1,6 @@
 from contextlib import suppress
 from datetime import datetime
+from importlib import import_module
 import json
 from pathlib import Path
 import random
@@ -9,11 +10,7 @@ from evotools.log_helper import get_logger
 logger = get_logger(__name__)
 
 
-def get_current_time():
-    return datetime.today().strftime("%Y-%m-%d.%H%M%S.%f")
-
-
-class Result:
+class RunResult:
     @staticmethod
     def each_run(algo, problem):
         rootpath = Path('results',
@@ -24,9 +21,9 @@ class Result:
                 match = re.fullmatch("(?P<rundate>\d{4}-\d{2}-\d{2}\.\d{2}\d{2}\d{2}\.\d{6})__(?P<runid>\d{7})",
                                      candidate.name)
                 matchdict = match.groupdict()
-                res = Result(algo, problem,
-                             rundate=matchdict["rundate"],
-                             runid=matchdict["runid"])
+                res = RunResult(algo, problem,
+                                rundate=matchdict["rundate"],
+                                runid=matchdict["runid"])
                 res.preload_all_budgets()
                 yield res
             except AttributeError:
@@ -53,7 +50,7 @@ class Result:
         with store_path.open(mode='w') as fh:
             json.dump({"population": population}, fh)
 
-        self.budgets[budget] = population
+        self.budgets[budget] = RunResult.RunResultBudget(budget, population, store_path)
 
     def load(self, budget):
         if budget in self.budgets:
@@ -61,7 +58,8 @@ class Result:
 
         store_path = self.path / "{budget}.json".format(**locals())
         population = self._load_file(store_path)
-        return self.budgets.setdefault(budget, population)
+        res = RunResult.RunResultBudget(budget, population, store_path)
+        return self.budgets.setdefault(budget, res)
 
     @staticmethod
     def _load_file(path):
@@ -78,11 +76,53 @@ class Result:
                                          candidate.name)
                     budget = int(match.groupdict()["budget"])
                     population = self._load_file(candidate)
-                    self.budgets[budget] = population
+                    res = RunResult.RunResultBudget(budget, population, candidate)
+                    self.budgets[budget] = res
                 except (AttributeError, IsADirectoryError, KeyError):
                     pass
 
+    class RunResultBudget:
+        def __init__(self, budget, population, path):
+            self.budget = budget
+            self.population = population
+            self.path = path
+            self.metrics = {}
+
+        def _get_metric(self, metric_name, metric_mod=None, metric_params=None):
+            if metric_name in self.metrics:
+                return self.metrics[metric_name]
+
+            metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
+
+            try:
+                with metric_path.open(mode='r') as fh:
+                    res = json.load(fh)
+                    metric_val = res["value"]
+                self.metrics[metric_name] = metric_val
+                return metric_val
+            except FileNotFoundError:
+                pass
+
+            if not metric_mod:
+                metric_mod = ["evotools", "metrics"]
+            if not metric_params:
+                metric_params = {}
+            metric_mod = import_module('.'.join(metric_mod))
+            metric_fun = getattr(metric_mod, metric_name)
+
+            metric_val = metric_fun(self.population, **metric_params)
+            return self.metrics.setdefault(metric_name, metric_val)
+
+        def distance_from_pareto(self, pareto):
+            return self._get_metric("distance_from_pareto", metric_params={"pareto": pareto})
+
+        def distribution(self):
+            return self._get_metric("distribution", metric_params={"sigma": 0.5})
+
+        def extent(self):
+            return self._get_metric("extent")
+
     def each_result(self):
         for budget in sorted(self.budgets):
-            population = self.budgets[budget]
-            yield (budget, population)
+            res = self.budgets[budget]
+            yield res
