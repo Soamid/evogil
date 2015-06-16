@@ -13,7 +13,7 @@ random.seed()
 import matplotlib.pyplot as plt
 
 
-class ThetaNSGAIII(DriverLegacy):
+class NSGAIII(DriverLegacy):
     def __init__(self,
                  population,
                  dims,
@@ -424,7 +424,7 @@ if __name__ == '__main__':
     dimensions = [(-10, 10), (-10, 10)]
     my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
 
-    popu = ThetaNSGAIII(my_individuals, dimensions, objectives, theta=0)
+    popu = NSGAIII(my_individuals, dimensions, objectives, theta=0)
     # population.steps(range(100))
 
     for j in range(100):

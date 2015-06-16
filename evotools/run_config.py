@@ -1,3 +1,4 @@
+from operator import itemgetter
 from algorithms.HGS.HGS import HGS
 
 
@@ -28,6 +29,10 @@ algo_base = {
         "islands_number": 3,
         "migrants_number": 5,
         "epoch_length": 5,
+    },
+
+    "SMSEMOA": {
+        "__metaconfig__var_mult": 0.1  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
     },
 
     (("IMGA", ), "IBEA"): {
@@ -149,3 +154,18 @@ def _standard_variance(algo_config, problem_mod, divider=100.0):
         "crossover_variance": var,
     })
 
+
+def init_alg_SMSEMOA(algo_config, problem_mod):
+    var = [abs(maxa - mina) / algo_config["__metaconfig__var_mult"]
+           for (mina, maxa)
+           in problem_mod.dims]
+    reference_point = tuple(max(problem_mod.pareto_front,
+                                key=itemgetter(i))[i]
+                            for i
+                            in range(len(problem_mod.pareto_front[0])))
+
+    algo_config.update({
+        "mutation_variance": var,
+        "crossover_variance": var,
+        "reference_point": reference_point
+    })
