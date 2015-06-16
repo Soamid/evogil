@@ -221,9 +221,10 @@ def worker(args):
         proc_time = []
         results = []
 
+        logger.info("Beginning processing of %s, args: %s", driver, args)
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, DriverGen):
-                logger.info("The driver %s is DriverGen-based", driver)
+                logger.debug("The driver %s is DriverGen-based", driver)
                 gen = driver.population_generator()
                 proxy = None
                 logger.debug("Starting processing")
@@ -250,7 +251,7 @@ def worker(args):
                 logger.debug("Final population: %s", proxy.finalized_population())
 
             elif isinstance(driver, DriverLegacy):
-                logger.info("The driver %s is DriverLegacy-based", driver)
+                logger.debug("The driver %s is DriverLegacy-based", driver)
                 with log_time(process_time, logger, "All iterations in {time_res}s CPU time"):
                     for budget in budgets:
                         logger.debug("Re-creating the driver used to perform computation")
@@ -273,6 +274,10 @@ def worker(args):
 
     except Exception as e:
         logger.exception("Some error", exc_info=e)
+
+    finally:
+        logger.info("Finished processing. args:%s", args)
+
 
 
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
@@ -581,7 +586,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                     driver_pos)
 
     instance = partial(algo_class, **config)
-    logger.info("Dropping this dummy obj, returning partial instead: %s",
-                instance)
+    logger.debug("Dropping this dummy obj, returning partial instead: %s",
+                 instance)
     return instance, problem_mod
 
