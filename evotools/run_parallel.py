@@ -97,7 +97,10 @@ def run_parallel(args):
         ('ackley', 'HGS+IBEA'),
         ('parabol', 'HGS+SPEA2'),
         ('parabol', 'HGS+IBEA'),
-        ('parabol', 'HGS+NSGAII')
+        ('parabol', 'HGS+NSGAII'),
+        ('ZDT1', 'OMOPSO'),
+        ('ZDT1', 'SMSEMOA'),
+        ('ZDT1', 'NSGAIII')
     ]
     logger.debug("Problems * algorithms: %s",
                  order)
