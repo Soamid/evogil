@@ -4,8 +4,7 @@ import random
 
 import numpy
 import numpy.linalg
-
-from ep.utils.driver import Driver
+from algorithms.base.driverlegacy import DriverLegacy
 
 
 EPSILON = numpy.finfo(float).eps
@@ -14,7 +13,7 @@ random.seed()
 import matplotlib.pyplot as plt
 
 
-class ThetaNSGAIII(Driver):
+class ThetaNSGAIII(DriverLegacy):
     def __init__(self,
                  population,
                  dims,

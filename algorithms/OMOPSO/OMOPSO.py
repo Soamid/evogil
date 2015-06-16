@@ -1,10 +1,9 @@
 import copy
 import random
+from algorithms.base.driverlegacy import DriverLegacy
 
-from ep.utils.driver import Driver
 
-
-class OMOPSO(Driver):
+class OMOPSO(DriverLegacy):
     ETA = 0.0075
 
     def __init__(self, population, fitnesses, dims, mutation_perturbation, mutation_variance=0, crossover_variance=0):

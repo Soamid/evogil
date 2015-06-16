@@ -1,13 +1,12 @@
 import random
 import collections
 
-from ep.smsemoa.hv import HyperVolume
-from ep.utils import ea_utils
+from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.hv import HyperVolume
+from evotools import ea_utils
 
-from ep.utils.driver import Driver
 
-
-class SMSEMOA(Driver):
+class SMSEMOA(DriverLegacy):
     def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, reference_point, epoch_length_multiplier=0.5):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
         self.population = population
