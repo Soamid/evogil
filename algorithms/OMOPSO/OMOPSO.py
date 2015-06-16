@@ -6,7 +6,7 @@ from algorithms.base.driverlegacy import DriverLegacy
 class OMOPSO(DriverLegacy):
     ETA = 0.0075
 
-    def __init__(self, population, fitnesses, dims, mutation_perturbation, mutation_variance=0, crossover_variance=0):
+    def __init__(self, population, fitnesses, dims, mutation_perturbation=0.5, mutation_variance=0, crossover_variance=0):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
         self.population = population
         self.leaders_size = len(population)  # parameter?
