@@ -1,22 +1,29 @@
 import functools
 import math
 import operator
+import pathlib
 
 import numpy as np
 
 
 f_dims = 5
 
-with open('R2_DTLZ2_bound_30D.dat', 'r') as f:
+base_dat = pathlib.Path('.') / 'problems' / 'UF11'
+bound_30_dat = base_dat / 'R2_DTLZ2_bound_30D.dat'
+lambda_30_dat = base_dat / 'R2_DTLZ2_lamda_30D.dat'
+m_30_dat = base_dat / 'R2_DTLZ2_M_30D.dat'
+m5_dat = base_dat / 'R2_DTLZ2_M5.dat'
+
+with bound_30_dat.open('r') as f:
     bounds_lines = f.readlines()
 
-with open('R2_DTLZ2_lamda_30D.dat', 'r') as f:
+with lambda_30_dat.open('r') as f:
     lambda_lines = f.readlines()
 
-with open('R2_DTLZ2_M_30D.dat', 'r') as f:
+with m_30_dat.open('r') as f:
     M_lines = f.readlines()
 
-with open('R2_DTLZ2_M5.dat', 'r') as f:
+with m5_dat.open('r') as f:
     pf_lines = f.readlines()
 
 lambdas = [float(x) for x in lambda_lines[0].split()]
