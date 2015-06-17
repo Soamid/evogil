@@ -13,3 +13,8 @@ def weighted_choice(choices):
         upto += w
 
     assert False, "Shouldn't get here"
+
+
+def take(n, iterator):
+    for i in range(n):
+        yield next(iterator)

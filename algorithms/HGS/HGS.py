@@ -1,154 +1,121 @@
 # coding=utf-8
-import functools
+from functools import partial
+from itertools import count
 import random
-import math
 from collections import deque
 from contextlib import suppress
 
+from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools.metrics import euclid_distance
-from evotools.ea_utils import gen_population, paretofront_layers
+from evotools.ea_utils import paretofront_layers
+from evotools.random_tools import take
+from evotools.stats import average
 
 
-class HGS(DriverLegacy):
+class HGS(DriverGen):
     # Kilka ustawień HGS-u
     global_branch_compare = False
     global_sprout_test = False
     node_population_returns_only_front = False
 
-    @staticmethod
-    def make_sigmas(sigma, sclng_coeffs, dims):
-        return [
-            [sigma * (abs(b - a) / n) ** (1. / len(dims))  # n-ty pierwiastek z rozmiaru wymiaru, n to ilość wymiarów
-             for (a, b), n in zip(dims, ns)]
-            for ns in sclng_coeffs]
+    def __init__(self, dims, population, fitnesses, scaling_coefficients, crossover_variance, mutation_variance,
+                 sprouting_variance, population_per_level, metaepoch_len, driver, mutation_probability=0.05,
+                 max_children=3, sproutiveness=1):
+        """
+        :param dims: list[(float,float)]  # dimensions' ranges, one per dimension
+        :param population: list[list[float]]  # initial population
+        :param fitnesses: list[(list[float], ) -> list[float]]  # fitness functions
+        :param scaling_coefficients: list[float]  # scaling the universa, one per level
+        :param crossover_variance: list[float]  # one per dimension
+        :param mutation_variance: list[float]  # one per dimension
+        :param sprouting_variance: list[float]  # one per dimension
+        :param population_per_level: list[int]  # one per depth
+        :param metaepoch_len: int  # length of the metaepoch
+        :param driver: T <= DriverGen | T <= DriverLegacy
+        :param max_children: int  # limit the number of immediate sprouts
+        :param sproutiveness: int  # number of sprouts generated on each metaepoch
+        :return: HGS
+        """
+        super().__init__()
 
-    @classmethod
-    def make_std(cls,
-                 dims:             ':: [ (Float, Float) ]',
-                 population:       ':: Population',
-                 fitnesses:        ':: [FitnessFun]',
-                 popln_sizes:      ':: [Int]',
-                 sclng_coeffss:    ':: [[Float]], -- po jednym na wymiar',
-                 csovr_varss:      ':: [[Float]], -- po jednym na wymiar',
-                 muttn_varss:      ':: [[Float]], -- po jednym na wymiar',
-                 sprtn_varss:      ':: [[Float]], -- po jednym na wymiar',
-                 brnch_comps:      ':: [Float]',
-                 metaepoch_len:    ':: Int',
-                 driver:           ':: Driver d => {fitnesses :: [FitnessFun], population :: Population} -> d',
-                 max_children:     ':: Int'=5,
-                 sproutiveness:    ':: Int'=2):
-        return cls(dims=dims,
-                   population=population,
-                   fitnesses=fitnesses,
-                   lvl_params={'popln_sizes': popln_sizes,
-                               'sclng_coeffss': sclng_coeffss,
-                               'csovr_varss': csovr_varss,
-                               'muttn_varss': muttn_varss,
-                               'sprtn_varss': sprtn_varss,
-                               'brnch_comps': brnch_comps
-                   },
-                   metaepoch_len=metaepoch_len,
-                   driver=driver,
-                   max_children=max_children,
-                   sproutiveness=sproutiveness)
+        self.fitnesses = fitnesses
+        self.dims = dims
 
-    @staticmethod
-    def gen_finaltest(problem, driver):
-        sclng_coeffs = [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]]
-        pop_sizes = [50, 12, 4]
-        return HGS.make_std(dims=problem.dims,
-                            population=gen_population(pop_sizes[0], problem.dims),
-                            fitnesses=problem.fitnesses,
-                            popln_sizes=pop_sizes,
-                            sclng_coeffss=sclng_coeffs,
-                            muttn_varss=HGS.make_sigmas(20, sclng_coeffs, problem.dims),
-                            csovr_varss=HGS.make_sigmas(10, sclng_coeffs, problem.dims),
-                            sprtn_varss=HGS.make_sigmas(100, sclng_coeffs, problem.dims),
-                            brnch_comps=[1, 0.25, 0.05],
-                            metaepoch_len=1,
-                            max_children=3,
-                            driver=driver)
+        self.mutation_variance = mutation_variance
+        self.mutation_probability = mutation_probability
 
-    def __init__(self,
-                 dims:             ':: [ (Float, Float) ]',
-                 population:       ':: Population',
-                 fitnesses:        ':: [FitnessFun]',
-                 lvl_params:       ':: {popln_sizes   :: [Int],'
-                                   '    sclng_coeffss :: [[Float]], -- po jednym na wymiar'
-                                   '    csovr_varss   :: [[Float]], -- po jednym na wymiar'
-                                   '    muttn_varss   :: [[Float]], -- po jednym na wymiar'
-                                   '    sprtn_varss   :: [[Float]], -- po jednym na wymiar'
-                                   '    brnch_comps   :: [Float]}'
-                                   '-- |popln_size| = m, number of levels',
-                 metaepoch_len:    ':: Int',
-                 driver:           ':: Driver d => {fitnesses :: [FitnessFun], population :: Population} -> d',
-                 max_children:     ':: Int'=3,
-                 sproutiveness:    ':: Int'=1):
+        self.crossover_variance = crossover_variance
 
-        super().__init__(fitnesses=None,
-                         dims=dims,
-                         mutation_variance=None,
-                         crossover_variance=None,
-                         population=None)
+        self.sprouting_variance = sprouting_variance
 
-        self.budget = -1
-        self.id_cnt = 0
+        self.scaling_coefficients = scaling_coefficients
+        self.population_per_level = population_per_level
+        self.dims_per_lvl = [[(0, (b - a) / n) for n, (a, b) in zip(coeffs, dims)]
+                             for coeffs in self.scaling_coefficients]
 
         self.sproutiveness = sproutiveness
         self.max_children = max_children
         self.metaepoch_len = metaepoch_len
+
         self.driver = driver
 
-        self.popln_size = [len(population)] + lvl_params['popln_sizes'][1:]
-        self.csvrs_vars = lvl_params['csovr_varss']
-        self.muttn_vars = lvl_params['muttn_varss']
-        self.sprtn_vars = lvl_params['sprtn_varss']
-        self.sclng_coeffs = lvl_params['sclng_coeffss']
-        self.brnch_cmp_c = lvl_params['brnch_comps']
+        self.id_cnt = count()  # counter for sprouts
+        self.root = HGS.Node(self,
+                             level=0,
+                             population=[self.decode(p, lvl=0)
+                                         for p in population])
 
-        # UWAGA na oznaczenia! Oryg. funkcje fitness operują na przestrzeni [a,b]^d, natomiast
-        # HGS sobie wszystko skaluje do U_l (zależnych od poziomu).
+    def code(self, xs, lvl):
+        """ U_l -> [a,b]^d, l=1..m
+        :param xs: list[float]
+        :param lvl: int
+        :rtype: list[float]
+        """
+        return [(x * n + a)
+                for x, n, (a, b)
+                in zip(xs,
+                       self.scaling_coefficients[lvl],
+                       self.dims)]
 
-        def encode_ind(xs, ns, ds):  # U_l -> [a,b]^d, l=1..m
-            return [(x * n + a) for x, n, (a, b) in zip(xs, ns, ds)]
+    def decode(self, xs, lvl):
+        """ [a,b]^d -> U_l, l=1..m
+        :param xs: list[float]
+        :param lvl: int
+        :return: list[float]
+        """
+        return [(x - a) / n
+                for x, n, (a, b)
+                in zip(xs,
+                       self.scaling_coefficients[lvl],
+                       self.dims)]
 
-        self.code = [functools.partial(encode_ind, ns=coeffs, ds=dims) for coeffs in self.sclng_coeffs]
+    def scale(self, xs, lvl):
+        """ U_i -> U_{i+1}
+        :param xs: list[float]
+        :param lvl: int
+        :return: list[float]
+        """
+        coeff_i = self.scaling_coefficients[lvl]
+        coeff_j = self.scaling_coefficients[lvl+1]
+        return [x * ni / nj
+                for x, ni, nj
+                in zip(xs,
+                       coeff_i,
+                       coeff_j)]
 
-        def decode_ind(xs, ns, ds):  # [a,b]^d -> U_l, l=1..m
-            return [(x - a) / n for x, n, (a, b) in zip(xs, ns, ds)]
-
-        self.decode = [functools.partial(decode_ind, ns=coeffs, ds=dims) for coeffs in self.sclng_coeffs]
-
-        def scale_ind(xs, nsa, nsb):  # U_i -> U_{i+1}
-            return [x * ni / nj for x, ni, nj in zip(xs, nsa, nsb)]
-
-        self.scale = [functools.partial(scale_ind, nsa=cfa, nsb=cfb)
-                      for cfa, cfb in zip(self.sclng_coeffs, self.sclng_coeffs[1:])]
-
-        def fitness_decorated(xs, encoding_f, f):
-            return f(encoding_f(xs))
-
-        self.fitnesses_per_lvl = [[functools.partial(fitness_decorated, f=f, encoding_f=codef)
-                                   for f in fitnesses]
-                                  for codef in self.code]
-
-        self.dims_per_lvl = [[(0, (b - a) / n)
-                              for n, (a, b) in zip(coeffs, dims)]
-                             for coeffs in self.sclng_coeffs]
-
-        self.root = HGS.Node(self, 0, [self.decode[0](p)
-                                       for p in population])
-        self.root.metaepochs_ran = 0
-
-    @property
-    def population(self):
-        return [p
-                for n in self.get_nodes(include_finished=True)
-                for p in n.population]
+    def level_fitnesses(self, xs, lvl):
+        """ U_l -> objectives
+        :param xs: list[float]  # domain,
+        :param lvl: int
+        :return: list[float]  # co-domain
+        """
+        return [f(self.code(xs, lvl))
+                for f
+                in self.fitnesses]
 
     def get_nodes(self, include_finished=False):
-        """ Przechodzi drzewo HGS w kolejności level-order. """
+        """ HGS nodes in level-order. """
         deq = deque([self.root])
 
         with suppress(IndexError):
@@ -158,52 +125,58 @@ class HGS(DriverLegacy):
                 if not x.finished or include_finished:
                     yield x
 
-    def steps(self):
-        def cost_fun(cs):
-            n = 3
-            cs_rsort = sorted(cs, reverse=True)
-            target = math.ceil(sum(cs) * 1.0 / 3)
-            target_max = 0
-            for i in range(n):
-                subtarget = 0
-                while cs_rsort and subtarget < target:
-                    subtarget += cs_rsort.pop()
-                target_max = max(subtarget, target_max)
-            return math.ceil(target_max * 1.2)  # 1.2 to współczynnik pesymizmu. TODO: Gdy nastąpi poniedziałek zmienić na 1.3.
-
-
+    def population_generator(self):
         while True:
-            children_costs = []
-            for i in self.get_nodes():
+            this_metaepoch_cost = \
+                sum(  # sum the cost for all nodes
+                    sum(  # sum the cost for all iterations of each node
+                        node_cost
+                        for node_cost, node_population
+                        in take(self.metaepoch_len,
+                                i.step_iter())
+                    )
+                    for i
+                    in self.get_nodes()
+                )
+            yield HGS.HGSProxy(this_metaepoch_cost,
+                               self.get_nodes(include_finished=True))
 
-                cost, pop = 0, None
-                for _ in range(self.metaepoch_len):
-                    i_cost, i_pop = next(i.step_iter())
-                    cost += i_cost
-                    pop = i_pop
-                
-                children_costs.append(cost)
+    class HGSProxy(DriverGen.Proxy):
+        def __init__(self, cost, all_nodes):
+            """
+            :param cost: int
+            :param all_nodes: list[Node]
+            :return: HGSProxy
+            """
+            super().__init__(cost)
+            self.all_nodes = all_nodes
 
-            cost_fun_res = cost_fun(children_costs)
-            yield cost_fun_res, self.population
+        def send_emigrants(self, emigrants):
+            raise Exception("HGS does not support migrations")
 
+        def get_immigrants(self):
+            raise Exception("HGS does not support migrations")
 
-    def rank(self, population):
-        return self.root.driver.rank(population)
+        def finalized_population(self):
+            return [
+                p
+                for n in self.all_nodes
+                for p in n.population
+            ]
 
-    def finish(self):
-        return self.population
-
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     class Node:
 
-        def __init__(self,
-                     outer:      ':: HGS',
-                     level:      ':: Int',
-                     population: ':: ScaledPopulation'):
+        def __init__(self, outer, level, population):
+            """
+            :param outer: HGS
+            :param level: int
+            :param population: list[list[float]]  # scaled population
+            :return:
+            """
             self.outer = outer
-            self.id, self.outer.id_cnt = self.outer.id_cnt, self.outer.id_cnt + 1
+            self.id = next(outer.id_cnt)
             self.metaepochs_ran = 0
             self.level = level
             self.sprouts = []
@@ -211,22 +184,32 @@ class HGS(DriverLegacy):
 
             self.driver = outer.driver(population=population,
                                        dims=outer.dims_per_lvl[level],
-                                       fitnesses=outer.fitnesses_per_lvl[level],
-                                       mutation_variance=outer.muttn_vars[level],
-                                       crossover_variance=outer.csvrs_vars[level])
-
-            self.driver_step_iterator = self.driver.steps()
+                                       # fitnesses=partial(outer.level_fitnesses, lvl=level)
+                                       fitnesses=outer.fitnesses_per_lvl[level],  # !!!!
+                                       mutation_variance=outer.mutation_variance,
+                                       mutation_probability=outer.mutation_probability,
+                                       crossover_variance=outer.crossover_variance)
 
         def step_iter(self):
-            while True:
-                i = next(self.driver_step_iterator)
-                self.sprout()
-                self.branch_reduction()
-                self.metaepochs_ran += 1
-                yield i        
+            if isinstance(self.driver, DriverGen):
+                for proxy in self.driver.population_generator():
+                    self.sprout()
+                    self.branch_reduction()
+                    self.metaepochs_ran += 1
+                    yield proxy.cost
+
+            elif isinstance(self.driver, DriverLegacy):
+                driver_step_iterator = self.driver.steps()
+                while True:
+                    i = next(driver_step_iterator)
+                    self.sprout()
+                    self.branch_reduction()
+                    self.metaepochs_ran += 1
+                    yield i
 
         @property
         def average(self):
+            #return average(self.driver.population)
             return self.driver.average
 
         @property
