@@ -130,8 +130,8 @@ def worker(args):
     (problem, algo), budgets, runid, renice = args
 
     if renice:
-        logger.debug("Renice the process PID:%d by %d", os.getpid(), int(args["--renice"]))
-        os.nice(int(args["--renice"]))
+        logger.debug("Renice the process PID:%s by %s", os.getpid(), renice)
+        os.nice(int(renice))
 
     logger.debug("Getting random seed")
     # basically we duplicate the code of https://github.com/python/cpython/blob/master/Lib/random.py#L111 because
