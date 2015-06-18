@@ -7,9 +7,13 @@ from contextlib import suppress
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 from algorithms.base.drivertools import average_indiv, rank
+from evotools.log_helper import get_logger
 from evotools.metrics import euclid_distance
 from evotools.ea_utils import paretofront_layers
 from evotools.random_tools import take
+
+
+logger = get_logger(__name__)
 
 
 class HGS(DriverGen):
@@ -290,8 +294,8 @@ class HGS(DriverGen):
 
                 newnode = HGS.Node(self.outer, self.level + 1, initial_population)
                 self.sprouts.append(newnode)
-                print("  #    HGS>>> sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                         aep=self.metaepochs_ran))
+                logger.debug("sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
+                                                                  aep=self.metaepochs_ran))
                 break
 
         def branch_reduction(self):

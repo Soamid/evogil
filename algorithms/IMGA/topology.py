@@ -1,4 +1,6 @@
+from evotools.log_helper import get_logger
 
+logger = get_logger(__name__)
 
 class Topology:
 
@@ -9,7 +11,7 @@ class Topology:
     @staticmethod
     def print(t):
         for i in range(len(t)):
-            print(str(i) + ' : ' + str(t[i]))
+            logger.debug(str(i) + ' : ' + str(t[i]))
 
 class TorusTopology(Topology):
     def __init__(self, width):

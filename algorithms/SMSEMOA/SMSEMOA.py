@@ -4,7 +4,9 @@ import collections
 from algorithms.base.driverlegacy import DriverLegacy
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils
+from evotools.log_helper import get_logger
 
+logger = get_logger(__name__)
 
 class SMSEMOA(DriverLegacy):
     def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, reference_point, epoch_length_multiplier=0.5):
@@ -38,7 +40,7 @@ class SMSEMOA(DriverLegacy):
                 self.__population = self.reduce_population(self.__population + [new_indiv])
 
                 if budget is not None and cost > budget:
-                    print(i)
+                    logger.debug(i)
                     return cost
 
                 i+=1

@@ -1,6 +1,9 @@
 import copy
 import random
 from algorithms.base.driverlegacy import DriverLegacy
+from evotools.log_helper import get_logger
+
+logger = get_logger(__name__)
 
 
 class OMOPSO(DriverLegacy):
@@ -44,7 +47,7 @@ class OMOPSO(DriverLegacy):
 
             self.leader_archive.crowding()
 
-            print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
+            logger.debug("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
 
             if budget is not None and cost > budget:
                 break

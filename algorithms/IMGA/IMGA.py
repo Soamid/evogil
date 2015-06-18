@@ -3,7 +3,9 @@ import random
 from algorithms.IMGA.topology import TorusTopology, Topology
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools import ea_utils
+from evotools.log_helper import get_logger
 
+logger = get_logger(__name__)
 
 class IMGA(DriverLegacy):
     def __init__(self,
@@ -34,7 +36,7 @@ class IMGA(DriverLegacy):
 
     def steps(self, _iterator, budget=None):
         while True:
-            print(self.epoch_no)
+            logger.debug(self.epoch_no)
             self.epoch_no +=1
             cost = self.epoch()
             yield cost, self.finish()
@@ -55,7 +57,7 @@ class IMGA(DriverLegacy):
         for i in range(len(self.islands)):
             island = self.islands[i]
 
-            print('pop size: ' + str(len(island.driver.population)))
+            logger.debug('pop size: ' + str(len(island.driver.population)))
             for n in self.topology[i]:
                 self.islands[n].immigrate(island.emigrate())
 
@@ -75,7 +77,7 @@ class IMGA(DriverLegacy):
         for i in range(len(init_population) % self.islands_number):
             subpopulations[i].append(init_population[self.islands_number*subpop_size + i])
 
-        print(subpopulations)
+        logger.debug(subpopulations)
 
         return [IMGA.Island(self, subpop) for subpop in subpopulations]
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -118,7 +120,7 @@ class IMGA(DriverLegacy):
 
             self.driver.population = current_population
 
-            print('after emigrate: ' + str(len(self.driver.population)))
+            logger.debug('after emigrate: ' + str(len(self.driver.population)))
 
 
         def immigrate(self, migrants):
@@ -137,7 +139,7 @@ class IMGA(DriverLegacy):
 
             self.driver.population = current_population
 
-            print('after immigrate: ' + str(len(self.driver.population)))
+            logger.debug('after immigrate: ' + str(len(self.driver.population)))
 
             self.refugees.clear()
             self.visa_office.clear()
