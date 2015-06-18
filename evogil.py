@@ -2,7 +2,8 @@
 """EvoGIL helper.
 
 Usage:
-  evogil.py -h | --help 
+  evogil.py -h | --help
+  evogil.py list
   evogil.py run <budget> [options]
   evogil.py summary
   evogil.py (stats | statistics) [options]
@@ -65,6 +66,7 @@ Options:
 from docopt import docopt
 
 # self
+from evotools import run_config
 from evotools.log_helper import get_logger, init_loggers
 import evotools.stats
 from evotools.timing import system_time, log_time
@@ -77,6 +79,15 @@ import evotools.best_fronts
 
 init_loggers()
 logger = get_logger('evogil')
+
+
+def all_algos_problems(args):
+    print("MOEAs:")
+    for algo in run_config.algorithms:
+        print("   ", algo)
+    print("Problems:")
+    for problem in run_config.problems:
+        print("   ", problem)
 
 
 if __name__ == '__main__':
@@ -93,6 +104,7 @@ if __name__ == '__main__':
         'best_fronts': evotools.best_fronts.main,
         'violin':      evotools.violin.violin,
         'summary':     evotools.benchmark_results.analyse_results,
+        'list':        all_algos_problems,
     }
 
     for k, v in run_dict.items():
