@@ -62,7 +62,7 @@ def run_parallel(args):
     order = list(product(problems, algorithms))
 
     logger.info("Selected following tests: %s",
-                ', '.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
+                '\n, '.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
                           for problem, algo in order))
 
     logger.debug("Duplicating problems (-N flag)")
@@ -280,7 +280,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                    tuple(all_drivers[driver_pos + 1:])
             )
             update = run_config.algo_base[key]
-            logger.debug("%s %s: %s",
+            logger.debug("%s %s %s %s: %s %s",
                          descr,
                          "| by algo dict key:", key, "\n    <<", ', '.join(update),
                          update)
@@ -297,7 +297,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                    algo
             )
             update = run_config.algo_base[key]
-            logger.debug("%s %s: %s",
+            logger.debug("%s %s %s %s: %s %s",
                          descr,
                          "| by algo dict key:", key, "\n    <<", ', '.join(update),
                          update)
@@ -315,7 +315,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                    tuple(all_drivers[driver_pos + 1:])
             )
             update = run_config.algo_base[key]
-            logger.debug("%s %s: %s",
+            logger.debug("%s %s %s %s: %s %s",
                          descr,
                          "| by algo dict key:", key, "\n    <<", ', '.join(update),
                          update)
@@ -335,7 +335,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                     problem
             )
             update = run_config.cust_base[key]
-            logger.debug("%s %s: %s",
+            logger.debug("%s %s %s %s: %s %s",
                          descr,
                          "| by cust dict key:", key, "\n    <<", ', '.join(update),
                          update)
@@ -357,7 +357,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                    problem
             )
             update = run_config.cust_base[key]
-            logger.debug("%s %s: %s",
+            logger.debug("%s %s %s %s: %s %s",
                          descr,
                          "| by cust dict key:", key, "\n    <<", ', '.join(update),
                          update)

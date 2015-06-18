@@ -38,7 +38,6 @@ Options:
         Available meta-algorithms (list may be out-of-date):
             HGS
             IMGA
-        [default: HGS+NSGAII,HGS+SPEA2,HGS+IBEA,IBEA+NSGAII,IBEA+SPEA2,IBEA+IBEA,NSGAII,SPEA2,IBEA]
   -p <problem_name>, --problem <problem_name>
         Only for selected problem(s) separated by comma.
         Available problems (list may be out-of-date):
@@ -49,7 +48,6 @@ Options:
             ZDT6
             ackley
             kursawe
-        [default: ZDT1,ZDT2,ZDT3,ZDT4,ZDT6,ackley,kursawe]
   -b <bootstrap-iter>, --bootstrap <bootstrap-iter>
         Bootstrap iterations.
         [default: 10000]
