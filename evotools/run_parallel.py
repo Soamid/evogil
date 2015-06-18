@@ -108,7 +108,7 @@ SUMMARY:
         logger.error("Errors encountered: {errors:>3}".format(**locals()))
 
     summary = collections.defaultdict(float)
-    for (bench, _, _), (res, proc_time) in zip(order, results):
+    for (bench, _, _, _), (res, proc_time) in zip(order, results):
         summary[bench] += proc_time or 0.0
 
     if logger.isEnabledFor(logging.INFO):
