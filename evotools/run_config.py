@@ -1,6 +1,36 @@
+from itertools import product
 from operator import itemgetter
 from algorithms.HGS.HGS import HGS
 
+
+_drivers = [
+    'SPEA2',
+    'IBEA',
+    'NSGAII',
+    'OMOPSO',
+    'NSGAIII',
+    'SMSEMOA',
+]
+
+_metaalgorithms = [
+    'HGS',
+    # 'IMGA',
+]
+
+algorithms = [
+    "{}+{}".format(meta, algo)
+    for meta, algo
+    in product(_metaalgorithms, _drivers)
+]
+
+problems = [
+    'ZDT1',
+    'ZDT2',
+    'ZDT3',
+    'ZDT4',
+    'ZDT6',
+    'kursawe'
+]
 
 metaconfig_populationsize = 100
 metaconfig_budgets = list(range(500, 9500, 1000))

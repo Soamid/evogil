@@ -1,5 +1,3 @@
-# base
-import copy
 import logging
 import multiprocessing
 import os
@@ -10,7 +8,7 @@ import operator
 
 from importlib import import_module
 from contextlib import suppress
-import itertools
+from itertools import product, count
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 
@@ -18,7 +16,6 @@ from evotools.ea_utils import gen_population
 from evotools import run_config
 
 from functools import partial
-import traceback
 from evotools.log_helper import get_logger
 from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
@@ -31,103 +28,38 @@ def run_parallel(args):
     budgets = sorted([int(budget) for budget in args['<budget>'].split(',')])
     logger.debug("Budgets: %s", budgets)
 
-    order = [
-        ('ZDT6', 'HGS+NSGAII'),
-        ('ZDT4', 'HGS+NSGAII'),
-        ('ZDT4', 'IMGA+NSGAII'),
-        ('ZDT3', 'HGS+NSGAII'),
-        ('ZDT1', 'HGS+NSGAII'),
-        ('ZDT2', 'HGS+NSGAII'),
-        ('ZDT4', 'NSGAII'),
-        ('ZDT6', 'NSGAII'),
-        ('kursawe', 'HGS+NSGAII'),
-        ('ZDT3', 'NSGAII'),
-        ('ZDT1', 'NSGAII'),
-        ('ZDT2', 'NSGAII'),
-        ('ZDT6', 'IMGA+NSGAII'),
-        ('ZDT3', 'IMGA+NSGAII'),
-        ('ZDT2', 'IMGA+NSGAII'),
-        ('ZDT1', 'IMGA+NSGAII'),
-        ('ZDT2', 'HGS+SPEA2'),
-        ('ZDT1', 'HGS+SPEA2'),
-        ('kursawe', 'IMGA+NSGAII'),
-        ('kursawe', 'NSGAII'),
-        ('ZDT4', 'HGS+SPEA2'),
-        ('ZDT4', 'IBEA'),
-        ('ZDT4', 'IMGA+IBEA'),
-        ('kursawe', 'IBEA'),
-        ('kursawe', 'IMGA+IBEA'),
-        ('kursawe', 'SPEA2'),
-        ('kursawe', 'IMGA+SPEA2'),
-        ('ZDT6', 'IBEA'),
-        ('ZDT6', 'IMGA+IBEA'),
-        ('kursawe', 'HGS+SPEA2'),
-        ('ZDT3', 'HGS+SPEA2'),
-        ('ZDT3', 'IBEA'),
-        ('ZDT3', 'IMGA+IBEA'),
-        ('ZDT4', 'IMGA+SPEA2'),
-        ('ZDT2', 'IMGA+IBEA'),
-        ('ZDT2', 'IBEA'),
-        ('ZDT1', 'IBEA'),
-        ('kursawe', 'HGS+IBEA'),
-        ('ZDT1', 'IMGA+IBEA'),
-        ('ZDT4', 'HGS+IBEA'),
-        ('ZDT6', 'HGS+SPEA2'),
-        ('ZDT3', 'HGS+IBEA'),
-        ('ZDT1', 'HGS+IBEA'),
-        ('ZDT2', 'HGS+IBEA'),
-        ('ZDT1', 'IMGA+SPEA2'),
-        ('ZDT2', 'IMGA+SPEA2'),
-        ('ZDT3', 'IMGA+SPEA2'),
-        ('ZDT6', 'IMGA+SPEA2'),
-        ('ackley', 'IMGA+NSGAII'),
-        ('ackley', 'HGS+NSGAII'),
-        ('ZDT4', 'SPEA2'),
-        ('ZDT1', 'SPEA2'),
-        ('ZDT6', 'SPEA2'),
-        ('ZDT2', 'SPEA2'),
-        ('ZDT3', 'SPEA2'),
-        ('ackley', 'NSGAII'),
-        ('ZDT6', 'HGS+IBEA'),
-        ('ackley', 'IMGA+SPEA2'),
-        ('ackley', 'HGS+SPEA2'),
-        ('ackley', 'SPEA2'),
-        ('ackley', 'IMGA+IBEA'),
-        ('ackley', 'IBEA'),
-        ('ackley', 'HGS+IBEA'),
-        ('parabol', 'HGS+SPEA2'),
-        ('parabol', 'HGS+IBEA'),
-        ('parabol', 'HGS+NSGAII'),
-        ('ZDT1', 'OMOPSO'),
-        ('ZDT1', 'SMSEMOA'),
-        ('ZDT1', 'NSGAIII')
-    ]
+    order = list(product(run_config.problems, run_config.algorithms))
+
     logger.debug("Problems * algorithms: %s",
                  order)
 
+    algorithms = run_config.algorithms
     if args['--algo']:
-        algos = args['--algo'].lower().split(',')
+        algorithms_filter = args['--algo'].lower().split(',')
         logger.debug("Selecting algorithms by name: %s",
-                     algos)
-        order = [(problem, algo)
-                 for problem, algo
-                 in order
-                 if algo.lower() in algos
+                     algorithms)
+        algorithms = [
+            algo
+            for algo in algorithms
+            if algo.lower() in algorithms_filter
         ]
         logger.debug("Selected: %s",
-                     order)
+                     algorithms)
 
+    problems = run_config.problems
     if args['--problem']:
-        problems = args['--problem'].lower().split(',')
+        problems_filter = args['--problem'].lower().split(',')
         logger.debug("Selecting problems by name: %s",
                      problems)
-        order = [(problem, algo)
-                 for problem, algo
-                 in order
-                 if problem.lower() in problems
+        problems = [
+            problem
+            for problem in problems
+            if problem.lower() in problems_filter
         ]
         logger.debug("Selected: %s",
-                     order)
+                     problems)
+
+    order = list(product(problems, algorithms))
 
     logger.info("Selected following tests: %s",
                 ', '.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
@@ -263,7 +195,7 @@ def worker(args):
                         with log_time(process_time, logger,
                                       "Iteration with budget {0} in {{time_res}}s CPU time".format(budget)):
                             logger.debug("Running with budget=%d", budget)
-                            total_cost = driver.steps(itertools.count(), budget)
+                            total_cost = driver.steps(count(), budget)
                         finalpop = driver.finish()
                         finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
                         runres.store(budget, total_cost, finalpop, finalpop_fit)
