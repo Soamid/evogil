@@ -17,6 +17,7 @@ from evotools import run_config
 
 from functools import partial
 from evotools.log_helper import get_logger
+from evotools.random_tools import show_partial
 from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
@@ -159,7 +160,7 @@ def worker(args):
         logger.info("Beginning processing of %s, args: %s", driver, args)
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, DriverGen):
-                logger.debug("The driver %s is DriverGen-based", driver)
+                logger.debug("The driver %s is DriverGen-based", show_partial(driver))
                 gen = driver.population_generator()
                 proxy = None
                 logger.debug("Starting processing")
@@ -186,7 +187,7 @@ def worker(args):
                 logger.debug("Final population: %s", proxy.finalized_population())
 
             elif isinstance(driver, DriverLegacy):
-                logger.debug("The driver %s is DriverLegacy-based", driver)
+                logger.debug("The driver %s is DriverLegacy-based", show_partial(driver))
                 with log_time(process_time, logger, "All iterations in {time_res}s CPU time"):
                     for budget in budgets:
                         logger.debug("Re-creating the driver used to perform computation")
@@ -202,7 +203,7 @@ def worker(args):
                         results.append((budget, finalpop))
             else:
                 e = NotImplementedError()
-                logger.exception("Oops. The driver type is not recognized, got %s", driver, exc_info=e)
+                logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)
                 raise e
 
         return results, proc_time[-1]
@@ -214,17 +215,16 @@ def worker(args):
         logger.info("Finished processing. args:%s", args)
 
 
-
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     logger.debug("Starting preparation")
 
+    if not all_drivers:
+        all_drivers = []
+
     try:
 
-        if not all_drivers:
-            all_drivers = []
-
         logger.debug("Preparing %s for %s", algo, problem)
-        logger.debug("driver:%s", driver)
+        logger.debug("driver class:%s", show_partial(driver))
 
         algo_mod = '.'.join(['algorithms', algo, algo])
         algo_mod = import_module(algo_mod)
@@ -519,7 +519,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                 "Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
                 algo,
                 problem,
-                driver,
+                show_partial(driver),
                 all_drivers,
                 driver_pos)
 
@@ -535,8 +535,10 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
             "problem={problem} "
             "driver={driver} "
             "all_drivers={all_drivers} "
-            "driver_pos={driver_pos}".format(algo=algo, problem=problem,
-                                             driver=driver, all_drivers=all_drivers,
+            "driver_pos={driver_pos}".format(algo=algo,
+                                             problem=problem,
+                                             driver=show_partial(driver),
+                                             all_drivers=all_drivers,
                                              driver_pos=driver_pos),
             exc_info=e)
         raise e

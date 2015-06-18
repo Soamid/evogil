@@ -20,3 +20,13 @@ def take(n, iterator):
     with suppress(StopIteration):
         for i in range(n):
             yield next(iterator)
+
+def show_partial(x):
+    res = "∅"
+    try:
+        return str(x.func)
+    except AttributeError:
+        if x:
+            return str(type(x))
+        else:
+            return "∅"
