@@ -57,7 +57,6 @@ algo_base = {
         "__metaconfig__mutation_variance":    1.,
     },
     "SPEA2": {
-        "mutation_probability":   0.05,
     },
     "IMGA": {
         "islands_number": 3,
