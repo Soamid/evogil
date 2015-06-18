@@ -44,6 +44,10 @@ class IMGA(DriverLegacy):
 
         return self.cost
 
+    @property
+    def population(self):
+        self.finished = True
+        return self.finish()
 
     def finish(self):
         global_pop = []
