@@ -62,9 +62,10 @@ def run_parallel(args):
 
     order = list(product(problems, algorithms))
 
-    logger.info("Selected following tests: %s",
+    logger.info("Selected following tests: \n%s",
                 '\n, '.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
-                          for problem, algo in order))
+                            for problem, algo
+                            in order))
 
     logger.debug("Duplicating problems (-N flag)")
     order = [(test, budgets, runid)

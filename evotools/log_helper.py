@@ -5,6 +5,10 @@ from pathlib import Path
 def init_loggers():
     logger_console_output = logging.StreamHandler()
     logger_console_output.setLevel(logging.INFO)
+    logger_console_output.setFormatter(
+        logging.Formatter(
+            '%(asctime)s %(name)s %(levelname)s: %(message)s',
+            datefmt='%H:%M:%S'))
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
