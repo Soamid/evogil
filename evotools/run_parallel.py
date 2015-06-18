@@ -63,9 +63,9 @@ def run_parallel(args):
     order = list(product(problems, algorithms))
 
     logger.info("Selected following tests: \n%s",
-                '\n, '.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
-                            for problem, algo
-                            in order))
+                '\n,'.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
+                           for problem, algo
+                           in order))
 
     logger.debug("Duplicating problems (-N flag)")
     order = [
@@ -90,7 +90,7 @@ def run_parallel(args):
     #           in zip(results, order)
     #           if res is None]
     errors = [str((test, budgets, runid))
-              for comp_result, (test, budgets, runid)
+              for comp_result, (test, budgets, runid, renice)
               in zip(results, order)
               if comp_result is None
     ]
