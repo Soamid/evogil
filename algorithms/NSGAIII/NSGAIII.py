@@ -8,7 +8,6 @@ from algorithms.base.driverlegacy import DriverLegacy
 from evotools.log_helper import get_logger
 
 EPSILON = numpy.finfo(float).eps
-random.seed()
 
 import matplotlib.pyplot as plt
 
