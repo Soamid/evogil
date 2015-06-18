@@ -188,7 +188,6 @@ class HGS(DriverGen):
                                        dims=outer.dims_per_lvl[level],
                                        fitnesses=outer.fitnesses_per_lvl[level],
                                        mutation_variance=outer.mutation_variance,
-                                       mutation_probability=outer.mutation_probability,
                                        crossover_variance=outer.crossover_variance)
             """ :type : T <= DriverGen | DriverLegacy """
 
