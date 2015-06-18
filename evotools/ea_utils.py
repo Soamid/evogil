@@ -1,6 +1,9 @@
 # coding=utf-8
 import random
 import itertools
+from evotools.log_helper import get_logger
+
+logger = get_logger(__name__)
 
 
 def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':
@@ -40,7 +43,12 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
     :return: Lista list [A1, A2, ...] taka, że i<j gddy wszystkie elementy Ai dominują wszystkie z Aj.
     """
 
-    lst_f_doms = [[indiv, fitfun_res(indiv), 0] for indiv in lst]
+    try:
+        lst_f_doms = [[indiv, fitfun_res(indiv), 0] for indiv in lst]
+    except TypeError:
+        # workaround:
+        logger.error("Wow, this is a bug. Please pass a function, not a list!", stack_info=True)
+        lst_f_doms = [[indiv, [f(indiv) for f in fitfun_res], 0] for indiv in lst]
 
     while len(lst_f_doms) > 0:
         for i, j in itertools.permutations(lst_f_doms, 2):
@@ -93,3 +101,10 @@ def split_front(pareto_front, epsilon):
         groups.append(group)
 
     return groups
+
+def one_fitness(fitnesses):
+    def res(xs):
+        return [f(xs)
+                for f
+                in fitnesses]
+    return res
