@@ -37,7 +37,7 @@ def crossover_beta(xs, ys, dimensions, crossover_variance):
     ]
 
 
-def average(population):
+def average_indiv(population):
     """ :return: Zwraca 'średniego' osobnika. """
     res = numpy.average(population, axis=0)
     if type(res) == numpy.float64:

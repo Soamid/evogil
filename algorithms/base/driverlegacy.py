@@ -1,5 +1,5 @@
 # coding=utf-8
-from algorithms.base.drivertools import crossover, mutate
+from algorithms.base.drivertools import crossover, mutate, rank
 
 
 class DriverLegacy:
@@ -40,3 +40,8 @@ class DriverLegacy:
 
     def mutate(self, xs):
         return mutate(xs, self.dims, self.mutation_probability, self.mutation_variance)
+
+    def get_indivs_inorder(self):
+        def fitfun_res(ind):
+            return [f(ind) for f in self.fitnesses]
+        return rank(self.population, fitfun_res)

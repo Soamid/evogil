@@ -1,5 +1,4 @@
 # coding=utf-8
-from functools import partial
 from itertools import count
 import random
 from collections import deque
@@ -7,35 +6,39 @@ from contextlib import suppress
 
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivertools import average_indiv, rank
 from evotools.metrics import euclid_distance
 from evotools.ea_utils import paretofront_layers
 from evotools.random_tools import take
-from evotools.stats import average
 
 
 class HGS(DriverGen):
     # Kilka ustawień HGS-u
     global_branch_compare = False
-    global_sprout_test = False
     node_population_returns_only_front = False
 
-    def __init__(self, dims, population, fitnesses, scaling_coefficients, crossover_variance, mutation_variance,
-                 sprouting_variance, population_per_level, metaepoch_len, driver, mutation_probability=0.05,
-                 max_children=3, sproutiveness=1):
+    def __init__(self, dims, population, fitnesses,
+                 population_per_level, scaling_coefficients,
+                 crossover_variance, sprouting_variance,
+                 mutation_variance, branch_comparison,
+                 metaepoch_len, driver, max_children,
+                 mutation_probability=0.05, sproutiveness=1):
         """
-        :param dims: list[(float,float)]  # dimensions' ranges, one per dimension
-        :param population: list[list[float]]  # initial population
-        :param fitnesses: list[(list[float], ) -> list[float]]  # fitness functions
-        :param scaling_coefficients: list[float]  # scaling the universa, one per level
-        :param crossover_variance: list[float]  # one per dimension
-        :param mutation_variance: list[float]  # one per dimension
-        :param sprouting_variance: list[float]  # one per dimension
-        :param population_per_level: list[int]  # one per depth
-        :param metaepoch_len: int  # length of the metaepoch
-        :param driver: T <= DriverGen | T <= DriverLegacy
-        :param max_children: int  # limit the number of immediate sprouts
-        :param sproutiveness: int  # number of sprouts generated on each metaepoch
-        :return: HGS
+        @type dims: list[(float,float)]  # dimensions' ranges, one per dimension
+        @type population: list[list[float]]  # initial population
+        @type fitnesses: list[(list[float], ) -> list[float]]  # fitness functions
+        @type population_per_level: list[int]  # one per depth
+        @type scaling_coefficients: list[float]  # scaling the universa, one per level
+        @type crossover_variance: list[float]  # one per dimension
+        @type sprouting_variance: list[float]  # one per dimension
+        @type mutation_variance: list[float]  # one per dimension
+        @type branch_comparison: float
+        @type metaepoch_len: int  # length of the metaepoch
+        @type driver: T <= DriverGen | T <= DriverLegacy
+        @type max_children: int  # limit the number of immediate sprouts
+        @type mutation_probability : float
+        @type sproutiveness: int  # number of sprouts generated on each metaepoch
+        :rtype: HGS
         """
         super().__init__()
 
@@ -48,11 +51,28 @@ class HGS(DriverGen):
         self.crossover_variance = crossover_variance
 
         self.sprouting_variance = sprouting_variance
+        self.branch_comparison = branch_comparison
 
         self.scaling_coefficients = scaling_coefficients
         self.population_per_level = population_per_level
-        self.dims_per_lvl = [[(0, (b - a) / n) for n, (a, b) in zip(coeffs, dims)]
-                             for coeffs in self.scaling_coefficients]
+        self.dims_per_lvl = [
+            [
+                (0, (b - a) / coeff)
+                for (a, b)
+                in dims
+            ]
+            for coeff
+            in self.scaling_coefficients
+        ]
+        self.fitnesses_per_lvl = [
+            [
+                lambda xs: fit(self.code(xs, lvl))
+                for fit
+                in self.fitnesses
+                ]
+            for lvl, _
+            in enumerate(self.scaling_coefficients)
+        ]
 
         self.sproutiveness = sproutiveness
         self.max_children = max_children
@@ -68,51 +88,37 @@ class HGS(DriverGen):
 
     def code(self, xs, lvl):
         """ U_l -> [a,b]^d, l=1..m
-        :param xs: list[float]
-        :param lvl: int
+        @type xs: list[float]
+        @type lvl: int
         :rtype: list[float]
         """
-        return [(x * n + a)
-                for x, n, (a, b)
+        return [(x * self.scaling_coefficients[lvl] + a)
+                for x, (a, b)
                 in zip(xs,
-                       self.scaling_coefficients[lvl],
                        self.dims)]
 
     def decode(self, xs, lvl):
         """ [a,b]^d -> U_l, l=1..m
-        :param xs: list[float]
-        :param lvl: int
+        @type xs: list[float]
+        @type lvl: int
         :return: list[float]
         """
-        return [(x - a) / n
-                for x, n, (a, b)
+        return [(x - a) / self.scaling_coefficients[lvl]
+                for x, (a, b)
                 in zip(xs,
-                       self.scaling_coefficients[lvl],
                        self.dims)]
 
     def scale(self, xs, lvl):
         """ U_i -> U_{i+1}
-        :param xs: list[float]
-        :param lvl: int
+        @type xs: list[float]
+        @type lvl: int
         :return: list[float]
         """
         coeff_i = self.scaling_coefficients[lvl]
-        coeff_j = self.scaling_coefficients[lvl+1]
-        return [x * ni / nj
-                for x, ni, nj
-                in zip(xs,
-                       coeff_i,
-                       coeff_j)]
-
-    def level_fitnesses(self, xs, lvl):
-        """ U_l -> objectives
-        :param xs: list[float]  # domain,
-        :param lvl: int
-        :return: list[float]  # co-domain
-        """
-        return [f(self.code(xs, lvl))
-                for f
-                in self.fitnesses]
+        coeff_j = self.scaling_coefficients[lvl + 1]
+        return [x * coeff_i / coeff_j
+                for x
+                in xs]
 
     def get_nodes(self, include_finished=False):
         """ HGS nodes in level-order. """
@@ -127,26 +133,23 @@ class HGS(DriverGen):
 
     def population_generator(self):
         while True:
-            this_metaepoch_cost = \
-                sum(  # sum the cost for all nodes
-                    sum(  # sum the cost for all iterations of each node
-                        node_cost
-                        for node_cost, node_population
-                        in take(self.metaepoch_len,
-                                i.step_iter())
-                    )
-                    for i
-                    in self.get_nodes()
-                )
+            this_metaepoch_cost = sum(
+                node_cost
+                for node
+                in self.get_nodes()
+                for node_cost
+                in take(self.metaepoch_len,
+                        node.step_iter())
+            )
             yield HGS.HGSProxy(this_metaepoch_cost,
                                self.get_nodes(include_finished=True))
 
     class HGSProxy(DriverGen.Proxy):
         def __init__(self, cost, all_nodes):
             """
-            :param cost: int
-            :param all_nodes: list[Node]
-            :return: HGSProxy
+            @type cost: int
+            @type all_nodes: HGS.Node
+            :rtype: HGS.HGSProxy
             """
             super().__init__(cost)
             self.all_nodes = all_nodes
@@ -162,18 +165,17 @@ class HGS(DriverGen):
                 p
                 for n in self.all_nodes
                 for p in n.population
-            ]
+                ]
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     class Node:
 
         def __init__(self, outer, level, population):
             """
-            :param outer: HGS
-            :param level: int
-            :param population: list[list[float]]  # scaled population
-            :return:
+            @type outer: HGS
+            @type level: int
+            @type population: list[list[float]]  # scaled population
             """
             self.outer = outer
             self.id = next(outer.id_cnt)
@@ -184,94 +186,114 @@ class HGS(DriverGen):
 
             self.driver = outer.driver(population=population,
                                        dims=outer.dims_per_lvl[level],
-                                       # fitnesses=partial(outer.level_fitnesses, lvl=level)
-                                       fitnesses=outer.fitnesses_per_lvl[level],  # !!!!
+                                       fitnesses=outer.fitnesses_per_lvl[level],
                                        mutation_variance=outer.mutation_variance,
                                        mutation_probability=outer.mutation_probability,
                                        crossover_variance=outer.crossover_variance)
+            """ :type : T <= DriverGen | DriverLegacy """
+
+            if isinstance(self.driver, DriverGen):
+                self.last_proxy = None
+                """ :type : HGS.HGSProxy """
 
         def step_iter(self):
             if isinstance(self.driver, DriverGen):
-                for proxy in self.driver.population_generator():
+                while True:
+                    for self.last_proxy in take(self.outer.metaepoch_len,
+                                                self.driver.population_generator()):
+                        pass
                     self.sprout()
                     self.branch_reduction()
                     self.metaepochs_ran += 1
-                    yield proxy.cost
+                    yield self.last_proxy.cost
 
             elif isinstance(self.driver, DriverLegacy):
-                driver_step_iterator = self.driver.steps()
                 while True:
-                    i = next(driver_step_iterator)
+                    cost = self.driver.steps(range(self.outer.metaepoch_len))
                     self.sprout()
                     self.branch_reduction()
                     self.metaepochs_ran += 1
-                    yield i
+                    yield cost
 
         @property
         def average(self):
-            #return average(self.driver.population)
-            return self.driver.average
+            return average_indiv(self._get_driver_pop())
+
+        def _get_driver_pop(self):
+            if isinstance(self.driver, DriverLegacy):
+                return self.driver.population
+            elif isinstance(self.driver, DriverGen):
+                return self.last_proxy.finalized_population()
 
         @property
         def population(self):
+            the_pop = self._get_driver_pop()
+            """ :type : list[list[float]] """
             if HGS.node_population_returns_only_front:
                 def evaluator(x):
                     return [f(x) for f in self.outer.fitnesses_per_lvl[self.level]]
 
-                pareto_front = paretofront_layers(self.driver.population, evaluator)
-                if len(pareto_front) > 0:
-                    pareto_front = pareto_front[0]
-                return (self.outer.code[self.level](p)
-                        for p in pareto_front)
-            return (self.outer.code[self.level](p)
-                    for p in self.driver.population)
+                return [self.outer.code(p, lvl=self.level)
+                        for p
+                        in next(paretofront_layers(the_pop, evaluator))]
+            else:
+                return [self.outer.code(p, lvl=self.level)
+                        for p
+                        in the_pop]
 
         @property
         def finished(self):
-            return self.reduced or self.driver.finished
+            return self.reduced or (isinstance(self.driver, DriverLegacy) and self.driver.finished)
 
         def sprout(self):
             if self.driver.finished:
                 return
             if self.reduced:
                 return
-            if 1 + self.level >= len(self.outer.popln_size):
+            if 1 + self.level >= len(self.outer.population_per_level):
                 return
             if self.metaepochs_ran < 1:
                 return
 
             sproutiveness = self.outer.sproutiveness
             if self.outer.max_children:
-                sproutiveness = min(sproutiveness, self.outer.max_children - len(self.sprouts))
+                sproutiveness = min(sproutiveness,
+                                    self.outer.max_children - len(self.sprouts))
 
-            candidates = iter(self.driver.get_indivs_inorder())
-            for _ in range(sproutiveness):
-                for candidate in candidates:
-                    scaled_candidate = self.outer.scale[self.level](candidate)
+            candidates = None
+            if isinstance(self.driver, DriverLegacy):
+                candidates = iter(self.driver.get_indivs_inorder())
+            elif isinstance(self.driver, DriverGen):
+                candidates = iter(rank(self.last_proxy.finalized_population(),
+                                       self.outer.fitnesses_per_lvl[self.level]))
 
-                    # TL;DR: jeśli porównujemy globalnie to sprawdź, czy jakikolwiek ze sproutów
-                    # na tym samym poziomie jest podobny. Wpp porównaj tylko ze sproutami-braćmi.
-                    if HGS.global_sprout_test:
-                        search_space = (s for n in self.outer.get_nodes() if n.level == self.level
-                                        for s in n.sprouts)
-                    else:
-                        search_space = iter(self.sprouts)
+            for candidate in take(sproutiveness, candidates):
+                scaled_candidate = self.outer.scale(candidate, lvl=self.level)
 
-                    if any(euclid_distance(s.average, scaled_candidate) < self.outer.brnch_cmp_c[self.level + 1]
-                           for s in search_space):
-                        # jeśli istnieje podobny sprout to bierzemy następnego kandydata
-                        continue
+                if any(euclid_distance(s.average, scaled_candidate)
+                        < self.outer.branch_comparison
+                       for s
+                       in (iter(self.sprouts))):
+                    # jeśli istnieje podobny sprout to bierzemy następnego kandydata
+                    continue
 
-                    initial_population = [[min(max(a, (random.gauss(x, sigma))), b)
-                                           for x, (a, b), sigma in zip(scaled_candidate,
-                                                                       self.outer.dims_per_lvl[self.level],
-                                                                       self.outer.sprtn_vars[self.level])]
-                                          for _ in range(self.outer.popln_size[self.level + 1])]
-                    newnode = HGS.Node(self.outer, self.level + 1, initial_population)
-                    self.sprouts.append(newnode)
-                    print("  #    HGS>>> sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                             aep=self.metaepochs_ran))
-                    break
+                initial_population = [
+                    [
+                        min(max(a, (random.gauss(x, sigma))), b)
+                        for x, (a, b), sigma
+                        in zip(scaled_candidate,
+                               self.outer.dims_per_lvl[self.level + 1],
+                               self.outer.sprouting_variance)
+                    ]
+                    for _
+                    in range(self.outer.population_per_level[self.level + 1])
+                ]
+
+                newnode = HGS.Node(self.outer, self.level + 1, initial_population)
+                self.sprouts.append(newnode)
+                print("  #    HGS>>> sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
+                                                                         aep=self.metaepochs_ran))
+                break
 
         def branch_reduction(self):
             if HGS.global_branch_compare:
@@ -285,5 +307,5 @@ class HGS(DriverGen):
                 for b in comparab_sprouts[i + 1:]:
                     if a.level != b.level or b.finished:
                         continue
-                    if euclid_distance(a.average, b.average) < self.outer.brnch_cmp_c[a.level]:
+                    if euclid_distance(a.average, b.average) < self.outer.branch_comparison:
                         b.reduced = True

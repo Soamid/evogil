@@ -1,3 +1,4 @@
+from contextlib import suppress
 import random
 
 
@@ -16,5 +17,6 @@ def weighted_choice(choices):
 
 
 def take(n, iterator):
-    for i in range(n):
-        yield next(iterator)
+    with suppress(StopIteration):
+        for i in range(n):
+            yield next(iterator)

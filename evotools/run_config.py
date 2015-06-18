@@ -15,12 +15,16 @@ algo_base = {
         "mating_population_size": 0.5,
     },
     "HGS": {
-        "sproutiveness":                2,
-        "max_children":                 3,
-        "metaepoch_len":                1,
-        "__metaconfig__popln_sizes":    [50, 12, 4],
-        "__metaconfig__brnch_comps":    [1, 0.25, 0.05],
-        "__metaconfig__sclng_coeffs":   [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]],
+        "population_per_level": [50., 12., 4.],
+        "scaling_coefficients": [10., 2.5, 1.],
+        "mutation_probability": 0.05,
+        "branch_comparison":    0.05,
+        "metaepoch_len":        1,
+        "max_children":         3,
+        "sproutiveness":        2,
+        "__metaconfig__crossover_variance":   1.,
+        "__metaconfig__sprouting_variance":   1.,
+        "__metaconfig__mutation_variance":    1.,
     },
     "SPEA2": {
         "mutation_probability":   0.05,
@@ -112,26 +116,6 @@ def init_alg_NSGAII(algo_config, problem_mod):
             "__metaconfig__populationsize": 75
         })
 
-def init_alg_HGS(algo_config, problem_mod):
-    algo_config["__metaconfig__populationsize"] = algo_config["__metaconfig__popln_sizes"][0]
-
-    if problem_mod.name in ["parabol"]:
-        csovr, muttn, sprtn = 1, 1, 0.7
-    else:
-        csovr, muttn, sprtn = 10, 20, 100
-
-    print("APPLYING SCLNG COEFFS", algo_config["__metaconfig__sclng_coeffs"])
-    algo_config.update({
-        "lvl_params": {
-                'popln_sizes':   algo_config["__metaconfig__popln_sizes"],
-                'sclng_coeffss': algo_config["__metaconfig__sclng_coeffs"],
-                'brnch_comps':   algo_config["__metaconfig__brnch_comps"],
-                'csovr_varss':   HGS.make_sigmas(csovr, algo_config["__metaconfig__sclng_coeffs"], problem_mod.dims),
-                'muttn_varss':   HGS.make_sigmas(muttn, algo_config["__metaconfig__sclng_coeffs"], problem_mod.dims),
-                'sprtn_varss':   HGS.make_sigmas(sprtn, algo_config["__metaconfig__sclng_coeffs"], problem_mod.dims),
-            }
-    })
-
 
 def init_alg_IMGA(algo_config, problem_mod):
     _standard_variance(algo_config, problem_mod)
@@ -154,6 +138,17 @@ def _standard_variance(algo_config, problem_mod, divider=100.0):
         "crossover_variance": var,
     })
 
+
+def init_alg_HGS(algo_config, problem_mod):
+    def multiply_per_dim(x):
+        return [x * abs(b-a)
+                for (a,b)
+                in problem_mod.dims]
+    algo_config.update({
+        "crossover_variance": multiply_per_dim(algo_config["__metaconfig__crossover_variance"]),
+        "sprouting_variance": multiply_per_dim(algo_config["__metaconfig__sprouting_variance"]),
+        "mutation_variance":  multiply_per_dim(algo_config["__metaconfig__mutation_variance"]),
+    })
 
 def init_alg_SMSEMOA(algo_config, problem_mod):
     var = [abs(maxa - mina) / algo_config["__metaconfig__var_mult"]
