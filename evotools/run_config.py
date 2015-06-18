@@ -21,7 +21,7 @@ algorithms = [
     "{}+{}".format(meta, algo)
     for meta, algo
     in product(_metaalgorithms, _drivers)
-]
+] + _drivers
 
 problems = [
     'ZDT1',

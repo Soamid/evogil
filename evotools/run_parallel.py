@@ -68,9 +68,10 @@ def run_parallel(args):
                             in order))
 
     logger.debug("Duplicating problems (-N flag)")
-    order = [(test, budgets, runid)
-             for test in order
-             for runid in range(int(args['-N']))
+    order = [
+        (test, budgets, runid, args["--renice"])
+        for test in order
+        for runid in range(int(args['-N']))
     ]
 
     logger.debug("Creating the pool")
@@ -126,9 +127,9 @@ SUMMARY:
 
 def worker(args):
     logger.debug("Starting the worker. args:%s", args)
-    (problem, algo), budgets, runid = args
+    (problem, algo), budgets, runid, renice = args
 
-    if args["--renice"]:
+    if renice:
         logger.debug("Renice the process PID:%d by %d", os.getpid(), int(args["--renice"]))
         os.nice(int(args["--renice"]))
 
