@@ -33,18 +33,17 @@ class IMGA(DriverLegacy):
 
         Topology.print(self.topology)
 
-
-
     def steps(self, _iterator, budget=None):
         for _ in _iterator:
             logger.debug(self.epoch_no)
-            self.epoch_no +=1
-            cost = self.epoch()
-            self.finish()
-            self.cost += cost
-            if budget is not None and self.cost > self.budget:
+            self.epoch_no += 1
+
+            self.cost += self.epoch()
+            if budget and self.cost > budget:
                 break
+
         return self.cost
+
 
     def finish(self):
         global_pop = []
