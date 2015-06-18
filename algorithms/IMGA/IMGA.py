@@ -4,6 +4,7 @@ from algorithms.IMGA.topology import TorusTopology, Topology
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools import ea_utils
 from evotools.log_helper import get_logger
+from evotools.random_tools import weighted_choice
 
 logger = get_logger(__name__)
 
@@ -35,11 +36,15 @@ class IMGA(DriverLegacy):
 
 
     def steps(self, _iterator, budget=None):
-        while True:
+        for _ in _iterator:
             logger.debug(self.epoch_no)
             self.epoch_no +=1
             cost = self.epoch()
-            yield cost, self.finish()
+            self.finish()
+            self.cost += cost
+            if budget is not None and self.cost > self.budget:
+                break
+        return self.cost
 
     def finish(self):
         global_pop = []
@@ -110,7 +115,7 @@ class IMGA(DriverLegacy):
 
                 weights = [1/(i+1) for i in range(len(pareto_layers))]
 
-                chosen_layer = ea_utils.weighted_choice(zip(pareto_layers, weights))
+                chosen_layer = weighted_choice(zip(pareto_layers, weights))
 
                 refugee = random.choice(chosen_layer)
                 self.refugees.append(refugee)

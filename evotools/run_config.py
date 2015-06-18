@@ -14,7 +14,7 @@ _drivers = [
 
 _metaalgorithms = [
     'HGS',
-    # 'IMGA',
+    'IMGA',
 ]
 
 algorithms = [
