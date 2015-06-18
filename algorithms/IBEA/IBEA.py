@@ -1,4 +1,5 @@
 from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivertools import rank
 from evotools.errors import CodeSmell
 
 import itertools
@@ -34,7 +35,7 @@ class IBEA(DriverLegacy):
         return self.cost
 
     def get_indivs_inorder(self):
-        return self.rank(self.population, self.calculate_objectives)
+        return rank(self.population, self.calculate_objectives)
 
     def finish(self):
         self._scale_objectives()

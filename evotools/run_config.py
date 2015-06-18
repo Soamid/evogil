@@ -45,7 +45,7 @@ algo_base = {
         "mating_population_size": 0.5,
     },
     "HGS": {
-        "population_per_level": [50., 12., 4.],
+        "population_per_level": [50,   12, 4],
         "scaling_coefficients": [10., 2.5, 1.],
         "mutation_probability": 0.05,
         "branch_comparison":    0.05,
