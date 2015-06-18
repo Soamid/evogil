@@ -1,4 +1,5 @@
 from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivertools import rank
 from evotools.errors import CodeSmell
 
 __author__ = 'Prpht'
@@ -52,7 +53,7 @@ class NSGAII(DriverLegacy):
         return self.cost
 
     def get_indivs_inorder(self):
-        return self.rank(self.population, self.calculate_objectives)
+        return rank(self.population, self.calculate_objectives)
 
     def finish(self):
         self._calculate_objectives()
