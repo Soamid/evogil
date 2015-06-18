@@ -57,6 +57,8 @@ Options:
   -N <iterations>
         Repeat N times.
         [default: 1]
+  --renice <increment>
+        Renice workers. Works on UNIX & derivatives.
 """
 
 # docopt

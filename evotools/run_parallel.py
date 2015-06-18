@@ -128,6 +128,10 @@ def worker(args):
     logger.debug("Starting the worker. args:%s", args)
     (problem, algo), budgets, runid = args
 
+    if args["--renice"]:
+        logger.debug("Renice the process PID:%d by %d", os.getpid(), int(args["--renice"]))
+        os.nice(int(args["--renice"]))
+
     logger.debug("Getting random seed")
     # basically we duplicate the code of https://github.com/python/cpython/blob/master/Lib/random.py#L111 because
     # in case os.urandom is not available, random.seed defaults to epoch time. That would set the seed equal in each
