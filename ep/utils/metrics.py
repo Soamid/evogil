@@ -1,8 +1,8 @@
 import ep.utils.ea_utils as ea_utils
-import ep.utils.epsilon as epsilon
+import ep.utils.epsilon as eps
 import ep.smsemoa.hv as hv
 
-EPSILON = epsilon.Epsilon()
+EPSILON = eps.Epsilon()
 
 
 # do wyfiltrowania niezdominowanej czesci populacji
@@ -26,7 +26,7 @@ def inverse_generational_distance(solution, not_dominated_solution, pareto):
     return ea_utils.inverse_generational_distance(solution, pareto)
 
 
-#im mniejszy tym lepszy, smieszna forma odleglosci, ostra zbieznosc
+#im wiekszy tym lepszy, smieszna forma odleglosci, ostra zbieznosc
 def epsilon(solution, not_dominated_solution, pareto):
     return EPSILON.epsilon(not_dominated_solution, pareto)
 
@@ -49,11 +49,24 @@ def non_domination_ratio(solution, not_dominated_solution, pareto):
 #im wiekszy tym lepszy, jak duzy hipervolume zdominowany, zbieznosc i pokrycie
 def hypervolume(solution, not_dominated_solution, pareto):
     dims = len(pareto[0])
-    reference_point = [max([ind[k] for ind in pareto]) for k in range(dims)]
-    #TODO reference point mozna by policzyc raz a dobrze, ale wtedy ladna struktura metryk sie psuje
-    #TODO wiec trzeba by je trzymac policzone i rozpoznawac po jakims hashu z optymalnego frontu
-    #TODO ale nie mam juz na to sily
+    reference_point = [100.0 for _ in range(dims)]
+    #TODO kij wie jaki powinien byc -.-
     hv_instance = hv.HyperVolume(reference_point)
     return hv_instance.compute(not_dominated_solution)
+
+
+if __name__ == '__main__':
+    pareto = [[0., 1., 1.], [1., 0., 1.], [1., 1., 0.]]
+    solution = [[4.3, 1.5, 1.3], [13.0, 1.5, 1.37], [0.34, 14.5, 14.3], [1.3, 11.5, 6.3]]
+    not_dominated_solution = filter_not_dominated(solution)
+    print(not_dominated_solution)
+
+    print(generational_distance(solution, not_dominated_solution, pareto))
+    print(inverse_generational_distance(solution, not_dominated_solution, pareto))
+    print(epsilon(solution, not_dominated_solution, pareto))
+    print(extent(solution, not_dominated_solution, pareto))
+    print(spacing(solution, not_dominated_solution, pareto))
+    print(non_domination_ratio(solution, not_dominated_solution, pareto))
+    print(hypervolume(solution, not_dominated_solution, pareto))
 
 
