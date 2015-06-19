@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import itertools
 
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':
     return [[random.uniform(from_range, to_range) for from_range, to_range in dims]
@@ -87,7 +87,7 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
         # Dla d=1 (jednowymiarowego przypadku): po prostu minimum.
         # Czas: O(n)
         # Dla d=2:
-        #   1. A_1, ..., A_n posortuj w kolejności leksykograficznej (tj. [1,2] < [1,3] < [2,0] < [2,2] )
+        # 1. A_1, ..., A_n posortuj w kolejności leksykograficznej (tj. [1,2] < [1,3] < [2,0] < [2,2] )
         #   2. i=1
         #   3. A_i należy do frontu Pareto
         #   4. znajdź j>i takie, że A_j[2] < A_i[2] (tj. pierwszy następny, którego wartość na indeksie 2 jest lepsza)
@@ -104,13 +104,19 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
         #     czyli DUŻO ale nie na tyle, by mi się chciało to pisać.
 
 
+# DO NOT USE EVAH BECAUSE WRONG
 def distance_from_pareto(solution, pareto):
+    raise DeprecationWarning
+    raise AssertionError
     return sum([min([euclid_distance(x, y)
                      for y in pareto])
                 for x in solution]) / len(solution)
 
 
+# DO NOT USE EVAH BECAUSE WRONG
 def distribution(solution, sigma):
+    raise DeprecationWarning
+    raise AssertionError
     return sum([len([y
                      for y in solution
                      if euclid_distance(x, y) > sigma]) / (len(solution) - 1)
@@ -122,6 +128,59 @@ def extent(solution):
     return math.sqrt(sum([max([math.fabs(x[i] - y[i])
                                for x, y in itertools.product(solution, solution)])
                           for i in range(len(solution[0]))]))
+
+
+def generational_distance(solution, pareto):
+    return distance(solution, pareto)
+
+
+def inverse_generational_distance(solution, pareto):
+    return distance(pareto, solution)
+
+
+def non_domination_ratio(solution, not_dominated_solution):
+    return float(len(not_dominated_solution)) / float(len(solution))
+
+
+def spacing(solution):
+    dims = len(solution[0])
+
+    min_distances = []
+    for i, ind_a in enumerate(solution):
+        distances = []
+        for j, ind_b in enumerate(solution):
+            if not i == j:
+                dist = sum([math.fabs(ind_a[k] - ind_b[k]) for k in range(dims)])
+                distances.append(dist)
+        min_distances.append(min(distances))
+
+    mean_dist = np.mean(min_distances)
+    dist_sum = sum([(mean_dist - dist)**2 for dist in min_distances])
+    return math.sqrt(dist_sum / float(len(solution) - 1))
+
+
+def distance(from_set, to_set):
+    distances = [
+        min([euclid_sqr_distance(f, t) for t in to_set])
+        for f in from_set
+    ]
+    return math.sqrt(sum(distances)) / len(distances)
+
+
+def filter_not_dominated(ind_set):
+    not_dominated = []
+    for ind in ind_set:
+        dominated_by_sth = False
+        new_not_dominated = []
+        for nd_ind in not_dominated:
+            if not dominates(ind, nd_ind):
+                new_not_dominated.append(nd_ind)
+            if dominates(nd_ind, ind):
+                dominated_by_sth = True
+        if not dominated_by_sth:
+            new_not_dominated.append(ind)
+        not_dominated = new_not_dominated
+    return not_dominated
 
 
 @contextmanager
@@ -165,3 +224,16 @@ def split_front(pareto_front, epsilon):
         groups.append(group)
 
     return groups
+
+
+if __name__ == '__main__':
+    opt = [[0., 1., 1.3], [1., 0., 1.], [1., 1., 0.]]
+    mine = [[0., 1., 1.], [1., 10., 1.], [1., 10., 11.], [123., 10., 1.]]
+    print(distance(mine, opt))
+    print(distance(opt, mine))
+    print(inverse_generational_distance(mine, opt))
+    print(filter_not_dominated(mine))
+    print(filter_not_dominated(opt))
+    print(generational_distance(mine, opt))
+    print(spacing(opt))
+    print(spacing(mine))

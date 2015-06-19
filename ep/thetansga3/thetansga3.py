@@ -21,10 +21,14 @@ class ThetaNSGAIII(Driver):
                  fitnesses,
                  mutation_variance=0,
                  crossover_variance=0,
-                 theta=5):
+                 theta=5,
+                 eta_crossover=20,
+                 eta_mutation=30):
         super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
 
         self.theta = theta
+        self.eta_crossover = eta_crossover
+        self.eta_mutation = eta_mutation
 
         self.dims = dims
         self.dims_no = len(dims)
@@ -189,9 +193,9 @@ class ThetaNSGAIII(Driver):
             parent_a = random.choice(self.individuals)
             parent_b = random.choice(self.individuals)
             child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims,
-                                                          crossover_rate=self.crossover_rate)
-            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate)
-            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate)
+                                                          crossover_rate=self.crossover_rate, eta=self.eta_crossover)
+            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
+            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
             offspring_inds.append(child_a)
             offspring_inds.append(child_b)
         return offspring_inds
@@ -209,7 +213,7 @@ class ThetaNSGAIII(Driver):
 
         for ind in individuals:
             ind.normalized_objectives = numpy.array(
-                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i])
+                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i] + EPSILON)
                  for i, obj in enumerate(ind.objectives)])
 
     def clustering(self, individuals):
@@ -354,14 +358,14 @@ def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta
         rand = random.random()
 
         # child a
-        beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1))
+        beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1 + EPSILON))
         alpha = 2.0 - pow(beta, -(eta + 1.0))
         beta_q = get_beta_q(rand, alpha, eta)
 
         child_a.v[i] = 0.5 * ((y1 + y2) - beta_q * (y2 - y1))
 
         # child b
-        beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1))
+        beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1 + EPSILON))
         alpha = 2.0 - pow(beta, -(eta + 1.0))
         beta_q = get_beta_q(rand, alpha, eta)
 
@@ -395,8 +399,8 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20):
         y = ind.v[i]
         lb, ub = dim
 
-        delta1 = (y - lb) / (ub - lb)
-        delta2 = (ub - y) / (ub - lb)
+        delta1 = (y - lb) / (ub - lb + EPSILON)
+        delta2 = (ub - y) / (ub - lb + EPSILON)
 
         mut_pow = 1.0 / (eta + 1.0)
 
@@ -419,30 +423,61 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20):
 
 
 if __name__ == '__main__':
-    objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
-                  lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3)
-                  + math.pow(abs(x[1]), 0.8) + 5 * math.pow(math.sin(x[1]), 3)]
-    dimensions = [(-10, 10), (-10, 10)]
-    my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
+    dims = [(-100.0, 100.0), (-100.0, 100.0)]
 
-    popu = ThetaNSGAIII(my_individuals, dimensions, objectives, theta=0)
-    # population.steps(range(100))
+    # mutatedX = []
+    # mutatedY = []
+    # for _ in range(100):
+    #     to_mut = Individual([0.0, 0.0])
+    #     polynomial_mutation(to_mut, dims, 0.9, 100.0)
+    #     mutatedX.append(to_mut.v[0])
+    #     mutatedY.append(to_mut.v[1])
+    # plt.scatter(mutatedX, mutatedY)
+    # plt.xlim(-100.0, 100.0)
+    # plt.ylim(-100.0, 100.0)
+    #
+    # plt.show()
 
-    for j in range(100):
-        popu.next_step()
-        print(j)
+    crossX = []
+    crossY = []
+    for _ in range(10000):
+        to_crossA = Individual([-10.0, -10.0])
+        to_crossB = Individual([10.0, 10.0])
+        newA, newB = simulated_binary_crossover(to_crossA, to_crossB, dims, 0.9, eta=30.0)
+        crossX.append(newA.v[0])
+        crossY.append(newA.v[1])
+        crossX.append(newB.v[0])
+        crossY.append(newB.v[1])
+    plt.scatter(crossX, crossY)
+    plt.xlim(-100.0, 100.0)
+    plt.ylim(-100.0, 100.0)
 
-        effect = popu.finish()
-        X = [popu.objectives[0](x) for x in effect]
-        Y = [popu.objectives[1](x) for x in effect]
-        plt.scatter(X, Y)
-        # pylab.xlim(-10.,250.)
-        # pylab.ylim(-10.,250.)
-        plt.xlim(-15., 5.)
-        plt.ylim(-15., 25.)
+    plt.show()
 
-        file = ""
-        if j < 10:
-            file += "0"
-        plt.savefig("pictures//" + file + str(j) + ".png")
-        plt.clf()
+    # objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
+    #               lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3)
+    #               + math.pow(abs(x[1]), 0.8) + 5 * math.pow(math.sin(x[1]), 3)]
+    # dimensions = [(-10, 10), (-10, 10)]
+    # my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
+    #
+    # popu = ThetaNSGAIII(my_individuals, dimensions, objectives, theta=0)
+    # # population.steps(range(100))
+    #
+    # for j in range(100):
+    #     popu.next_step()
+    #     print(j)
+    #
+    #     effect = popu.finish()
+    #     X = [popu.objectives[0](x) for x in effect]
+    #     Y = [popu.objectives[1](x) for x in effect]
+    #     plt.scatter(X, Y)
+    #     # pylab.xlim(-10.,250.)
+    #     # pylab.ylim(-10.,250.)
+    #     plt.xlim(-15., 5.)
+    #     plt.ylim(-15., 25.)
+    #
+    #     file = ""
+    #     if j < 10:
+    #         file += "0"
+    #     plt.savefig("pictures//" + file + str(j) + ".png")
+    #     plt.clf()
