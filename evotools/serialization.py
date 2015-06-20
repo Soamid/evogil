@@ -17,11 +17,11 @@ class RunResult:
     def get_bounds():
         """ Wylicza górne granice wymiarów przeciwdziedziny dla wyznaczonych problemów """
         for problem_name, algorithms in RunResult.each_result():
-            all_results = list(chain.from_iterable(run.fitnesses
-                                                   for algo_name, budgets in algorithms
-                                                   for result in budgets
-                                                   for run in result["results"]))
-            res = [max(*l) for l in zip(*all_results[::-1])]
+            all_results = chain.from_iterable(run.fitnesses
+                                              for algo_name, budgets in algorithms
+                                              for result in budgets
+                                              for run in result["results"])
+            res = [max(*l) for l in zip(*all_results)]
 
             print(problem_name, res)
 
