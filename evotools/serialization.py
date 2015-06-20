@@ -1,12 +1,14 @@
 from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
+from functools import partial
 from importlib import import_module
 import json
 from pathlib import Path
 import random
 import re
 from evotools.log_helper import get_logger
+from evotools.stats_bootstrap import yield_analysis
 
 logger = get_logger(__name__)
 
@@ -32,20 +34,36 @@ class RunResult:
 
     @staticmethod
     def each_result():
+        def f_metrics(result_list):
+            """
+            @type result_list : list[RunResult.RunResultBudget]
+            """
+            yield "cost", "cost", [float(x.cost) for x in result_list]
+            yield "distrib", "distribution", [x.distribution() for x in result_list]
+            yield "extent", "extent", [x.extent() for x in result_list]
+            # yield "dst", "distance from pareto", [x.distance_from_pareto() for x in result_list]
+
+        def f_algo(problem_path, algo_path):
+            by_budget = defaultdict(list)
+            for run in RunResult.each_run(algo_path.name, problem_path.name):
+                for runbudget in run.each_budget():
+                    by_budget[runbudget.budget].append(runbudget)
+            for budget in sorted(by_budget):
+                yield {
+                    "problem": problem_path.name,
+                    "algo": algo_path.name,
+                    "budget": budget,
+                    "results": by_budget[budget],
+                    "analysis": f_metrics(by_budget[budget])
+                }
+
+        def f_problem(problem_path):
+            for algo_path in problem_path.iterdir():
+                yield algo_path.name, f_algo(problem_path, algo_path)
+
         with suppress(FileNotFoundError):
-            for problem in (Path('results')).iterdir():
-                for algo in problem.iterdir():
-                    by_budget = defaultdict(list)
-                    for run in RunResult.each_run(algo.name, problem.name):
-                        for runbudget in run.each_budget():
-                            by_budget[runbudget.budget].append(runbudget)
-                    for budget in sorted(by_budget):
-                        yield {
-                            "problem": problem,
-                            "algo": algo,
-                            "budget": budget,
-                            "results": by_budget[budget]
-                        }
+            for problem in Path('results').iterdir():
+                yield problem.name, f_problem(problem)
 
     def __init__(self, algo, problem, rundate=None, runid=None):
         if not rundate:
@@ -130,29 +148,30 @@ class RunResult:
             self.metrics = {}
 
         def _get_metric(self, metric_name, metric_mod_name=None, metric_params=None):
+            if not metric_mod_name:
+                metric_mod_name = ["evotools", "metrics"]
+            if not metric_params:
+                metric_params = {}
+
             if metric_name in self.metrics:
                 return self.metrics[metric_name]
 
             metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
 
-            try:
+            with suppress(FileNotFoundError):
                 with metric_path.open(mode='r') as fh:
                     res = json.load(fh)
                     metric_val = res["value"]
                     if res["metric"]["params"] != metric_params:
                         e = Exception("You have changed params of the metric. "
                                       "recalculating / per-param storage not implemented")
-                        logger.exception("Metric params do not match", exc_info=e)
+                        logger.exception("Metric params do not match: %s != %s",
+                                         res["metric"]["params"], metric_params, exc_info=e)
                         raise e
                 self.metrics[metric_name] = metric_val
                 return metric_val
-            except FileNotFoundError:
-                pass
 
-            if not metric_mod_name:
-                metric_mod_name = ["evotools", "metrics"]
-            if not metric_params:
-                metric_params = {}
+            # noinspection PyUnreachableCode
             metric_mod = import_module('.'.join(metric_mod_name))
             metric_fun = getattr(metric_mod, metric_name)
             metric_val = metric_fun(self.fitnesses, **metric_params)
