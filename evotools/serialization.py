@@ -1,14 +1,13 @@
 from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
-from functools import partial
 from importlib import import_module
 import json
 from pathlib import Path
 import random
 import re
+
 from evotools.log_helper import get_logger
-from evotools.stats_bootstrap import yield_analysis
 
 logger = get_logger(__name__)
 

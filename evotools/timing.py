@@ -1,4 +1,5 @@
 import contextlib
+from logging import DEBUG
 import time
 
 
@@ -17,9 +18,11 @@ def system_time(lst):
     lst.append(end-start)
 
 @contextlib.contextmanager
-def log_time(ctx, log, msg, out=None):
+def log_time(ctx, log, msg, out=None, loglvl=None):
+    if not loglvl:
+        loglvl = DEBUG
     if out is None:
         out = []
     with ctx(out):
         yield
-    log.debug(msg.format(time_res=out[-1]))
+    log.log(loglvl, msg.format(time_res=out[-1]))
