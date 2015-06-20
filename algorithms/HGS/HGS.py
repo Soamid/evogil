@@ -21,12 +21,9 @@ class HGS(DriverGen):
     global_branch_compare = False
     node_population_returns_only_front = False
 
-    def __init__(self, dims, population, fitnesses,
-                 population_per_level, scaling_coefficients,
-                 crossover_variance, sprouting_variance,
-                 mutation_variance, branch_comparison,
-                 metaepoch_len, driver, max_children,
-                 mutation_probability=0.05, sproutiveness=1):
+    def __init__(self, dims, population, fitnesses, population_per_level, scaling_coefficients, crossover_variance,
+                 sprouting_variance, mutation_variance, branch_comparison, metaepoch_len, driver, max_children,
+                 mutation_probability=0.05, sproutiveness=1, driver_kwargs_per_level=None):
         """
         @type dims: list[(float,float)]  # dimensions' ranges, one per dimension
         @type population: list[list[float]]  # initial population
@@ -42,8 +39,11 @@ class HGS(DriverGen):
         @type max_children: int  # limit the number of immediate sprouts
         @type mutation_probability : float
         @type sproutiveness: int  # number of sprouts generated on each metaepoch
+        @type driver_kwargs_per_level : list[dict]
         :rtype: HGS
         """
+        if not driver_kwargs_per_level:
+            driver_kwargs_per_level = [{} for _ in population_per_level]
         super().__init__()
 
         self.fitnesses = fitnesses
@@ -77,6 +77,7 @@ class HGS(DriverGen):
             for lvl, _
             in enumerate(self.scaling_coefficients)
         ]
+        self.driver_kwargs_per_level = driver_kwargs_per_level
 
         self.sproutiveness = sproutiveness
         self.max_children = max_children
@@ -192,7 +193,8 @@ class HGS(DriverGen):
                                        dims=outer.dims_per_lvl[level],
                                        fitnesses=outer.fitnesses_per_lvl[level],
                                        mutation_variance=outer.mutation_variance,
-                                       crossover_variance=outer.crossover_variance)
+                                       crossover_variance=outer.crossover_variance,
+                                       **outer.driver_kwargs_per_level[level])
             """ :type : T <= DriverGen | DriverLegacy """
 
             if isinstance(self.driver, DriverGen):
