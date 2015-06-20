@@ -33,16 +33,16 @@ class RunResult:
 
     @staticmethod
     def each_result():
-        def f_metrics(result_list):
+        def f_metrics(result_list, problem_mod):
             """
             @type result_list : list[RunResult.RunResultBudget]
             """
             yield "cost", "cost", [float(x.cost) for x in result_list]
             yield "distrib", "distribution", [x.distribution() for x in result_list]
             yield "extent", "extent", [x.extent() for x in result_list]
-            # yield "dst", "distance from pareto", [x.distance_from_pareto() for x in result_list]
+            yield "dst", "distance from pareto", [x.distance_from_pareto(pareto=problem_mod.pareto_front) for x in result_list]
 
-        def f_algo(problem_path, algo_path):
+        def f_algo(problem_path, algo_path, problem_mod):
             by_budget = defaultdict(list)
             for run in RunResult.each_run(algo_path.name, problem_path.name):
                 for runbudget in run.each_budget():
@@ -53,16 +53,18 @@ class RunResult:
                     "algo": algo_path.name,
                     "budget": budget,
                     "results": by_budget[budget],
-                    "analysis": f_metrics(by_budget[budget])
+                    "analysis": f_metrics(by_budget[budget], problem_mod)
                 }
 
-        def f_problem(problem_path):
+        def f_problem(problem_path, problem_mod):
             for algo_path in problem_path.iterdir():
-                yield algo_path.name, f_algo(problem_path, algo_path)
+                yield algo_path.name, f_algo(problem_path, algo_path, problem_mod)
 
         with suppress(FileNotFoundError):
             for problem in Path('results').iterdir():
-                yield problem.name, f_problem(problem)
+                problem_mod = '.'.join(['problems', problem.name, 'problem'])
+                problem_mod = import_module(problem_mod)
+                yield problem.name, f_problem(problem, problem_mod)
 
     def __init__(self, algo, problem, rundate=None, runid=None):
         if not rundate:
