@@ -16,7 +16,7 @@ def init_loggers():
 
 
 def get_logger(name):
-    logger_file_output = logging.FileHandler(str(Path('logs', name + '.log')))
+    logger_file_output = logging.FileHandler(str(Path('logs', name + '.log')), encoding='utf-8')
     logger_file_output.setLevel(logging.DEBUG)
     logger_file_output.setFormatter(
         logging.Formatter(
