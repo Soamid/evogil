@@ -2,6 +2,7 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from importlib import import_module
+from itertools import chain
 import json
 from pathlib import Path
 import random
@@ -11,8 +12,19 @@ from evotools.log_helper import get_logger
 
 logger = get_logger(__name__)
 
-
 class RunResult:
+    @staticmethod
+    def get_bounds():
+        """ Wylicza górne granice wymiarów przeciwdziedziny dla wyznaczonych problemów """
+        for problem_name, algorithms in RunResult.each_result():
+            all_results = list(chain.from_iterable(run.fitnesses
+                                                   for algo_name, budgets in algorithms
+                                                   for result in budgets
+                                                   for run in result["results"]))
+            res = [max(*l) for l in zip(*all_results[::-1])]
+
+            print(problem_name, res)
+
     @staticmethod
     def each_run(algo, problem):
         rootpath = Path('results',
