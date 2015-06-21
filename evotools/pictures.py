@@ -291,6 +291,7 @@ def plot_results(results):
 
             last_plt.append(ax.plot(xs, ys, ls=lines, color=color, label=name, linewidth=lw, ms=ms)[0])
 
+        logger.debug("last_plt = %s", last_plt)
         problem, metric = plot_name
 
         # plt.legend(loc='best', fontsize=6)
@@ -302,7 +303,12 @@ def plot_results(results):
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
 
-        plt.legend(last_plt, [s.get_label() for s in last_plt], loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
+        plt.legend(last_plt,
+                   [s.get_label() for s in last_plt],
+                   loc='center left',
+                   box_to_anchor=(1, 0.5),
+                   prop={'size': 20},
+                   frameon=False)
 
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
