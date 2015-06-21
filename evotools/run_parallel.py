@@ -20,7 +20,7 @@ from evotools import run_config
 
 from functools import partial
 from evotools.log_helper import init_worker
-from evotools.random_tools import show_partial
+from evotools.random_tools import show_partial, show_conf
 from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
@@ -247,14 +247,6 @@ def worker(args):
         logger.debug("Finished processing. args:%s", args)
 
 
-def show_conf(conf):
-    conf = copy.deepcopy(conf)
-    with suppress(KeyError):
-        conf["driver"] = show_partial(conf["driver"])
-    with suppress(KeyError):
-        conf["population"] = [conf["population"][0], "…snip…"]
-    return str(conf)
-
 
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     logger = logging.getLogger(__name__)
@@ -294,7 +286,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         if driver:
             update = {"driver": driver}
             config.update(update)
-            logger.debug("Assigning driver: %s", update)
+            logger.debug("%s : %s", descr, driver)
             config.update(update)
             logger.debug("config: %s", show_conf(config))
 
@@ -414,11 +406,11 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         ################################################################################
         descr = "CUSTOMS FOR ALGORITHM"
-        # example fun: init_alg_SPEA2
-        # example fun: init_alg_HGS
-        # example fun: init_alg_IMGA
+        # example fun: init_alg___SPEA2
+        # example fun: init_alg___HGS
+        # example fun: init_alg___IMGA
         with suppress(AttributeError):
-            key = "init_alg_" + algo
+            key = "init_alg___" + algo
             logger.debug("Try %s(…)", key)
             updater = getattr(run_config, key)
             logger.debug("%s %s: %s: %s",
@@ -432,10 +424,10 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         ################################################################################
         descr = "CUSTOMS FOR ALGORITHM + SUBDRIVERS"
-        # example fun: init_alg_HGS__SPEA2
-        # example fun: init_alg_IMGA__HGS_SPEA2
+        # example fun: init_alg___HGS__SPEA2
+        # example fun: init_alg___IMGA__HGS_SPEA2
         with suppress(AttributeError):
-            key = "init_alg_" + algo + '__' + '_'.join(all_drivers[driver_pos + 1:])
+            key = "init_alg___" + algo + '__' + '_'.join(all_drivers[driver_pos + 1:])
             logger.debug("Try %s(…)", key)
             updater = getattr(run_config, key)
             logger.debug("%s %s: %s: %s",
@@ -449,10 +441,10 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         ################################################################################
         descr = "CUSTOMS FOR PARENTS + ALGORITHM"
-        # example fun: init_alg_IMGA_HGS__SPEA2
-        # example fun: init_alg_IMGA__HGS
+        # example fun: init_alg_IMGA_HGS___SPEA2
+        # example fun: init_alg_IMGA___HGS
         with suppress(AttributeError):
-            key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo
+            key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '___' + algo
             logger.debug("Try %s(…)", key)
             updater = getattr(run_config, key)
             logger.debug("%s %s: %s: %s",
@@ -466,9 +458,9 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         ################################################################################
         descr = "CUSTOMS FOR PARENTS + ALGORITHM + SUBDRIVERS"
-        # example fun: init_alg_IMGA__HGS__SPEA2
+        # example fun: init_alg_IMGA___HGS__SPEA2
         with suppress(AttributeError):
-            key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(
+            key = "init_alg_" + '_'.join(all_drivers[:driver_pos]) + '___' + algo + '__' + '_'.join(
                 all_drivers[driver_pos + 1:])
             logger.debug("Try %s(…)", key)
             updater = getattr(run_config, key)
@@ -498,10 +490,9 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         ################################################################################
         descr = "CUSTOMS FOR PROBLEM"
-        # example fun: init_prob_ackley
+        # example fun: init_prob____ackley
         with suppress(AttributeError):
-            key = "init_prob_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(
-                all_drivers[driver_pos + 1:])
+            key = "init_prob____" + problem
             logger.debug("Try %s(…)", key)
             updater = getattr(run_config, key)
             logger.debug("%s %s: %s: %s",
@@ -515,17 +506,22 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         ################################################################################
         descr = "CUSTOMS"
-        # example fun: init_cust_SPEA2___ackley
-        # example fun: init_cust_SPEA2___zdt1
-        # example fun: init_cust_IMGA_HGS__SPEA2___ackley
-        # example fun: init_cust_IMGA_HGS__SPEA2___zdt1
-        # example fun: init_cust_IMGA__HGS__SPEA2___ackley
-        # example fun: init_cust_IMGA__HGS__SPEA2___zdt1
-        # example fun: init_cust__IMGA__HGS_SPEA2___ackley
-        # example fun: init_cust__IMGA__HGS_SPEA2___zdt1
+        # example fun: init_cust___SPEA2____ackley  # configure SPEA2 for ackley
+        # example fun: init_cust___SPEA2____zdt1
+        # example fun: init_cust_IMGA_HGS___SPEA2____ackley  # configure SPEA2 for ackley when under IMGA+HGS
+        # example fun: init_cust_IMGA_HGS___SPEA2____zdt1
+        # example fun: init_cust_IMGA___HGS__SPEA2____ackley  # configure HGS for ackley when under IMGA w/ SPEA2 driver
+        # example fun: init_cust_IMGA___HGS__SPEA2____zdt1
+        # example fun: init_cust___IMGA__HGS_SPEA2____ackley  # configure IMGA for ackley w/ HGS+SPEA2 driver
+        # example fun: init_cust___IMGA__HGS_SPEA2____zdt1
         with suppress(AttributeError):
-            key = "init_cust_" + '_'.join(all_drivers[:driver_pos]) + '__' + algo + '__' + '_'.join(
-                all_drivers[driver_pos + 1:])
+            overdriver = ''.join('_' + x for x in all_drivers[:driver_pos])
+            algo_pref = "___" + algo
+            subdrivers = ""
+            if all_drivers[driver_pos + 1:]:
+                subdrivers = "__" + '_'.join(all_drivers[driver_pos + 1:])
+            problem_suf = "____" + problem
+            key = "init_cust" + overdriver + algo_pref + subdrivers + problem_suf
             logger.debug("Try %s(…)", key)
             updater = getattr(run_config, key)
             logger.debug("%s %s: %s: %s",

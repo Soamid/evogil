@@ -1,7 +1,7 @@
 from itertools import product
 from operator import itemgetter
 from algorithms.HGS.HGS import HGS
-
+from evotools.random_tools import standard_variance
 
 _drivers = [
     'SPEA2',
@@ -123,22 +123,22 @@ cust_base = {
 }
 
 
-def init_alg_IBEA(algo_config, problem_mod):
-    _standard_variance(algo_config, problem_mod)
+def init_alg___IBEA(algo_config, problem_mod):
+    standard_variance(algo_config, problem_mod)
 
-def init_alg_SPEA2(algo_config, problem_mod):
+def init_alg___SPEA2(algo_config, problem_mod):
     if problem_mod.name in [ "ZDT1", "ZDT2", "ZDT3", "ZDT4", "ZDT6"]:
-        _standard_variance(algo_config, problem_mod, divider=0.1)
+        standard_variance(algo_config, problem_mod, divider=0.1)
     elif problem_mod.name in ["kursawe"]:
         algo_config.update({
             "mutation_variance":  [0.8, 0.4, 0.2],
             "crossover_variance": [0.8, 0.4, 0.2],
         })
     else:
-        _standard_variance(algo_config, problem_mod)
+        standard_variance(algo_config, problem_mod)
 
-def init_alg_NSGAII(algo_config, problem_mod):
-    _standard_variance(algo_config, problem_mod)
+def init_alg___NSGAII(algo_config, problem_mod):
+    standard_variance(algo_config, problem_mod)
 
     if problem_mod.name in ['ackley', 'kursawe', 'ZDT4']:
         algo_config.update({
@@ -146,29 +146,21 @@ def init_alg_NSGAII(algo_config, problem_mod):
         })
 
 
-def init_alg_IMGA(algo_config, problem_mod):
-    _standard_variance(algo_config, problem_mod)
+def init_alg___IMGA(algo_config, problem_mod):
+    standard_variance(algo_config, problem_mod)
 
 
-def init_alg_IMGA__SPEA2(algo_config, problem_mod):
+def init_alg_IMGA___SPEA2(algo_config, problem_mod):
     if problem_mod.name in ["ackley"]:
-        _standard_variance(algo_config, problem_mod)
+        standard_variance(algo_config, problem_mod)
     else:
-        _standard_variance(algo_config, problem_mod, divider=0.1)
+        standard_variance(algo_config, problem_mod, divider=0.1)
 
 
-def _standard_variance(algo_config, problem_mod, divider=100.0):
-    var = [ abs(maxa-mina)/divider
-            for (mina, maxa)
-            in problem_mod.dims
-          ]
-    algo_config.update({
-        "mutation_variance":  var,
-        "crossover_variance": var,
-    })
 
 
-def init_alg_HGS(algo_config, problem_mod):
+
+def init_alg___HGS(algo_config, problem_mod):
     def multiply_per_dim(x):
         return [x * abs(b-a)
                 for (a,b)
@@ -179,7 +171,7 @@ def init_alg_HGS(algo_config, problem_mod):
         "mutation_variance":  multiply_per_dim(algo_config["__metaconfig__mutation_variance"]),
     })
 
-def init_alg_SMSEMOA(algo_config, problem_mod):
+def init_alg___SMSEMOA(algo_config, problem_mod):
     var = [abs(maxa - mina) / algo_config["__metaconfig__var_mult"]
            for (mina, maxa)
            in problem_mod.dims]
