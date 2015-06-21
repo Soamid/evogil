@@ -7,15 +7,12 @@
 import math
 import random
 
+from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.drivergen import DriverGen
-from algorithms.base.driverlegacy import DriverLegacy
-from algorithms.base.drivertools import mutate, crossover
-from evotools import ea_utils
-from evotools.metrics import euclid_distance
+from evotools import ea_utils, metrics
 
 
-
-class SPEA2(DriverLegacy):
+class SPEA2(DriverGen):
     class Tournament:
         def __init__(self):
             self.tournament_size = 2
@@ -24,12 +21,42 @@ class SPEA2(DriverLegacy):
             sub_pool = random.sample(pool, self.tournament_size)
             return min(sub_pool, key=lambda x: x['fitness'])['value']
 
-    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance):
-        super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
+    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, mutation_probability=0.05):
+        super().__init__()
+        self.fitnesses = fitnesses
+        self.dims = dims
+        self.mutation_variance = mutation_variance
+        self.mutation_probability = mutation_probability
+        self.crossover_variance = crossover_variance
         self.population = population
+
         self.__archive_size = len(population)
         self.__archive = []
         self.select = SPEA2.Tournament()
+
+    class SPEA2Proxy(DriverGen.Proxy):
+
+        def __init__(self, archive, population, cost):
+            super().__init__(cost)
+            self._archive = archive
+            self._population = population
+
+        def current_population(self):
+            return [x['value'] for x in self._population]
+
+        def finalized_population(self):
+            return [x['value'] for x in self._archive]
+
+        def deport_emigrants(self, immigrants):
+            to_remove = [p for p in self._population if p['value'] in immigrants]
+            for p in to_remove:
+                self._population.remove(p)
+            return to_remove
+
+        def assimilate_immigrants(self, emigrants):
+            for e in emigrants:
+                self._population.append(e)
+
 
     @property
     def population(self):
@@ -42,22 +69,23 @@ class SPEA2(DriverLegacy):
     def finish(self):
         return [x['value'] for x in self.__archive]
 
-    def steps(self, condI, budget=None):
+    def population_generator(self):
         cost = 0
 
-        for _ in condI:
+        while True:
             self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
-            self.population = [self.mutate(self.crossover(self.select(self.__archive),
-                                                          self.select(self.__archive)))
+            self.population = [mutate(crossover(self.select(self.__archive),
+                                                self.select(self.__archive)), self.dims, self.mutation_probability,
+                                      self.mutation_variance)
                                for _ in self.__population]
-            cost += len(self.__population)
+            cost = len(self.__population)
 
-            if budget is not None and cost > budget:
-                break
+            yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)
 
         return cost
+
 
     def calculate_fitnesses(self, population, archive):
         self.calculate_objectives(population)
@@ -92,20 +120,10 @@ class SPEA2(DriverLegacy):
                                   if id(p) != id(x) and self.dominates(p, x)])
 
     def dominates(self, p1, p2):
-        at_least_one = False
-        for i in range(0, len(p1['objectives'])):
-            if p2['objectives'][i] < p1['objectives'][i]:
-                return False
-            elif p2['objectives'][i] > p1['objectives'][i]:
-                at_least_one = True
-
-        return at_least_one
+        return ea_utils.dominates(p1['objectives'], p2['objectives'])
 
     def euclidean_distance(self, c1, c2):
-        dist_sum = 0.0
-        for i in range(0, len(c1)):
-            dist_sum += (c1[i] - c2[i]) ** 2.0
-        return math.sqrt(dist_sum)
+        return metrics.euclid_distance(c1, c2)
 
     def environmental_selection(self, pop, archive):
         union = archive + pop
@@ -125,8 +143,8 @@ class SPEA2(DriverLegacy):
         return environment
 
     def get_domination_index(self, sorted_pop):
-        for i in range(0, len(sorted_pop)):
-            if sorted_pop[i]['fitness'] > 1:
+        for i, p in enumerate(sorted_pop):
+            if p['fitness'] > 1:
                 return i
 
         return len(sorted_pop)
