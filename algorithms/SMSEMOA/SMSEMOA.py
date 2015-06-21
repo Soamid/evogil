@@ -1,12 +1,10 @@
+import logging
 import random
 import collections
 
 from algorithms.base.driverlegacy import DriverLegacy
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils
-from evotools.log_helper import get_logger
-
-logger = get_logger(__name__)
 
 class SMSEMOA(DriverLegacy):
     def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, reference_point, epoch_length_multiplier=0.5):
@@ -28,7 +26,7 @@ class SMSEMOA(DriverLegacy):
         return self.population
 
     def steps(self, condI, budget=None):
-
+        logger = logging.getLogger(__name__)
         cost = self.calculate_objectives(self.__population)
 
         i = 1

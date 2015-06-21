@@ -1,12 +1,11 @@
 import itertools
+import logging
 import math
-from evotools.log_helper import get_logger
 from evotools.timing import log_time, process_time
-
-logger = get_logger(__name__)
 
 
 def distance_from_pareto(solution, pareto):
+    logger = logging.getLogger(__name__)
     solution = list(solution)
     logger.debug("distance_from_pareto: input length %d", len(solution))
     with log_time(process_time, logger, "distance_from_pareto computation time: {time_res:.3}s"):
@@ -16,6 +15,7 @@ def distance_from_pareto(solution, pareto):
 
 
 def distribution(solution, sigma=0.5):
+    logger = logging.getLogger(__name__)
     solution = list(solution)
     logger.debug("distribution: input length %d", len(solution))
     with log_time(process_time, logger, "distribution computation time: {time_res:.3}s"):
@@ -28,6 +28,7 @@ def distribution(solution, sigma=0.5):
 
 
 def extent(solution):
+    logger = logging.getLogger(__name__)
     logger.debug("extent: input length %d", len(solution))
     with log_time(process_time, logger, "extent computation time: {time_res:.3}s"):
         return math.sqrt(sum(max(math.fabs(x[i] - y[i])

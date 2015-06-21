@@ -75,7 +75,7 @@ def save_plot(ax, f, d_problem):
     plt.close(f)
 
 
-def main(argv):
+def main(*args, **kwargs):
 
     root = Path('jsoned')
     for d_problem in [p_problem

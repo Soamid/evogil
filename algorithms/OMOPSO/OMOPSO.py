@@ -1,9 +1,7 @@
 import copy
+import logging
 import random
 from algorithms.base.driverlegacy import DriverLegacy
-from evotools.log_helper import get_logger
-
-logger = get_logger(__name__)
 
 
 class OMOPSO(DriverLegacy):
@@ -23,6 +21,7 @@ class OMOPSO(DriverLegacy):
             p.best_val = copy.deepcopy(p)
 
     def steps(self, condI, budget=None):
+        logger = logging.getLogger(__name__)
         cost = 0
         gen_no = 0
 

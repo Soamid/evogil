@@ -1,6 +1,5 @@
-from evotools.log_helper import get_logger
+import logging
 
-logger = get_logger(__name__)
 
 class Topology:
 
@@ -10,6 +9,7 @@ class Topology:
 
     @staticmethod
     def print(t):
+        logger = logging.getLogger(__name__)
         for i in range(len(t)):
             logger.debug(str(i) + ' : ' + str(t[i]))
 

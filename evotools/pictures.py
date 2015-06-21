@@ -292,7 +292,7 @@ def plot_results(results):
         plt.savefig(str(path))
 
 
-def pictures_from_stats(argv):
+def pictures_from_stats(argv, queue):
     # plot_pareto_fronts()
     
     results = collections.defaultdict(list)

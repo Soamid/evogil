@@ -1,9 +1,7 @@
 # coding=utf-8
+import logging
 import random
 import itertools
-from evotools.log_helper import get_logger
-
-logger = get_logger(__name__)
 
 
 def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':
@@ -47,6 +45,7 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
         lst_f_doms = [[indiv, fitfun_res(indiv), 0] for indiv in lst]
     except TypeError:
         # workaround:
+        logger = logging.getLogger(__name__)
         logger.error("Wow, this is a bug. Please pass a function, not a list!", stack_info=True)
         lst_f_doms = [[indiv, [f(indiv) for f in fitfun_res], 0] for indiv in lst]
 

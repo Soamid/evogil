@@ -17,16 +17,16 @@ from evotools.ea_utils import gen_population
 from evotools import run_config
 
 from functools import partial
-from evotools.log_helper import get_logger
+from evotools.log_helper import init_worker
 from evotools.random_tools import show_partial
 from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
 
-logger = get_logger(__name__)
 
+def run_parallel(args, queue):
+    logger = logging.getLogger(__name__)
 
-def run_parallel(args):
     budgets = sorted([int(budget) for budget in args['<budget>'].split(',')])
     logger.debug("Budgets: %s", budgets)
 
@@ -78,7 +78,7 @@ def run_parallel(args):
     random.shuffle(order)
 
     logger.debug("Creating the pool")
-    p = multiprocessing.Pool(int(args['-j']))
+    p = multiprocessing.Pool(int(args['-j']), initializer=init_worker, initargs=[queue])
 
     wall_time = []
     start_time = datetime.now()
@@ -103,6 +103,9 @@ def run_parallel(args):
                              )
             except ZeroDivisionError:
                 logging.info("Job queue progress: %.3f%%. Est. finish: unknown yet", ratio)
+
+    p.close()
+    p.join()
 
     proc_times = sum(subres[1]
                      for subres
@@ -144,6 +147,8 @@ def run_parallel(args):
 
 
 def worker(args):
+    logger = logging.getLogger(__name__)
+
     logger.debug("Starting the worker. args:%s", args)
     (problem, algo), budgets, runid, renice = args
 
@@ -240,6 +245,7 @@ def worker(args):
 
 
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
+    logger = logging.getLogger(__name__)
     logger.debug("Starting preparation")
 
     if not all_drivers:

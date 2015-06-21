@@ -4,13 +4,12 @@ from datetime import datetime
 from importlib import import_module
 from itertools import chain
 import json
+import logging
 from pathlib import Path
 import random
 import re
 
-from evotools.log_helper import get_logger
 
-logger = get_logger(__name__)
 
 class RunResult:
     @staticmethod
@@ -161,6 +160,7 @@ class RunResult:
             self.metrics = {}
 
         def _get_metric(self, metric_name, metric_mod_name=None, metric_params=None):
+            logger = logging.getLogger(__name__)
             if not metric_mod_name:
                 metric_mod_name = ["evotools", "metrics"]
             if not metric_params:

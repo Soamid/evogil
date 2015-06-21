@@ -62,12 +62,11 @@ Options:
         Renice workers. Works on UNIX & derivatives.
 """
 
-# docopt
+import logging
 from docopt import docopt
-
-# self
+import multiprocessing
 from evotools import run_config
-from evotools.log_helper import get_logger, init_loggers
+from evotools import log_helper
 import evotools.stats
 from evotools.timing import system_time, log_time
 import evotools.violin
@@ -77,11 +76,8 @@ import evotools.pictures
 import evotools.best_fronts
 
 
-init_loggers()
-logger = get_logger('evogil')
-
-
-def all_algos_problems(args):
+# noinspection PyUnusedLocal
+def all_algos_problems(*args, **kwargs):
     print("MOEAs:")
     for algo in run_config.algorithms:
         print("   ", algo)
@@ -90,7 +86,11 @@ def all_algos_problems(args):
         print("   ", problem)
 
 
-if __name__ == '__main__':
+def main_worker(queue, configurer):
+    configurer(queue)
+
+    logger = logging.getLogger(__name__)
+
     logger.debug("Starting the evogil. Parsing arguments.")
     with log_time(system_time, logger, "Parsing done in {time_res}s"):
         argv = docopt(__doc__, version='EvoGIL 3.0')
@@ -111,5 +111,23 @@ if __name__ == '__main__':
         logger.debug("run_dict: k,v = %s,%s", k, v)
         if argv[k]:
             logger.debug("run_dict match. argv[k]=%s", argv[k])
-            v(argv)
+            v(argv, queue)
             break
+
+
+def main():
+    root_logging_queue = multiprocessing.Queue(-1)
+    listener = multiprocessing.Process(target=log_helper.listener,
+                                       args=(root_logging_queue, log_helper.init_listener))
+    listener.start()
+
+    w = multiprocessing.Process(target=main_worker,
+                                args=(root_logging_queue, log_helper.init_worker))
+    w.start()
+    w.join()
+    root_logging_queue.put_nowait(None)
+    listener.join()
+
+
+if __name__ == '__main__':
+    main()

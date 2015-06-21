@@ -1,8 +1,6 @@
-from evotools.log_helper import get_logger
+
 from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis, average
-
-logger = get_logger(__name__)
 
 
 fields = [
@@ -22,7 +20,7 @@ fields = [
 ]
 
 
-def statistics(args, print_stdout=True):
+def statistics(args, queue):
     badbench = []
     cost_badbench = []
     boot_size = int(args['--bootstrap'])
@@ -138,7 +136,7 @@ def statistics(args, print_stdout=True):
                             print(err_prefix + "::",
                                   "Mean of results changed a little (< 10%), so probably that's all okay")
 
-    if print_stdout and badbench:
+    if badbench:
         print("#" * 237)
         for i in badbench:
             print(">>> " + " :: ".join(str(x) for x in i))

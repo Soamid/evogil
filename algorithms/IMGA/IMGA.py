@@ -1,12 +1,11 @@
+import logging
 import random
 
 from algorithms.IMGA.topology import TorusTopology, Topology
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools import ea_utils
-from evotools.log_helper import get_logger
 from evotools.random_tools import weighted_choice
 
-logger = get_logger(__name__)
 
 class IMGA(DriverLegacy):
     def __init__(self,
@@ -34,6 +33,7 @@ class IMGA(DriverLegacy):
         Topology.print(self.topology)
 
     def steps(self, _iterator, budget=None):
+        logger = logging.getLogger(__name__)
         for _ in _iterator:
             logger.debug(self.epoch_no)
             self.epoch_no += 1
@@ -59,6 +59,7 @@ class IMGA(DriverLegacy):
 
 
     def epoch(self):
+        logger = logging.getLogger(__name__)
         epoch_cost = max([island.driver.steps(range(self.epoch_length)) for island in self.islands])
 
 
@@ -78,6 +79,7 @@ class IMGA(DriverLegacy):
 
 
     def create_islands(self, init_population):
+        logger = logging.getLogger(__name__)
         subpop_size = int(len(init_population) / self.islands_number)
 
         subpopulations = [init_population[i*subpop_size:(i+1)*subpop_size] for i in range(self.islands_number)]
@@ -107,6 +109,7 @@ class IMGA(DriverLegacy):
             self.refugees = []
 
         def emigrate(self):
+            logger = logging.getLogger(__name__)
 
             def fitfun_res(ind):
                 return [f(ind) for f in self.outer.fitnesses]
@@ -135,6 +138,7 @@ class IMGA(DriverLegacy):
             self.visa_office.extend(migrants)
 
         def assimilate(self):
+            logger = logging.getLogger(__name__)
             if len(self.visa_office) != len(self.refugees):
                 raise ValueError('Number of immigrants and emigrants should be equal')
 

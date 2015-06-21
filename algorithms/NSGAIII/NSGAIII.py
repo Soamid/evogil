@@ -5,13 +5,10 @@ import random
 import numpy
 import numpy.linalg
 from algorithms.base.driverlegacy import DriverLegacy
-from evotools.log_helper import get_logger
 
 EPSILON = numpy.finfo(float).eps
 
 import matplotlib.pyplot as plt
-
-logger = get_logger(__name__)
 
 
 class NSGAIII(DriverLegacy):

@@ -1,5 +1,6 @@
 # coding=utf-8
 from itertools import count
+import logging
 import random
 from collections import deque
 from contextlib import suppress
@@ -7,13 +8,10 @@ from contextlib import suppress
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 from algorithms.base.drivertools import average_indiv, rank
-from evotools.log_helper import get_logger
 from evotools.metrics import euclid_distance
 from evotools.ea_utils import paretofront_layers, one_fitness
 from evotools.random_tools import take
 
-
-logger = get_logger(__name__)
 
 
 class HGS(DriverGen):
@@ -225,6 +223,7 @@ class HGS(DriverGen):
             return average_indiv(self._get_driver_pop())
 
         def _get_driver_pop(self):
+            logger = logging.getLogger(__name__)
             if isinstance(self.driver, DriverLegacy):
                 return self.driver.population
             elif isinstance(self.driver, DriverGen):
@@ -256,6 +255,7 @@ class HGS(DriverGen):
             return self.reduced or (isinstance(self.driver, DriverLegacy) and self.driver.finished)
 
         def sprout(self):
+            logger = logging.getLogger(__name__)
             if self.driver.finished:
                 return
             if self.reduced:

@@ -1,30 +1,39 @@
+from logging import StreamHandler
 import logging
+from logging.handlers import QueueHandler
 from pathlib import Path
 
 
-def init_loggers():
-    logger_console_output = logging.StreamHandler()
-    logger_console_output.setLevel(logging.INFO)
-    logger_console_output.setFormatter(
-        logging.Formatter(
-            '%(asctime)s %(name)s %(levelname)s: %(message)s',
-            datefmt='%H:%M:%S'))
+def init_listener():
+    root = logging.getLogger()
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(logger_console_output)
+    # console
+    h = StreamHandler()
+    h.setLevel(logging.INFO)
+    f = logging.Formatter('%(asctime)s %(name)s %(levelname)s: %(message)s',
+                          datefmt='%Y-%m-%d %H:%M:%S')
+    h.setFormatter(f)
+    root.addHandler(h)
+
+    h = logging.FileHandler(str(Path('logs', 'evogil.log')), encoding='utf-8')
+    h.setLevel(logging.DEBUG)
+    f = logging.Formatter('%(asctime)s%(msecs)d %(process)d %(name)s %(levelname)s %(message)s',
+                          datefmt='%Y-%m-%d %H:%M:%S')
+    h.setFormatter(f)
+    root.addHandler(h)
 
 
-def get_logger(name):
-    logger_file_output = logging.FileHandler(str(Path('logs', name + '.log')), encoding='utf-8')
-    logger_file_output.setLevel(logging.DEBUG)
-    logger_file_output.setFormatter(
-        logging.Formatter(
-            '%(asctime)s%(msecs)d pr:%(process)d %(name)s %(levelname)s msg:%(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'))
+def listener(queue, configurer):
+    configurer()
+    while True:
+        record = queue.get()
+        if record is None:
+            break
+        logger = logging.getLogger(record.name)
+        logger.handle(record)
 
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(logger_file_output)
-
-    return logger
+def init_worker(queue):
+    h = QueueHandler(queue)
+    root = logging.getLogger()
+    root.addHandler(h)
+    root.setLevel(logging.DEBUG)
