@@ -22,8 +22,6 @@ Commands:
     Some pictures?
   violin
     Plots violin plots?
-  results
-    Yields some info about performed benchmarks.
 
 Options:
   -a <algo_name>, --algo <algo_name>       

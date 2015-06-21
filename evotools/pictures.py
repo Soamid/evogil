@@ -1,6 +1,8 @@
 import collections
 
 from evotools import ea_utils
+from evotools.serialization import RunResult
+from evotools.stats_bootstrap import yield_analysis
 import problems.ackley.problem as ackley
 import problems.ZDT1.problem as zdt1
 import problems.ZDT2.problem as zdt2
@@ -30,14 +32,18 @@ BARE_CL = '0.8'
 IMGA_CL = '0.4'
 HGS_CL = '0.0'
 
-algos = {'spea2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL), 'nsga2': ('NSGAII', NSGA_LS, NSGA_M, BARE_CL),
-         'ibea': ( 'IBEA', IBEA_LS, IBEA_M, BARE_CL),
-         'imga_spea2': ('IMGA-SPEA2', SPEA_LS, SPEA_M,  IMGA_CL),
-         'imga_nsga2': ( 'IMGA-NSGAII', NSGA_LS,NSGA_M, IMGA_CL), 'imga_ibea': ('IMGA-IBEA', IBEA_LS, IBEA_M, IMGA_CL),
-         'hgs_spea2': ( 'HGS-SPEA2', SPEA_LS, SPEA_M, HGS_CL),
-         'hgs_nsga2': ( 'HGS-NSGAII', NSGA_LS, NSGA_M, HGS_CL), 'hgs_ibea': ( 'HGS-IBEA', IBEA_LS, IBEA_M, HGS_CL)}
+algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
+         'NSGAII': ('NSGAII', NSGA_LS, NSGA_M, BARE_CL),
+         'IBEA': ( 'IBEA', IBEA_LS, IBEA_M, BARE_CL),
+         'IMGA+SPEA2': ('IMGA-SPEA2', SPEA_LS, SPEA_M,  IMGA_CL),
+         'IMGA+NSGAII': ( 'IMGA-NSGAII', NSGA_LS,NSGA_M, IMGA_CL),
+         'IMGA+IBEA': ('IMGA-IBEA', IBEA_LS, IBEA_M, IMGA_CL),
+         'HGS+SPEA2': ( 'HGS-SPEA2', SPEA_LS, SPEA_M, HGS_CL),
+         'HGS+NSGAII': ( 'HGS-NSGAII', NSGA_LS, NSGA_M, HGS_CL),
+         'HGS+IBEA': ( 'HGS-IBEA', IBEA_LS, IBEA_M, HGS_CL)
+        }
 
-algos_order = ['spea2', 'nsga2', 'ibea', 'imga_spea2', 'imga_nsga2', 'imga_ibea', 'hgs_spea2', 'hgs_nsga2', 'hgs_ibea']
+algos_order = ['SPEA2', 'NSGAII', 'IBEA', 'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA']
 
 
 def plot_pareto_fronts():
@@ -294,29 +300,31 @@ def plot_results(results):
 
 def pictures_from_stats(argv, queue):
     # plot_pareto_fronts()
+
+    boot_size = 10  # ???????
     
     results = collections.defaultdict(list)
-    for subres in evotools.benchmark_results.iterate_results():
-        metric = subres['metrics_name']
-        if metric == 'dst from pareto':
-            metric = 'dst'
+    for problem_name, algorithms in RunResult.each_result():
+        for algo_name, budgets in algorithms:
+            for result in budgets:
+                _, _, cost_data = next(result["analysis"])
+                cost_analysis = yield_analysis(cost_data, boot_size)
 
-        data = subres['data']
-        cost = subres['cost']
+                budget = cost_analysis["btstrpd"]["metrics"]
+                budget_err = cost_analysis["stdev"]
 
-        bootstrap_size = 10000
-        low_inn_fence, upp_inn_fence, low_out_fence, upp_out_fence, stdev, mean, lower, upper, goodbench, btstrpd, stdev, mild_outliers, extr_outliers, metrics_nooutliers, mean_nooutliers_diff, stdev_nooutliers, stdev_nooutliers_diff, pr_dispersion, dispersion_warn = evotools.stats.yield_analysis(data, bootstrap_size)
-        cost_low_inn_fence, cost_upp_inn_fence, cost_low_out_fence, cost_upp_out_fence, cost_stdev, cost_mean, cost_lower, cost_upper, cost_goodbench, cost_btstrpd, cost_stdev, cost_mild_outliers, cost_extr_outliers, cost_metrics_nooutliers, cost_mean_nooutliers_diff, cost_stdev_nooutliers, cost_stdev_nooutliers_diff, cost_pr_dispersion, cost_dispersion_warn = evotools.stats.yield_analysis(cost, bootstrap_size)
+                for metric_name, metric_name_long, data_process in result["analysis"]:
+                    if metric_name == 'dst from pareto':
+                        metric_name = 'dst'
 
-        budget = cost_btstrpd["metrics"]
-        budget_err = cost_stdev
+                    data_analysis = yield_analysis(data_process, boot_size)
 
-        score = btstrpd["metrics"]
-        score_err = stdev
+                    score = data_analysis["btstrpd"]["metrics"]
+                    score_err = data_analysis["stdev"]
 
-        key = (subres['d_problem'].name, subres['d_algorithm'].name, metric)
-        value = (budget, budget_err, score, score_err)
+                    key = (problem_name, algo_name, metric_name)
+                    value = (budget, budget_err, score, score_err)
 
-        results[key].append(value)
+                    results[key].append(value)
 
     plot_results(results)

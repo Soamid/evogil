@@ -45,7 +45,7 @@ class RunResult:
     @staticmethod
     def each_result():
         def f_metrics(result_list, problem_mod):
-            """
+            """ Pierwszy *zawsze* będzie cost. To ważne.
             @type result_list : list[RunResult.RunResultBudget]
             """
             yield "cost", "cost", [float(x.cost) for x in result_list]
