@@ -75,7 +75,7 @@ class OMOPSO(DriverGen):
 
             # dirty hack for unknown evolution length
 
-            progress = total_cost / self.max_budget if self.max_budget else None
+            progress = min(1.0, total_cost / self.max_budget) if self.max_budget else None
             self.mopso_mutation(progress)
 
             cost += self.calculate_objectives()
@@ -159,7 +159,6 @@ class OMOPSO(DriverGen):
         map(uniform_mutation, self.population[0:pop_part])
 
         if evolution_progress:
-            print("Spoko progress: {} {}".format(evolution_progress))
             non_uniform_mutation = NonUniformMutation(evolution_progress, self.mutation_probability,
                                                       self.mutation_perturbation, self.dims)
             map(non_uniform_mutation, self.population[pop_part: 2 * pop_part])
