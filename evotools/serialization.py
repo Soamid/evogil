@@ -161,44 +161,50 @@ class RunResult:
 
         def _get_metric(self, metric_name, metric_mod_name=None, metric_params=None):
             logger = logging.getLogger(__name__)
-            if not metric_mod_name:
-                metric_mod_name = ["evotools", "metrics"]
-            if not metric_params:
-                metric_params = {}
+            try:
+                if not metric_mod_name:
+                    metric_mod_name = ["evotools", "metrics"]
+                if not metric_params:
+                    metric_params = {}
 
-            if metric_name in self.metrics:
-                return self.metrics[metric_name]
+                if metric_name in self.metrics:
+                    return self.metrics[metric_name]
 
-            metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
+                metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
 
-            with suppress(FileNotFoundError):
-                with metric_path.open(mode='r') as fh:
-                    res = json.load(fh)
-                    metric_val = res["value"]
-                    if res["metric"]["params"] != metric_params:
-                        e = Exception("You have changed params of the metric. "
-                                      "recalculating / per-param storage not implemented")
-                        logger.exception("Metric params do not match: %s != %s",
-                                         res["metric"]["params"], metric_params, exc_info=e)
-                        raise e
-                self.metrics[metric_name] = metric_val
-                return metric_val
+                with suppress(FileNotFoundError):
+                    with metric_path.open(mode='r') as fh:
+                        res = json.load(fh)
+                        metric_val = res["value"]
+                        if res["metric"]["params"] != metric_params:
+                            e = Exception("You have changed params of the metric. "
+                                          "recalculating / per-param storage not implemented")
+                            logger.exception("Metric params do not match: %s != %s",
+                                             res["metric"]["params"], metric_params, exc_info=e)
+                            raise e
+                    self.metrics[metric_name] = metric_val
+                    return metric_val
 
-            # noinspection PyUnreachableCode
-            metric_mod = import_module('.'.join(metric_mod_name))
-            metric_fun = getattr(metric_mod, metric_name)
-            metric_val = metric_fun(self.fitnesses, **metric_params)
+                # noinspection PyUnreachableCode
+                metric_mod = import_module('.'.join(metric_mod_name))
+                metric_fun = getattr(metric_mod, metric_name)
+                metric_val = metric_fun(self.fitnesses, **metric_params)
 
-            with metric_path.open(mode='w') as fh:
-                json_store = {"value": metric_val,
-                              "metric": {
-                                  "name": metric_name,
-                                  "module": metric_mod_name,
-                                  "params": metric_params}
-                              }
-                json.dump(json_store, fh)
+                with metric_path.open(mode='w') as fh:
+                    json_store = {"value": metric_val,
+                                  "metric": {
+                                      "name": metric_name,
+                                      "module": metric_mod_name,
+                                      "params": metric_params}
+                                  }
+                    json.dump(json_store, fh)
 
-            return self.metrics.setdefault(metric_name, metric_val)
+                return self.metrics.setdefault(metric_name, metric_val)
+            except Exception as e:
+                logger.exception("Error: RunResultBudget.budget=%d .cost=%d .path=%s -> metric=%s",
+                                 self.budget, self.cost, self.path, metric_name,
+                                 exc_info=e)
+                raise e
 
         def distance_from_pareto(self, pareto):
             return self._get_metric("distance_from_pareto", metric_params={"pareto": pareto})

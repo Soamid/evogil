@@ -5,8 +5,8 @@ Usage:
   evogil.py -h | --help
   evogil.py list
   evogil.py run <budget> [options]
-  evogil.py summary
   evogil.py (stats | statistics) [options]
+  evogil.py summary
   evogil.py pictures [options]
   evogil.py best_fronts
   evogil.py violin [options]
