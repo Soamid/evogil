@@ -112,9 +112,11 @@ class IMGA(DriverLegacy):
 
         def epoch(self, epoch_length):
             if isinstance(self.driver, DriverGen):
+                cost = 0
                 for _ in range(epoch_length):
                     self.last_proxy = self.driver_gen.send(self.last_proxy)
-                return self.last_proxy.cost
+                    cost += self.last_proxy.cost
+                return cost
             else:
                 return self.driver.steps(range(epoch_length))
 

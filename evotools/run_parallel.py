@@ -192,6 +192,7 @@ def worker(args):
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, DriverGen):
                 logger.debug("The driver %s is DriverGen-based", show_partial(driver))
+                driver.max_budget = budgets[-1]
                 gen = driver.population_generator()
                 proxy = None
                 logger.debug("Starting processing")
