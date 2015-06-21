@@ -308,6 +308,7 @@ def pictures_from_stats(argv, queue):
         for algo_name, budgets in algorithms:
             for result in budgets:
                 _, _, cost_data = next(result["analysis"])
+                cost_data = list(cost_data)
                 cost_analysis = yield_analysis(cost_data, boot_size)
 
                 budget = cost_analysis["btstrpd"]["metrics"]
@@ -316,6 +317,7 @@ def pictures_from_stats(argv, queue):
                 for metric_name, metric_name_long, data_process in result["analysis"]:
                     if metric_name == 'dst from pareto':
                         metric_name = 'dst'
+                    data_process = list(data_process)
 
                     data_analysis = yield_analysis(data_process, boot_size)
 

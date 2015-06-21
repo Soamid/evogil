@@ -1,6 +1,7 @@
 from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
+from functools import partial
 from importlib import import_module
 from itertools import chain
 import json
@@ -48,10 +49,11 @@ class RunResult:
             """ Pierwszy *zawsze* będzie cost. To ważne.
             @type result_list : list[RunResult.RunResultBudget]
             """
-            yield "cost", "cost", [float(x.cost) for x in result_list]
-            yield "distrib", "distribution", [x.distribution() for x in result_list]
-            yield "extent", "extent", [x.extent() for x in result_list]
-            yield "dst", "distance from pareto", [x.distance_from_pareto(pareto=problem_mod.pareto_front) for x in result_list]
+            yield "cost", "cost", [partial(float, x.cost) for x in result_list]
+            yield "distrib", "distribution", [x.distribution for x in result_list]
+            yield "extent", "extent", [x.extent for x in result_list]
+            yield "dst", "distance from pareto", [partial(x.distance_from_pareto, pareto=problem_mod.pareto_front)
+                                                  for x in result_list]
 
         def f_algo(problem_path, algo_path, problem_mod):
             by_budget = defaultdict(list)
@@ -101,7 +103,7 @@ class RunResult:
                           "cost": cost}
             json.dump(json_store, fh)
 
-        self.budgets[budget] = RunResult.RunResultBudget(budget,
+        self.budgets[budget] = RunResultBudget(budget,
                                                          cost,
                                                          population,
                                                          population_fitnesses,
@@ -113,7 +115,7 @@ class RunResult:
 
         store_path = self.path / "{budget}.json".format(**locals())
         population_json = self._load_file(store_path)
-        res = RunResult.RunResultBudget(budget,
+        res = RunResultBudget(budget,
                                         population_json["cost"],
                                         population_json["population"],
                                         population_json["fitnesses"],
@@ -136,7 +138,7 @@ class RunResult:
                     budget = int(match.groupdict()["budget"])
                     population_json = self._load_file(candidate)
 
-                    res = RunResult.RunResultBudget(budget,
+                    res = RunResultBudget(budget,
                                                     population_json["cost"],
                                                     population_json["population"],
                                                     population_json["fitnesses"],
@@ -150,67 +152,67 @@ class RunResult:
         for budget in sorted(self.budgets):
             yield self.budgets[budget]
 
-    class RunResultBudget:
-        def __init__(self, budget, cost, population, fitnesses, path):
-            self.budget = budget
-            self.cost = cost
-            self.population = population
-            self.fitnesses = fitnesses
-            self.path = path
-            self.metrics = {}
+class RunResultBudget:
+    def __init__(self, budget, cost, population, fitnesses, path):
+        self.budget = budget
+        self.cost = cost
+        self.population = population
+        self.fitnesses = fitnesses
+        self.path = path
+        self.metrics = {}
 
-        def _get_metric(self, metric_name, metric_mod_name=None, metric_params=None):
-            logger = logging.getLogger(__name__)
-            try:
-                if not metric_mod_name:
-                    metric_mod_name = ["evotools", "metrics"]
-                if not metric_params:
-                    metric_params = {}
+    def _get_metric(self, metric_name, metric_mod_name=None, metric_params=None):
+        logger = logging.getLogger(__name__)
+        try:
+            if not metric_mod_name:
+                metric_mod_name = ["evotools", "metrics"]
+            if not metric_params:
+                metric_params = {}
 
-                if metric_name in self.metrics:
-                    return self.metrics[metric_name]
+            if metric_name in self.metrics:
+                return self.metrics[metric_name]
 
-                metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
+            metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
 
-                with suppress(FileNotFoundError):
-                    with metric_path.open(mode='r') as fh:
-                        res = json.load(fh)
-                        metric_val = res["value"]
-                        if res["metric"]["params"] != metric_params:
-                            e = Exception("You have changed params of the metric. "
-                                          "recalculating / per-param storage not implemented")
-                            logger.exception("Metric params do not match: %s != %s",
-                                             res["metric"]["params"], metric_params, exc_info=e)
-                            raise e
-                    self.metrics[metric_name] = metric_val
-                    return metric_val
+            with suppress(FileNotFoundError):
+                with metric_path.open(mode='r') as fh:
+                    res = json.load(fh)
+                    metric_val = res["value"]
+                    if res["metric"]["params"] != metric_params:
+                        e = Exception("You have changed params of the metric. "
+                                      "recalculating / per-param storage not implemented")
+                        logger.exception("Metric params do not match: %s != %s",
+                                         res["metric"]["params"], metric_params, exc_info=e)
+                        raise e
+                self.metrics[metric_name] = metric_val
+                return metric_val
 
-                # noinspection PyUnreachableCode
-                metric_mod = import_module('.'.join(metric_mod_name))
-                metric_fun = getattr(metric_mod, metric_name)
-                metric_val = metric_fun(self.fitnesses, **metric_params)
+            # noinspection PyUnreachableCode
+            metric_mod = import_module('.'.join(metric_mod_name))
+            metric_fun = getattr(metric_mod, metric_name)
+            metric_val = metric_fun(self.fitnesses, **metric_params)
 
-                with metric_path.open(mode='w') as fh:
-                    json_store = {"value": metric_val,
-                                  "metric": {
-                                      "name": metric_name,
-                                      "module": metric_mod_name,
-                                      "params": metric_params}
-                                  }
-                    json.dump(json_store, fh)
+            with metric_path.open(mode='w') as fh:
+                json_store = {"value": metric_val,
+                              "metric": {
+                                  "name": metric_name,
+                                  "module": metric_mod_name,
+                                  "params": metric_params}
+                              }
+                json.dump(json_store, fh)
 
-                return self.metrics.setdefault(metric_name, metric_val)
-            except Exception as e:
-                logger.exception("Error: RunResultBudget.budget=%d .cost=%d .path=%s -> metric=%s",
-                                 self.budget, self.cost, self.path, metric_name,
-                                 exc_info=e)
-                raise e
+            return self.metrics.setdefault(metric_name, metric_val)
+        except Exception as e:
+            logger.exception("Error: RunResultBudget.budget=%d .cost=%d .path=%s -> metric=%s",
+                             self.budget, self.cost, self.path, metric_name,
+                             exc_info=e)
+            raise e
 
-        def distance_from_pareto(self, pareto):
-            return self._get_metric("distance_from_pareto", metric_params={"pareto": pareto})
+    def distance_from_pareto(self, pareto):
+        return self._get_metric("distance_from_pareto", metric_params={"pareto": pareto})
 
-        def distribution(self):
-            return self._get_metric("distribution", metric_params={"sigma": 0.5})
+    def distribution(self):
+        return self._get_metric("distribution", metric_params={"sigma": 0.5})
 
-        def extent(self):
-            return self._get_metric("extent")
+    def extent(self):
+        return self._get_metric("extent")
