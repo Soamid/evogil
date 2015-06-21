@@ -2,6 +2,7 @@ import logging
 import random
 
 from algorithms.IMGA.topology import TorusTopology, Topology
+from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
@@ -51,7 +52,7 @@ class IMGA(DriverLegacy):
 
     def finish(self):
         global_pop = []
-        for pop in [island.driver.finish() for island in self.islands]:
+        for pop in [island.finish() for island in self.islands]:
             global_pop.extend(pop)
 
         return global_pop
@@ -60,13 +61,11 @@ class IMGA(DriverLegacy):
 
     def epoch(self):
         logger = logging.getLogger(__name__)
-        epoch_cost = max([island.driver.steps(range(self.epoch_length)) for island in self.islands])
-
+        epoch_cost = max([island.epoch(self.epoch_length) for island in self.islands])
 
         for i in range(len(self.islands)):
             island = self.islands[i]
 
-            logger.debug('pop size: ' + str(len(island.driver.population)))
             for n in self.topology[i]:
                 self.islands[n].immigrate(island.emigrate())
 
@@ -105,8 +104,24 @@ class IMGA(DriverLegacy):
                                        fitnesses=outer.fitnesses,
                                        mutation_variance=outer.mutation_variance,
                                        crossover_variance=outer.crossover_variance)
+            if isinstance(self.driver, DriverGen):
+                self.driver_gen = self.driver.population_generator()
+                self.last_proxy = None
             self.visa_office = []
-            self.refugees = []
+            self.all_refugees = []
+
+        def epoch(self, epoch_length):
+            if isinstance(self.driver, DriverGen):
+                for _ in range(epoch_length):
+                    self.last_proxy = self.driver_gen.send(self.last_proxy)
+                return self.last_proxy.cost
+            else:
+                return self.driver.steps(range(epoch_length))
+
+        def finish(self):
+            if isinstance(self.driver, DriverGen):
+                return self.last_proxy.finalized_population()
+            return self.driver.finish()
 
         def emigrate(self):
             logger = logging.getLogger(__name__)
@@ -114,8 +129,12 @@ class IMGA(DriverLegacy):
             def fitfun_res(ind):
                 return [f(ind) for f in self.outer.fitnesses]
 
-            current_population = self.driver.population
+            if isinstance(self.driver, DriverGen):
+                current_population = self.last_proxy.current_population()
+            else:
+                current_population = self.driver.population
 
+            refugees = []
             for _ in range(self.outer.migrants_number):
                 pareto_layers = [l for l in ea_utils.paretofront_layers(current_population, fitfun_res=fitfun_res)]
 
@@ -124,14 +143,21 @@ class IMGA(DriverLegacy):
                 chosen_layer = weighted_choice(zip(pareto_layers, weights))
 
                 refugee = random.choice(chosen_layer)
-                self.refugees.append(refugee)
+                refugees.append(refugee)
+                if refugee not in current_population:
+                    logger.error("DUPA WSZECHCZASÓW")
                 current_population.remove(refugee)
 
-                yield refugee
-
-            self.driver.population = current_population
 
             logger.debug('after emigrate: ' + str(len(self.driver.population)))
+
+            self.all_refugees.extend(refugees)
+
+            if isinstance(self.driver, DriverGen):
+                return self.last_proxy.deport_emigrants(refugees)
+            else:
+                self.driver.population = current_population
+                return refugees
 
 
         def immigrate(self, migrants):
@@ -139,20 +165,18 @@ class IMGA(DriverLegacy):
 
         def assimilate(self):
             logger = logging.getLogger(__name__)
-            if len(self.visa_office) != len(self.refugees):
-                raise ValueError('Number of immigrants and emigrants should be equal')
+            if len(self.visa_office) != len(self.all_refugees):
+                raise ValueError('Number of immigrants and emigrants should be equal: {} != {}'.format(len(self.visa_office), len(self.all_refugees)))
 
-            current_population = self.driver.population
-
-            #print(current_population)
-            #print(self.refugees)
-
-            current_population.extend(self.visa_office)
-
-            self.driver.population = current_population
+            if isinstance(self.driver, DriverGen):
+                self.last_proxy.assimilate_immigrants(self.visa_office)
+            else:
+                current_population = self.driver.population
+                current_population.extend(self.visa_office)
+                self.driver.population = current_population
 
             logger.debug('after immigrate: ' + str(len(self.driver.population)))
 
-            self.refugees.clear()
+            self.all_refugees.clear()
             self.visa_office.clear()
 

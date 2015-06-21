@@ -157,11 +157,14 @@ class HGS(DriverGen):
             super().__init__(cost)
             self.all_nodes = all_nodes
 
-        def send_emigrants(self, emigrants):
+        def assimilate_immigrants(self, emigrants):
             raise Exception("HGS does not support migrations")
 
-        def get_immigrants(self):
+        def deport_emigrants(self, immigrants):
             raise Exception("HGS does not support migrations")
+
+        def current_population(self):
+            return self.finalized_population()
 
         def finalized_population(self):
             return [
