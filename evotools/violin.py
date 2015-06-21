@@ -8,7 +8,6 @@ from numpy.linalg import LinAlgError
 
 # self
 from evotools.config import algos, algos_order, PLOTS_DIR, metric_names
-from evotools.benchmark_results import iterate_results
 
 
 @contextmanager
@@ -31,7 +30,7 @@ def prepare_data(data):
 def violin(*args, **kwargs):
     global_data = {}
 
-    for loop in iterate_results():
+    for loop in []:
         d_problem    = loop['d_problem']
         d_algorithm  = loop['d_algorithm']
         data         = loop['data']
