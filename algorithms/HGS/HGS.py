@@ -259,8 +259,9 @@ class HGS(DriverGen):
 
         def sprout(self):
             logger = logging.getLogger(__name__)
-            if self.driver.finished:
-                return
+            with suppress(AttributeError):
+                if self.driver.finished:
+                    return
             if self.reduced:
                 return
             if 1 + self.level >= len(self.outer.population_per_level):
