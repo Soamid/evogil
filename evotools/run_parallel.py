@@ -74,6 +74,9 @@ def run_parallel(args):
         for runid in range(int(args['-N']))
     ]
 
+    logger.debug("Shuffling the job queue")
+    random.shuffle(order)
+
     logger.debug("Creating the pool")
     p = multiprocessing.Pool(int(args['-j']))
 
