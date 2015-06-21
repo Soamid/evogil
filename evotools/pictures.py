@@ -1,8 +1,10 @@
 import collections
+import logging
 
 from evotools import ea_utils
 from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
+from evotools.timing import log_time, process_time
 import problems.ackley.problem as ackley
 import problems.ZDT1.problem as zdt1
 import problems.ZDT2.problem as zdt2
@@ -35,12 +37,12 @@ HGS_CL = '0.0'
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAII': ('NSGAII', NSGA_LS, NSGA_M, BARE_CL),
          'IBEA': ( 'IBEA', IBEA_LS, IBEA_M, BARE_CL),
-         'IMGA+SPEA2': ('IMGA-SPEA2', SPEA_LS, SPEA_M,  IMGA_CL),
-         'IMGA+NSGAII': ( 'IMGA-NSGAII', NSGA_LS,NSGA_M, IMGA_CL),
-         'IMGA+IBEA': ('IMGA-IBEA', IBEA_LS, IBEA_M, IMGA_CL),
-         'HGS+SPEA2': ( 'HGS-SPEA2', SPEA_LS, SPEA_M, HGS_CL),
-         'HGS+NSGAII': ( 'HGS-NSGAII', NSGA_LS, NSGA_M, HGS_CL),
-         'HGS+IBEA': ( 'HGS-IBEA', IBEA_LS, IBEA_M, HGS_CL)
+         'IMGA+SPEA2': ('IMGA+SPEA2', SPEA_LS, SPEA_M,  IMGA_CL),
+         'IMGA+NSGAII': ( 'IMGA+NSGAII', NSGA_LS,NSGA_M, IMGA_CL),
+         'IMGA+IBEA': ('IMGA+IBEA', IBEA_LS, IBEA_M, IMGA_CL),
+         'HGS+SPEA2': ( 'HGS+SPEA2', SPEA_LS, SPEA_M, HGS_CL),
+         'HGS+NSGAII': ( 'HGS+NSGAII', NSGA_LS, NSGA_M, HGS_CL),
+         'HGS+IBEA': ( 'HGS+IBEA', IBEA_LS, IBEA_M, HGS_CL)
         }
 
 algos_order = ['SPEA2', 'NSGAII', 'IBEA', 'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA']
@@ -225,6 +227,7 @@ def plot_legend(series):
 
 
 def plot_results(results):
+    logger = logging.getLogger(__name__)
     legend_saved = False
     to_plot = collections.defaultdict(list)
     for key, values in results.items():
@@ -241,31 +244,43 @@ def plot_results(results):
             yerr.append(se)
         to_plot[(problem, metric)].append((algo, ((xs, xerr), (ys, yerr))))
 
+    logger.debug("to_plot = %s", list(to_plot.items()))
+
     for plot_name, plot_data in to_plot.items():
         last_plt = []
-        plt.figure(num=None, facecolor='w', edgecolor='k' , figsize=(15, 7))
+        plt.figure(num=None, facecolor='w', edgecolor='k', figsize=(15, 7))
         ax = plt.subplot(111)
         # plt.title(plot_name)
         (problem, metric) = plot_name
         if metric == 'dst':
             metric = 'distance from Pareto front'
             if problem == 'ackley':
-                plt.ylim([0.0001, 10])
+                ylim = [0.0001, 10]
+                logger.debug("plt.ylim = %s", ylim)
+                plt.ylim(ylim)
             plt.yscale('log')
         if metric == 'distribution':
             if problem == 'ackley' or problem == 'comoea_b':
-                plt.ylim([-0.1, 1.0])
+                ylim = [-0.1, 1.0]
+                logger.debug("plt.ylim = %s", ylim)
+                plt.ylim(ylim)
         if metric == 'extent':
             if problem == 'ackley':
-                plt.ylim([-0.5, 4.0])
+                ylim = [-0.5, 4.0]
+                logger.debug("plt.ylim = %s", ylim)
+                plt.ylim(ylim)
+        logger.debug("plt.ylabel = %s", metric)
         plt.ylabel(metric, fontsize=20)
         plt.xlabel('calls to fitness function', fontsize=20)
         plt.tick_params(axis='both',  labelsize=15)
         plot_data = sorted(plot_data, key=lambda x: x[0])
+        logger.debug("plot_data = %s", plot_data)
         lw = 5
         base_ms = 5
         plot_data = dict(plot_data)
+        logger.debug("plot_data = %s", plot_data)
         for algo in algos_order:
+            logger.debug("for algo=%s", algo)
             data = plot_data[algo]
             name, lines, marker, color = algos[algo]
             (xs, xerr), (ys, yerr) = data
@@ -298,35 +313,38 @@ def plot_results(results):
         plt.savefig(str(path))
 
 
-def pictures_from_stats(argv, queue):
-    # plot_pareto_fronts()
+def pictures_from_stats(args, queue):
+    plot_pareto_fronts()
+    logger = logging.getLogger(__name__)
 
-    boot_size = 10  # ???????
-    
+    boot_size = int(args['--bootstrap'])
+
+    logger.debug("pictures from stats")
     results = collections.defaultdict(list)
-    for problem_name, algorithms in RunResult.each_result():
-        for algo_name, budgets in algorithms:
-            for result in budgets:
-                _, _, cost_data = next(result["analysis"])
-                cost_data = list(cost_data)
-                cost_analysis = yield_analysis(cost_data, boot_size)
+    with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
+        for problem_name, algorithms in RunResult.each_result():
+            for algo_name, budgets in algorithms:
+                for result in budgets:
+                    _, _, cost_data = next(result["analysis"])
+                    cost_data = list(x() for x in cost_data)
+                    cost_analysis = yield_analysis(cost_data, boot_size)
 
-                budget = cost_analysis["btstrpd"]["metrics"]
-                budget_err = cost_analysis["stdev"]
+                    budget = cost_analysis["btstrpd"]["metrics"]
+                    budget_err = cost_analysis["stdev"]
 
-                for metric_name, metric_name_long, data_process in result["analysis"]:
-                    if metric_name == 'dst from pareto':
-                        metric_name = 'dst'
-                    data_process = list(data_process)
+                    for metric_name, metric_name_long, data_process in result["analysis"]:
+                        if metric_name == 'dst from pareto':
+                            metric_name = 'dst'
+                        data_process = list(x() for x in data_process)
 
-                    data_analysis = yield_analysis(data_process, boot_size)
+                        data_analysis = yield_analysis(data_process, boot_size)
 
-                    score = data_analysis["btstrpd"]["metrics"]
-                    score_err = data_analysis["stdev"]
+                        score = data_analysis["btstrpd"]["metrics"]
+                        score_err = data_analysis["stdev"]
 
-                    key = (problem_name, algo_name, metric_name)
-                    value = (budget, budget_err, score, score_err)
+                        key = (problem_name, algo_name, metric_name)
+                        value = (budget, budget_err, score, score_err)
 
-                    results[key].append(value)
+                        results[key].append(value)
 
     plot_results(results)
