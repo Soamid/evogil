@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import multiprocessing
 import os
@@ -62,10 +63,9 @@ def run_parallel(args):
 
     order = list(product(problems, algorithms))
 
-    logger.info("Selected following tests: \n%s",
-                '\n,'.join("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo)
-                           for problem, algo
-                           in order))
+    logger.info("Selected following tests:")
+    for problem, algo in order:
+        logger.info("  {problem:12} :: {algo:12}".format(problem=problem, algo=algo))
 
     logger.debug("Duplicating problems (-N flag)")
     order = [
@@ -81,6 +81,8 @@ def run_parallel(args):
     p = multiprocessing.Pool(int(args['-j']))
 
     wall_time = []
+    start_time = datetime.now()
+    results = []
     with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
 
         for i, subres in enumerate(p.imap(worker, order, chunksize=1)):
@@ -105,12 +107,8 @@ def run_parallel(args):
     proc_times = sum(subres[1]
                      for subres
                      in results
-                     if res is not None)
-    # errors = [proc_time
-    #           for (res, proc_time), (test, budgets, runid)
-    #           in zip(results, order)
-    #           if res is None]
-    errors = [str((test, budgets, runid))
+                     if subres is not None)
+    errors = [(test, budgets, runid)
               for comp_result, (test, budgets, runid, renice)
               in zip(results, order)
               if comp_result is None
@@ -118,32 +116,31 @@ def run_parallel(args):
 
     speedup = proc_times / wall_time[0]
 
-    logger.info("""########################################
-SUMMARY:
-  wall time:     %7.3f
-  CPU+user time: %7.3f
-  est. speedup:  %7.3f""", wall_time[0], proc_times, speedup)
+    logger.info("SUMMARY:")
+    logger.info("  wall time:     %7.3f", wall_time[0])
+    logger.info("  CPU+user time: %7.3f", proc_times)
+    logger.info("  est. speedup:  %7.3f", speedup)
 
-    if logger.isEnabledFor(logging.DEBUG) and errors:
-        errors = '\n                 '.join(errors)
-        logger.error("Errors encountered: {errors:>3}".format(**locals()))
+    if errors:
+        logger.error("Errors encountered:")
+        for (probl, algo), budgets, runid in errors:
+            logger.error("  %9s :: %14s :: runID=%d :: budgets=%s", probl, algo, runid, ','.join(str(x) for x in budgets))
 
     summary = collections.defaultdict(float)
-    for (bench, _, _, _), (res, proc_time) in zip(order, results):
-        summary[bench] += proc_time or 0.0
+    for (bench, _, _, _), subres in zip(order, results):
+        if subres:
+            summary[bench] += subres[1]
 
     if logger.isEnabledFor(logging.INFO):
         logger.info("Running time:")
         res = []
         for (prob, alg), timesum in sorted(summary.items(),
                                            key=operator.itemgetter(1),
-                                           reverse=True
-        ):
+                                           reverse=True):
             prob_show = "'" + prob + "'"
             alg_show = "'" + alg + "'"
             avg_time = timesum / float(args['-N'])
-            res.append("  ({prob_show:16}, {alg_show:16}),  # {avg_time:7.3f}s".format(**locals()))
-        logger.info('\n'.join(res))
+            logger.info("  prob:{prob_show:16} algo:{alg_show:16}) time:{avg_time:>8.3f}s".format(**locals()))
 
 
 def worker(args):
@@ -184,7 +181,7 @@ def worker(args):
         proc_time = []
         results = []
 
-        logger.info("Beginning processing of %s, args: %s", driver, args)
+        logger.debug("Beginning processing of %s, args: %s", driver, args)
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, DriverGen):
                 logger.debug("The driver %s is DriverGen-based", show_partial(driver))
@@ -239,7 +236,7 @@ def worker(args):
         logger.exception("Some error", exc_info=e)
 
     finally:
-        logger.info("Finished processing. args:%s", args)
+        logger.debug("Finished processing. args:%s", args)
 
 
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
@@ -542,7 +539,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
             logger.exception("Class creation error.", exc_info=e)
             raise e
         else:
-            logger.info(
+            logger.debug(
                 "Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
                 algo,
                 problem,
