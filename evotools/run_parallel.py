@@ -11,7 +11,7 @@ import collections
 import operator
 
 from importlib import import_module
-from contextlib import suppress, closing
+from contextlib import suppress, closing, contextmanager
 from itertools import product, count
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
@@ -21,7 +21,7 @@ from evotools import run_config
 
 from functools import partial
 from evotools.log_helper import init_worker
-from evotools.random_tools import show_partial, show_conf
+from evotools.random_tools import show_partial, show_conf, close_and_join
 from evotools.run_config import NotViableConfiguration
 from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
@@ -83,7 +83,7 @@ def run_parallel(args, queue):
 
     logger.debug("Creating the pool")
 
-    with closing(multiprocessing.Pool(int(args['-j']))) as p:
+    with close_and_join(multiprocessing.Pool(int(args['-j']))) as p:
 
         wall_time = []
         start_time = datetime.now()

@@ -1,4 +1,4 @@
-from contextlib import suppress
+from contextlib import suppress, contextmanager
 import copy
 import random
 
@@ -50,3 +50,13 @@ def standard_variance(algo_config, problem_mod, divider=100.0):
         "mutation_variance":  var,
         "crossover_variance": var,
     })
+
+
+@contextmanager
+def close_and_join(x):
+    try:
+        yield x
+    finally:
+        x.close()
+        x.join()
+

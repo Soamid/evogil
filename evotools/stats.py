@@ -4,6 +4,7 @@ from itertools import repeat
 import logging
 import multiprocessing
 from evotools.log_helper import init_worker
+from evotools.random_tools import close_and_join
 from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis, average
 from evotools.timing import process_time, log_time
@@ -59,7 +60,7 @@ def statistics(args, queue):
               flush=True)
         return True
 
-    with closing(multiprocessing.Pool(min(int(args['-j']), 4))) as p:
+    with close_and_join(multiprocessing.Pool(min(int(args['-j']), 4))) as p:
         for problem_name, algorithms in RunResult.each_result():
             for algo_name, budgets in algorithms:
                 header_just_printed = print_header()
