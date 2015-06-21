@@ -1,4 +1,6 @@
 import collections
+from contextlib import suppress
+from pathlib import Path
 
 from evotools import ea_utils
 from evotools.serialization import RunResult
@@ -10,24 +12,22 @@ import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 
-from contextlib import suppress
 
-from pathlib import Path
 PLOTS_DIR = Path('plots')
 
-import evotools.benchmark_results
-import evotools.stats
-
 import matplotlib
+
 matplotlib.rcParams.update({'font.size': 8})
 import matplotlib.pyplot as plt
 
 SPEA_LS = '-'
 NSGA_LS = '--'
 IBEA_LS = ':'
+OMOPSO_LS = '--'
 SPEA_M = 'o'
 NSGA_M = '*'
 IBEA_M = '^'
+OMOPSO_M = '>'
 BARE_CL = '0.8'
 IMGA_CL = '0.4'
 HGS_CL = '0.0'
@@ -35,15 +35,21 @@ HGS_CL = '0.0'
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAII': ('NSGAII', NSGA_LS, NSGA_M, BARE_CL),
          'IBEA': ( 'IBEA', IBEA_LS, IBEA_M, BARE_CL),
-         'IMGA+SPEA2': ('IMGA-SPEA2', SPEA_LS, SPEA_M,  IMGA_CL),
-         'IMGA+NSGAII': ( 'IMGA-NSGAII', NSGA_LS,NSGA_M, IMGA_CL),
+         'OMOPSO': ('OMOPSO', OMOPSO_LS, OMOPSO_M, BARE_CL),
+         'IMGA+SPEA2': ('IMGA-SPEA2', SPEA_LS, SPEA_M, IMGA_CL),
+         'IMGA+NSGAII': ( 'IMGA-NSGAII', NSGA_LS, NSGA_M, IMGA_CL),
          'IMGA+IBEA': ('IMGA-IBEA', IBEA_LS, IBEA_M, IMGA_CL),
+         'IMGA+OMOPSO': ('IMGA-OMOPSO', OMOPSO_LS, OMOPSO_M, IMGA_CL),
          'HGS+SPEA2': ( 'HGS-SPEA2', SPEA_LS, SPEA_M, HGS_CL),
          'HGS+NSGAII': ( 'HGS-NSGAII', NSGA_LS, NSGA_M, HGS_CL),
-         'HGS+IBEA': ( 'HGS-IBEA', IBEA_LS, IBEA_M, HGS_CL)
-        }
+         'HGS+IBEA': ( 'HGS-IBEA', IBEA_LS, IBEA_M, HGS_CL),
+         'HGS+OMOPSO': ('HGS-OMOPSO', OMOPSO_LS, OMOPSO_M, HGS_CL),
+         }
 
-algos_order = ['SPEA2', 'NSGAII', 'IBEA', 'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA']
+algos_order = ['SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO',
+               'HGS+SPEA2',
+               'HGS+NSGAII',
+               'HGS+IBEA', 'HGS+OMOPSO']
 
 
 def plot_pareto_fronts():
@@ -77,7 +83,7 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
     prto_y = [x[1] for x in pareto_front]
 
     if scattered:
-        plt.scatter(prto_x, prto_y, c='k', s=300,  edgecolors='none')
+        plt.scatter(prto_x, prto_y, c='k', s=300, edgecolors='none')
     else:
         plt.margins(y=.1, x=.1)
         plt.plot(prto_x, prto_y, 'k-', lw=6)
@@ -177,7 +183,6 @@ def get_last(results, problem, algo, metric):
 
 
 def align_to_error(result, error):
-
     if error == 0.0:
         return result
     error = str(error)
@@ -203,11 +208,10 @@ def align_to_error(result, error):
     if round_n < 0:
         round_n = min(round_n + 2, 0)
 
-
     rounded = round(result, round_n)
 
     # if rounded != result:
-    #     print('{} : {}, dev: {}, n={}'.format(result, rounded, error, round_n))
+    # print('{} : {}, dev: {}, n={}'.format(result, rounded, error, round_n))
 
     return rounded
 
@@ -243,7 +247,7 @@ def plot_results(results):
 
     for plot_name, plot_data in to_plot.items():
         last_plt = []
-        plt.figure(num=None, facecolor='w', edgecolor='k' , figsize=(15, 7))
+        plt.figure(num=None, facecolor='w', edgecolor='k', figsize=(15, 7))
         ax = plt.subplot(111)
         # plt.title(plot_name)
         (problem, metric) = plot_name
@@ -260,39 +264,41 @@ def plot_results(results):
                 plt.ylim([-0.5, 4.0])
         plt.ylabel(metric, fontsize=20)
         plt.xlabel('calls to fitness function', fontsize=20)
-        plt.tick_params(axis='both',  labelsize=15)
+        plt.tick_params(axis='both', labelsize=15)
         plot_data = sorted(plot_data, key=lambda x: x[0])
         lw = 5
         base_ms = 5
         plot_data = dict(plot_data)
         for algo in algos_order:
-            data = plot_data[algo]
-            name, lines, marker, color = algos[algo]
-            (xs, xerr), (ys, yerr) = data
-            if 'nsga2' in algo:
-                ms = base_ms + 1
-            else:
-                ms = base_ms
+            if algo in plot_data:
+                data = plot_data[algo]
+                name, lines, marker, color = algos[algo]
+                (xs, xerr), (ys, yerr) = data
+                if 'nsga2' in algo:
+                    ms = base_ms + 1
+                else:
+                    ms = base_ms
 
-            last_plt.append(ax.plot(xs, ys, ls=lines, color=color, label=name, linewidth=lw, ms=ms)[0])
+                last_plt.append(ax.plot(xs, ys, ls=lines, color=color, label=name, linewidth=lw, ms=ms)[0])
 
         problem, metric = plot_name
 
         # plt.legend(loc='best', fontsize=6)
         # plt.show()
         # if not legend_saved:
-        #     plot_legend(last_plt)
-        #     legend_saved = True
+        # plot_legend(last_plt)
+        # legend_saved = True
 
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
 
-        plt.legend(last_plt, [s.get_label() for s in last_plt], loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
+        plt.legend(last_plt, [s.get_label() for s in last_plt], loc='center left', bbox_to_anchor=(1, 0.5),
+                   prop={'size': 20}, frameon=False)
 
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
-        path = PLOTS_DIR / 'plots_bnw' / '{}_{}.eps'.format(problem_moea, metric_short)
+        path = PLOTS_DIR / 'plots_bnw' / '{}_{}.pdf'.format(problem_moea, metric_short)
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
@@ -302,7 +308,7 @@ def pictures_from_stats(argv, queue):
     # plot_pareto_fronts()
 
     boot_size = 10  # ???????
-    
+
     results = collections.defaultdict(list)
     for problem_name, algorithms in RunResult.each_result():
         for algo_name, budgets in algorithms:

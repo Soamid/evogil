@@ -61,8 +61,10 @@ Options:
 """
 
 import logging
-from docopt import docopt
 import multiprocessing
+
+from docopt import docopt
+
 from evotools import run_config
 from evotools import log_helper
 import evotools.stats
