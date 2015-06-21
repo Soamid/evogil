@@ -35,6 +35,9 @@ problems = [
 metaconfig_populationsize = 100
 metaconfig_budgets = list(range(500, 9500, 1000))
 
+class NotViableConfiguration(Exception):
+    pass
+
 
 algo_base = {
     "IBEA": {
@@ -125,6 +128,7 @@ cust_base = {
 
 def init_alg___IBEA(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
+    raise NotViableConfiguration()
 
 def init_alg___SPEA2(algo_config, problem_mod):
     if problem_mod.name in [ "ZDT1", "ZDT2", "ZDT3", "ZDT4", "ZDT6"]:

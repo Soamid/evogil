@@ -1,5 +1,6 @@
 import copy
 from datetime import datetime
+import inspect
 import logging
 from logging.handlers import QueueHandler
 import multiprocessing
@@ -21,6 +22,7 @@ from evotools import run_config
 from functools import partial
 from evotools.log_helper import init_worker
 from evotools.random_tools import show_partial, show_conf
+from evotools.run_config import NotViableConfiguration
 from evotools.serialization import RunResult
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
@@ -239,6 +241,11 @@ def worker(args):
                 raise e
 
         return results, proc_time[-1]
+
+    except NotViableConfiguration as e:
+        reason = inspect.trace()[-1]
+        logger.info("Configuartion disabled by %s:%d:%s. args:%s", reason[1], reason[2], reason[3], args)
+        logger.debug("Configuration disabled args:%s. Stack:", exc_info=e)
 
     except Exception as e:
         logger.exception("Some error", exc_info=e)
@@ -577,6 +584,9 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         instance = partial(algo_class, **config)
         logger.debug("Dropping this dummy obj, returning partial instead: %s", show_partial(instance))
         return instance, problem_mod
+
+    except NotViableConfiguration as e:
+        raise e
 
     except Exception as e:
         logger.exception(
