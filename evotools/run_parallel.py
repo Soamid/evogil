@@ -81,14 +81,7 @@ def run_parallel(args, queue):
 
     logger.debug("Creating the pool")
 
-    def local_init_worker(que):
-        pass
-        # h = QueueHandler(que)
-        # root = logging.getLogger()
-        # root.addHandler(h)
-        # root.setLevel(logging.DEBUG)
-
-    p = multiprocessing.Pool(int(args['-j']), initializer=local_init_worker, initargs=[queue])
+    p = multiprocessing.Pool(int(args['-j']))
 
     wall_time = []
     start_time = datetime.now()
