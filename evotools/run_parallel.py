@@ -82,10 +82,28 @@ def run_parallel(args):
 
     wall_time = []
     with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
-        results = p.map(worker, order, chunksize=1)
 
-    proc_times = sum(proc_time
-                     for res, proc_time
+        for i, subres in enumerate(p.imap(worker, order, chunksize=1)):
+            results.append(subres)
+
+            current_time = datetime.now()
+            diff_time = current_time - start_time
+            ratio = i * 1. / len(order)
+            try:
+                est_delivery_time = start_time + diff_time / ratio
+                time_to_delivery = est_delivery_time - current_time
+                logging.info("Job queue progress: %.3f%%. Est. finish in %02d:%02d:%02d (at %s)",
+                             ratio * 100,
+                             time_to_delivery.days * 24 + time_to_delivery.seconds // 3600,
+                             time_to_delivery.seconds // 60,
+                             time_to_delivery.seconds % 60,
+                             est_delivery_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+                             )
+            except ZeroDivisionError:
+                logging.info("Job queue progress: %.3f%%. Est. finish: unknown yet", ratio)
+
+    proc_times = sum(subres[1]
+                     for subres
                      in results
                      if res is not None)
     # errors = [proc_time
