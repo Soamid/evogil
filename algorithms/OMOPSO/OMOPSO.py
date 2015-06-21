@@ -1,17 +1,52 @@
 import copy
 import random
-from algorithms.base.driverlegacy import DriverLegacy
+
+from algorithms.base.drivergen import DriverGen
 from evotools.log_helper import get_logger
+
 
 logger = get_logger(__name__)
 
 
-class OMOPSO(DriverLegacy):
+class OMOPSO(DriverGen):
     ETA = 0.0075
 
-    def __init__(self, population, fitnesses, dims, mutation_perturbation=0.5, mutation_variance=0, crossover_variance=0):
-        super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
-        self.population = population
+
+    class OMOPSOProxy(DriverGen.Proxy):
+        def __init__(self, cost, archive, population):
+            super().__init__(cost)
+            self.cost = cost
+            self.archive = archive
+            self.population = population
+
+        def finalized_population(self):
+            return [x.value for x in self.archive]
+
+        def current_population(self):
+            return [x.value for x in self.population]
+
+        def deport_emigrants(self, immigrants):
+
+            to_remove = [p for p in self.population if p.value in immigrants]
+            for p in to_remove:
+                self.population.remove(p)
+            return to_remove
+
+        def assimilate_immigrants(self, emigrants):
+            for e in emigrants:
+                e.reset_speed()
+                self.population.append(e)
+
+
+
+    def __init__(self, population, fitnesses, dims, mutation_perturbation=0.5, mutation_probability=0.05,
+                 mutation_variance=0, crossover_variance=0):
+        super().__init__()
+        self.fitnesses = fitnesses
+        self.dims = dims
+        self.population = [Individual(p) for p in population]
+        self.mutation_probability = mutation_probability
+
         self.leaders_size = len(population)  # parameter?
         self.mutation_perturbation = mutation_perturbation
         self.crowding_selector = CrowdingTournament()
@@ -19,10 +54,10 @@ class OMOPSO(DriverLegacy):
         self.leader_archive = LeaderArchive(self.leaders_size)
 
     def init_personal_best(self):
-        for p in self.__population:
+        for p in self.population:
             p.best_val = copy.deepcopy(p)
 
-    def steps(self, condI, budget=None):
+    def population_generator(self):
         cost = 0
         gen_no = 0
 
@@ -33,12 +68,13 @@ class OMOPSO(DriverLegacy):
 
         # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
 
-        for _ in condI:
+        while True:
             self.compute_speed()
             self.move()
 
+            #TODO EVOLUTION PROGRESS NEEDED FOR NONUNIFORM MUTATION!!!
             # dirty hack for unknown evolution length
-            progress = cost / budget if budget else gen_no / float(len(condI))
+            progress = 0.5  # cost / budget if budget else gen_no / float(len(condI))
             self.mopso_mutation(progress)
 
             cost += self.calculate_objectives()
@@ -48,21 +84,20 @@ class OMOPSO(DriverLegacy):
             self.leader_archive.crowding()
 
             logger.debug("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
-
-            if budget is not None and cost > budget:
-                break
             gen_no += 1
+
+            yield OMOPSO.OMOPSOProxy(cost, self.archive, self.population)
 
         return cost
 
     def init_leaders(self):
-        for p in self.__population:
+        for p in self.population:
             if self.leader_archive.add(copy.deepcopy(p)):
                 self.archive.add(copy.deepcopy(p))
 
 
     def update_personal_best(self):
-        for p in self.__population:
+        for p in self.population:
             # print("new: {}, best: {}".format(p.objectives, p.best_val.objectives))
             if p.dominates(p.best_val):
                 # print("new best: {}".format(p.objectives))
@@ -70,21 +105,21 @@ class OMOPSO(DriverLegacy):
 
 
     def update_leaders(self):
-        for p in self.__population:
+        for p in self.population:
             new_ind = copy.deepcopy(p)
             if self.leader_archive.add(new_ind):
                 self.archive.add(copy.deepcopy(p))
 
 
     def calculate_objectives(self):
-        for p in self.__population:
+        for p in self.population:
             p.objectives = [o(p.value)
                             for o in self.fitnesses]
-        return len(self.__population)
+        return len(self.population)
 
 
     def move(self):
-        for p in self.__population:
+        for p in self.population:
             for i in range(len(self.dims)):
                 new_x = p.value[i] + p.speed[i]
                 bounded_x = max(new_x, self.dims[i][0])
@@ -97,7 +132,7 @@ class OMOPSO(DriverLegacy):
 
 
     def compute_speed(self):
-        for p in self.__population:
+        for p in self.population:
             best_global = self.crowding_selector(self.leader_archive) if len(self.leader_archive.archive) > 1 \
                 else self.leader_archive.archive[0]
 
@@ -114,25 +149,16 @@ class OMOPSO(DriverLegacy):
 
 
     def mopso_mutation(self, evolution_progress):
-        pop_len = len(self.__population)
+        pop_len = len(self.population)
         pop_part = int(pop_len / 3)
         uniform_mutation = UniformMutation(self.mutation_probability, self.mutation_perturbation, self.dims)
         non_uniform_mutation = NonUniformMutation(evolution_progress, self.mutation_probability,
                                                   self.mutation_perturbation, self.dims)
-        map(uniform_mutation, self.__population[0:pop_part])
-        map(non_uniform_mutation, self.__population[pop_part: 2 * pop_part])
+        map(uniform_mutation, self.population[0:pop_part])
+        map(non_uniform_mutation, self.population[pop_part: 2 * pop_part])
 
 
-    @property
-    def population(self):
-        return [x.value for x in self.__population]
 
-    @population.setter
-    def population(self, pop):
-        self.__population = [Individual(x) for x in pop]
-
-    def finish(self):
-        return [x.value for x in self.archive] if self.archive.archive else self.population
 
 
 class Mutation(object):
@@ -192,9 +218,9 @@ class Individual:
     def __init__(self, value):
         self.value = value
         self.best_val = None
-        self.speed = [0] * len(value)
         self.crowd_val = 0
         self.objectives = []
+        self.reset_speed()
 
     def __deepcopy__(self, memo):
         dup = Individual(copy.deepcopy(self.value, memo))
@@ -213,6 +239,9 @@ class Individual:
                 at_least_one = True
 
         return at_least_one
+
+    def reset_speed(self):
+        self.speed = [0] * len(self.value)
 
     def equal_obj(self, p):
         for i in range(len(self.objectives)):
