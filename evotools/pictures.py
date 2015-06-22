@@ -24,35 +24,50 @@ matplotlib.rcParams.update({'font.size': 8})
 import matplotlib.pyplot as plt
 
 SPEA_LS = '-'
-NSGA_LS = '--'
+NSGAII_LS = '--'
 IBEA_LS = ':'
-OMOPSO_LS = '--'
+OMOPSO_LS = '-'
+NSGAIII_LS = '--'
+SMSEMOA_LS = ':'
+
 SPEA_M = 'o'
-NSGA_M = '*'
+NSGAII_M = '*'
 IBEA_M = '^'
 OMOPSO_M = '>'
+NSGAIII_M = 'v'
+SMSEMOA_M = '<'
+
 BARE_CL = '0.8'
 IMGA_CL = '0.4'
 HGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
-         'NSGAII': ('NSGAII', NSGA_LS, NSGA_M, BARE_CL),
+         'NSGAII': ('NSGAII', NSGAII_LS, NSGAII_M, BARE_CL),
          'IBEA': ( 'IBEA', IBEA_LS, IBEA_M, BARE_CL),
          'OMOPSO': ('OMOPSO', OMOPSO_LS, OMOPSO_M, BARE_CL),
+         'NSGAIII': ('NSGAIII', NSGAIII_LS, NSGAIII_M, BARE_CL),
+         'SMSEMOA': ('SMSEMOA', SMSEMOA_LS, SMSEMOA_M, BARE_CL),
+
          'IMGA+SPEA2': ('IMGA+SPEA2', SPEA_LS, SPEA_M, IMGA_CL),
-         'IMGA+NSGAII': ( 'IMGA+NSGAII', NSGA_LS, NSGA_M, IMGA_CL),
+         'IMGA+NSGAII': ( 'IMGA+NSGAII', NSGAII_LS, NSGAII_M, IMGA_CL),
          'IMGA+OMOPSO': ('IMGA+OMOPSO', OMOPSO_LS, OMOPSO_M, IMGA_CL),
          'IMGA+IBEA': ('IMGA+IBEA', IBEA_LS, IBEA_M, IMGA_CL),
+         'IMGA+NSGAIII': ( 'IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
+         'IMGA+SMSEMOA': ( 'IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
+
          'HGS+SPEA2': ( 'HGS+SPEA2', SPEA_LS, SPEA_M, HGS_CL),
-         'HGS+NSGAII': ( 'HGS+NSGAII', NSGA_LS, NSGA_M, HGS_CL),
+         'HGS+NSGAII': ( 'HGS+NSGAII', NSGAII_LS, NSGAII_M, HGS_CL),
          'HGS+IBEA': ( 'HGS+IBEA', IBEA_LS, IBEA_M, HGS_CL),
          'HGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, HGS_CL),
+         'HGS+NSGAIII': ( 'HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, HGS_CL),
+         'HGS+SMSEMOA': ( 'HGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, HGS_CL),
         }
 
-algos_order = ['SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO',
-               'HGS+SPEA2',
-               'HGS+NSGAII',
-               'HGS+IBEA', 'HGS+OMOPSO']
+algos_order = [
+    'SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
+    'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
+    'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA',
+]
 
 
 def plot_pareto_fronts():
@@ -316,6 +331,7 @@ def plot_results(results):
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
         path = PLOTS_DIR / 'plots_bnw' / '{}_{}.pdf'.format(problem_moea, metric_short)
+
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
