@@ -22,9 +22,16 @@ class IBEA(DriverGen):
             return [x.v for x in self.individuals]
 
         def deport_emigrants(self, immigrants):
-            to_remove = [ind for ind in self.individuals if ind.v in immigrants]
-            for ind in to_remove:
-                self.individuals.remove(ind)
+            immigrants_cp = list(immigrants)
+            to_remove = []
+
+            for p in self.individuals:
+                if p.v in immigrants_cp:
+                    to_remove.append(p)
+                    immigrants_cp.remove(p.v)
+
+            for p in to_remove:
+                self.individuals.remove(p)
             return to_remove
 
         def assimilate_immigrants(self, emigrants):

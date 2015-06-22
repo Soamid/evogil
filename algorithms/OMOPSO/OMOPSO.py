@@ -23,8 +23,14 @@ class OMOPSO(DriverGen):
             return [x.value for x in self.population]
 
         def deport_emigrants(self, immigrants):
+            immigrants_cp = list(immigrants)
+            to_remove = []
 
-            to_remove = [p for p in self.population if p.value in immigrants]
+            for p in self.population:
+                if p.value in immigrants_cp:
+                    to_remove.append(p)
+                    immigrants_cp.remove(p.value)
+
             for p in to_remove:
                 self.population.remove(p)
             return to_remove
