@@ -63,10 +63,10 @@ class IBEA(DriverGen):
             self._next_step()
 
     def population_generator(self):
-        self.cost = 0
         while True:
             self._next_step()
             yield IBEA.IBEAProxy(self.cost, self.individuals, self)
+            self.cost = 0
         self._scale_objectives()
         self._calculate_fitness()
         self._environmental_selection()

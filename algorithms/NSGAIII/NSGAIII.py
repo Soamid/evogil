@@ -119,12 +119,10 @@ class NSGAIII(DriverGen):
                     self.ideal_point[i] = objective
 
     def population_generator(self):
-        if self.primary_cost_included:
-            self.cost = 0
         while True:
             self.next_step()
             yield NSGAIII.NSGAIIIProxy(self.cost, self.individuals)
-        self.primary_cost_included = True
+            self.cost = 0
         return self.cost
 
     def next_step(self):

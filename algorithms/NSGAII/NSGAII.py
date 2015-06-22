@@ -95,12 +95,10 @@ class NSGAII(DriverGen):
             self._next_step()
 
     def population_generator(self):
-        self.cost = 0
-
         while True:
             self._next_step()
             yield NSGAII.NSGAIIProxy(self.cost, self.individuals, self)
-
+            self.cost = 0
         self._calculate_objectives()
         self._nd_sort()
         self._crowding()

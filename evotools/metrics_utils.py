@@ -6,6 +6,8 @@ from evotools.ea_utils import dominates
 
 import numpy as np
 
+EPSILON = np.finfo(float).eps
+
 
 def distance_from_pareto(solution, pareto):
     logger = logging.getLogger(__name__)
@@ -74,11 +76,15 @@ def spacing(solution):
             if not i == j:
                 dist = sum([math.fabs(ind_a[k] - ind_b[k]) for k in range(dims)])
                 distances.append(dist)
-        min_distances.append(min(distances))
+        if len(distances) > 0:
+            min_distances.append(min(distances))
 
-    mean_dist = np.mean(min_distances)
+    if len(min_distances) > 0:
+        mean_dist = np.mean(min_distances)
+    else:
+        mean_dist = 0
     dist_sum = sum([(mean_dist - dist) ** 2 for dist in min_distances])
-    return math.sqrt(dist_sum / float(len(solution) - 1))
+    return math.sqrt(dist_sum / (float(len(solution) - 1) + EPSILON))
 
 
 def distance(from_set, to_set):
