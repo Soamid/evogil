@@ -81,7 +81,7 @@ class RunResult:
 
     def __init__(self, algo, problem, rundate=None, runid=None):
         if not rundate:
-            rundate = datetime.today().strftime("%Y-%M-%d.%H%M%S.%f")
+            rundate = datetime.today().strftime("%Y-%m-%d.%H%M%S.%f")
         if not runid:
             runid = random.randint(1000000, 9999999)
         self.rundate = rundate
