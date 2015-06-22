@@ -1,6 +1,7 @@
 import collections
 import logging
 from contextlib import suppress
+from pathlib import Path
 
 from evotools import ea_utils
 from evotools.serialization import RunResult
@@ -13,9 +14,7 @@ import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 
-from contextlib import suppress
 
-from pathlib import Path
 PLOTS_DIR = Path('plots')
 
 import matplotlib
@@ -23,12 +22,12 @@ import matplotlib
 matplotlib.rcParams.update({'font.size': 8})
 import matplotlib.pyplot as plt
 
-SPEA_LS = '-'
-NSGAII_LS = '--'
-IBEA_LS = ':'
-OMOPSO_LS = '-'
-NSGAIII_LS = '--'
-SMSEMOA_LS = ':'
+SPEA_LS = []  # '-'
+NSGAII_LS = [10, 2]  # '--'
+NSGAIII_LS = [30, 2]  # '-- --'
+IBEA_LS = [2, 2]  # '.....'
+OMOPSO_LS = [10, 2, 5, 2]  # '-.'
+SMSEMOA_LS = [2, 10]  # ':  :  :'
 
 SPEA_M = 'o'
 NSGAII_M = '*'
@@ -61,7 +60,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'HGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, HGS_CL),
          'HGS+NSGAIII': ( 'HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, HGS_CL),
          'HGS+SMSEMOA': ( 'HGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, HGS_CL),
-        }
+         }
 
 algos_order = [
     'SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
@@ -310,7 +309,8 @@ def plot_results(results):
                 else:
                     ms = base_ms
 
-                last_plt.append(ax.plot(xs, ys, ls=lines, color=color, label=name, linewidth=lw, ms=ms)[0])
+                last_plt.append(ax.plot(xs, ys, color=color, label=name, linewidth=lw, ms=ms)[0])
+                last_plt[-1].set_dashes(lines)
 
         logger.debug("last_plt = %s", last_plt)
         problem, metric = plot_name
