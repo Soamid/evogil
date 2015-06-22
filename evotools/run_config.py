@@ -83,6 +83,13 @@ algo_base = {
         "__metaconfig__var_mult": 0.1  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
     },
 
+    ('HGS', ('NSGAIII',)): {
+        'driver_kwargs_per_level': [{"eta_crossover": 20, "eta_mutation": 20},
+                                    {"eta_crossover": 20, "eta_mutation": 20},
+                                    {"eta_crossover": 20, "eta_mutation": 20},
+                                    ]
+    },
+
     (("IMGA", ), "IBEA"): {
         "kappa": 0.05,
     },
