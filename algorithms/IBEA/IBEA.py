@@ -86,7 +86,10 @@ class IBEA(DriverGen):
 
     def _scale_objectives(self):
         min_max = lambda x: (min(x), max(x))
-        self.cost += len(self.individuals)
+        for ind in self.individuals:
+            if not ind.known_objectives:
+                self.cost += 1
+            ind.known_objectives = True
         measured = [(objective, min_max([objective(ind.v) for ind in self.individuals])) for objective in
                     self.objectives]
         self.scaled_objectives = [self._scale(objective, min_o, max_o) for objective, (min_o, max_o) in measured]
@@ -130,6 +133,8 @@ class IBEA(DriverGen):
         self.mating_individuals = [
             self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
             self.mating_individuals]
+        for ind in self.mating_individuals:
+            ind.known_objectives = False
 
     @property
     def population(self):
@@ -142,7 +147,8 @@ class IBEA(DriverGen):
         self.mating_size = int(self.mating_size_c * self.population_size)
 
     def calculate_objectives(self, ind):
-        self.cost += 1
+        if not ind.known_objectives:
+            self.cost += 1
         return [objective(ind) for objective in self.objectives]
 
     class EPlusIndicator:
@@ -155,6 +161,7 @@ class IBEA(DriverGen):
     class Individual:
         def __init__(self, vector):
             self.v = vector
+            self.known_objectives = False
 
 
 if __name__ == "__main__":
