@@ -10,6 +10,7 @@ import random
 from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.drivergen import DriverGen
 from evotools import ea_utils, metrics
+from evotools.metrics_utils import euclid_distance
 
 
 class SPEA2(DriverGen):
@@ -56,8 +57,7 @@ class SPEA2(DriverGen):
             return to_remove
 
         def assimilate_immigrants(self, emigrants):
-            for e in emigrants:
-                self._population.append(e)
+            self._population.extend(emigrants)
 
     @property
     def population(self):
@@ -125,7 +125,7 @@ class SPEA2(DriverGen):
 
     @staticmethod
     def euclidean_distance(c1, c2):
-        return metrics.euclid_distance(c1, c2)
+        return euclid_distance(c1, c2)
 
     def environmental_selection(self, pop, archive):
         union = archive + pop
