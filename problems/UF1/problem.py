@@ -4,7 +4,7 @@ n = 30
 p_no = 150
 emoa_points = [i / (p_no - 1) for i in range(p_no)]
 
-pareto_front = [(f1, 1 - math.sqrt(f1)) for f1 in emoa_points]
+pareto_front = [[f1, 1 - math.sqrt(f1)] for f1 in emoa_points]
 pareto_set = []
 
 J1 = [j for j in range(2, n+1) if j % 2]

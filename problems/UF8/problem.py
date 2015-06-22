@@ -8,7 +8,7 @@ xy_series_no = int(math.sqrt(p_no))
 x_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
 y_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
 
-pareto_front = [(x, y, math.pow(-x ** 2 - y ** 2 + 1, 1 / 3)) for x, y in itertools.product(x_points, y_points) if
+pareto_front = [[x, y, math.pow(-x ** 2 - y ** 2 + 1, 1 / 3)] for x, y in itertools.product(x_points, y_points) if
                 x ** 2 + y ** 2 <= 1]
 pareto_set = []
 

@@ -8,7 +8,7 @@ eps = 0.1
 p_step = (1 - 1/(2*n))/150
 
 emoa_points = [x for i in range(1, n + 1) for x in numpy.arange((2 * i - 1) / (2 * n), (2 * i) / (2 * n) + p_step, p_step)]
-pareto_front = [(0, 1)] + [(x, 1 - x) for x in emoa_points]
+pareto_front = [[0, 1]] + [[x, 1 - x] for x in emoa_points]
 pareto_set = []
 
 J1 = [j for j in range(2, n + 1) if j % 2]

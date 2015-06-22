@@ -9,7 +9,7 @@ xy_series_no = int(math.sqrt(p_no))
 x_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
 z_points = [i / (xy_series_no - 1) for i in range(xy_series_no)]
 
-pareto_front = [(x, 1 - x - z, z) for x, z in itertools.product(x_points, z_points) if
+pareto_front = [[x, 1 - x - z, z] for x, z in itertools.product(x_points, z_points) if
                 x <= 0.25 * (1 - z) or x >= 0.75 * (1 - z)]
 
 J1 = [j for j in range(3, n + 1) if (j - 1) % 3]

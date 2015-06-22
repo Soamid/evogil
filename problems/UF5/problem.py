@@ -3,7 +3,7 @@ import math
 n = 10
 eps = 0.1
 
-pareto_front = [(i / (2 * n), 1 - i / (2 * n)) for i in range(2 * n + 1)]
+pareto_front = [[i / (2 * n), 1 - i / (2 * n)] for i in range(2 * n + 1)]
 pareto_set = []
 
 J1 = [j for j in range(2, n + 1) if j % 2]

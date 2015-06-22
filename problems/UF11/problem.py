@@ -29,7 +29,7 @@ with m5_dat.open('r') as f:
 lambdas = [float(x) for x in lambda_lines[0].split()]
 M = np.array([[float(x) for x in line.split()] for line in M_lines])
 
-pareto_front = [tuple(float(x) for x in line.split()) for line in pf_lines]
+pareto_front = [[float(x) for x in line.split()] for line in pf_lines]
 pareto_set = []
 
 name = 'UF11'
