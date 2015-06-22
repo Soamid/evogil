@@ -2,16 +2,61 @@ import logging
 import random
 import collections
 
-from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils
 
-class SMSEMOA(DriverLegacy):
-    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, reference_point, epoch_length_multiplier=0.5):
-        super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
+
+class SMSEMOA(DriverGen):
+    def __init__(self,
+                 population,
+                 fitnesses,
+                 dims,
+                 mutation_variance,
+                 crossover_variance,
+                 reference_point,
+                 epoch_length_multiplier=0.5,
+                 mutation_probability=0.05):
+        super().__init__()
+        self.fitnesses = fitnesses
+        self.dims = dims
+        self.mutation_variance = mutation_variance
+        self.mutation_probability = mutation_probability
+        self.crossover_variance = crossover_variance
+
         self.population = population
         self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
         self.reference_point = reference_point
+
+    class SMSEMOAProxy(DriverGen.Proxy):
+        def __init__(self, cost, population):
+            super().__init__(cost)
+            self.cost = cost
+            self.population = population
+
+        def finalized_population(self):
+            return [x.value for x in self.population]
+
+        def current_population(self):
+            return self.finalized_population()
+
+        def deport_emigrants(self, immigrants):
+            immigrants_cp = list(immigrants)
+            to_remove = []
+
+            for p in self.population:
+                if p.value in immigrants_cp:
+                    to_remove.append(p)
+                    immigrants_cp.remove(p.value)
+
+            for p in to_remove:
+                self.population.remove(p)
+            return to_remove
+
+        def assimilate_immigrants(self, emigrants):
+            for e in emigrants:
+                self.population.append(e)
 
 
     @property
@@ -22,28 +67,24 @@ class SMSEMOA(DriverLegacy):
     def population(self, pop):
         self.__population = [Individual(x) for x in pop]
 
-    def finish(self):
-        return self.population
 
-    def steps(self, condI, budget=None):
+    def population_generator(self):
+
         logger = logging.getLogger(__name__)
         cost = self.calculate_objectives(self.__population)
+        total_cost = cost
 
-        i = 1
-
-        for _ in condI:
+        while True:
             for _ in range(self.epoch_length):
                 new_indiv = self.generate(self.__population)
                 cost += self.calculate_objectives([new_indiv])
+                total_cost += cost
                 self.__population = self.reduce_population(self.__population + [new_indiv])
 
-                if budget is not None and cost > budget:
-                    logger.debug(i)
-                    return cost
+            yield SMSEMOA.SMSEMOAProxy(cost, self.__population)
+            cost = 0
 
-                i+=1
-
-        return cost
+        return total_cost
 
 
     def calculate_objectives(self, pop):
@@ -54,9 +95,9 @@ class SMSEMOA(DriverLegacy):
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]
-        child = self.crossover(*selected_parents)
+        child = crossover(*selected_parents)
 
-        return Individual(self.mutate(child))
+        return Individual(mutate(child, self.dims, self.mutation_probability, self.mutation_variance))
 
 
     def reduce_population(self, pop):
