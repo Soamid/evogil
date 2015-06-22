@@ -47,9 +47,10 @@ class NSGAIII(DriverGen):
                  theta=5,
                  mutation_variance=0,
                  crossover_variance=0,
-                 eta_crossover=20,
-                 eta_mutation=30):
+                 eta_crossover=20.0,
+                 eta_mutation=30.0):
         super().__init__()
+
         self.theta = theta
         self.eta_crossover = eta_crossover
         self.eta_mutation = eta_mutation
@@ -449,30 +450,61 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20):
 
 
 if __name__ == '__main__':
-    objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
-                  lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3)
-                  + math.pow(abs(x[1]), 0.8) + 5 * math.pow(math.sin(x[1]), 3)]
-    dimensions = [(-10, 10), (-10, 10)]
-    my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
+    dims = [(-100.0, 100.0), (-100.0, 100.0)]
 
-    my_pop = NSGAIII(my_individuals, dimensions, objectives, theta=0)
-    # population.steps(range(100))
+    mutatedX = []
+    mutatedY = []
+    for _ in range(100):
+        to_mut = Individual([0.0, 0.0])
+        polynomial_mutation(to_mut, dims, 0.9, 300.0)
+        mutatedX.append(to_mut.v[0])
+        mutatedY.append(to_mut.v[1])
+    plt.scatter(mutatedX, mutatedY)
+    plt.xlim(-100.0, 100.0)
+    plt.ylim(-100.0, 100.0)
 
-    for j in range(100):
-        my_pop.next_step()
-        print(j)
+    plt.show()
 
-        effect = my_pop.finish()
-        X = [my_pop.objectives[0](x) for x in effect]
-        Y = [my_pop.objectives[1](x) for x in effect]
-        plt.scatter(X, Y)
-        # pylab.xlim(-10.,250.)
-        # pylab.ylim(-10.,250.)
-        plt.xlim(-15., 5.)
-        plt.ylim(-15., 25.)
+    # crossX = []
+    # crossY = []
+    # for _ in range(10000):
+    #     to_crossA = Individual([-10.0, -10.0])
+    #     to_crossB = Individual([10.0, 10.0])
+    #     newA, newB = simulated_binary_crossover(to_crossA, to_crossB, dims, 1.0, eta=150.0)
+    #     crossX.append(newA.v[0])
+    #     crossY.append(newA.v[1])
+    #     crossX.append(newB.v[0])
+    #     crossY.append(newB.v[1])
+    # plt.scatter(crossX, crossY)
+    # plt.xlim(-100.0, 100.0)
+    # plt.ylim(-100.0, 100.0)
+    #
+    # plt.show()
 
-        file = ""
-        if j < 10:
-            file += "0"
-        plt.savefig("pictures//" + file + str(j) + ".png")
-        plt.clf()
+    # objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
+    #               lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3)
+    #               + math.pow(abs(x[1]), 0.8) + 5 * math.pow(math.sin(x[1]), 3)]
+    # dimensions = [(-10, 10), (-10, 10)]
+    # my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
+    #
+    # my_pop = NSGAIII(my_individuals, dimensions, objectives, theta=0)
+    # # population.steps(range(100))
+    #
+    # for j in range(100):
+    #     my_pop.next_step()
+    #     print(j)
+    #
+    #     effect = my_pop.finish()
+    #     X = [my_pop.objectives[0](x) for x in effect]
+    #     Y = [my_pop.objectives[1](x) for x in effect]
+    #     plt.scatter(X, Y)
+    #     # pylab.xlim(-10.,250.)
+    #     # pylab.ylim(-10.,250.)
+    #     plt.xlim(-15., 5.)
+    #     plt.ylim(-15., 25.)
+    #
+    #     file = ""
+    #     if j < 10:
+    #         file += "0"
+    #     plt.savefig("pictures//" + file + str(j) + ".png")
+    #     plt.clf()
