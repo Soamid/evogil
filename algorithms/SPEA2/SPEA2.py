@@ -23,6 +23,8 @@ class SPEA2(DriverGen):
 
     def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, mutation_probability=0.05):
         super().__init__()
+        self.__population = []
+
         self.fitnesses = fitnesses
         self.dims = dims
         self.mutation_variance = mutation_variance
@@ -57,7 +59,6 @@ class SPEA2(DriverGen):
             for e in emigrants:
                 self._population.append(e)
 
-
     @property
     def population(self):
         return [x['value'] for x in self.__population]
@@ -85,7 +86,6 @@ class SPEA2(DriverGen):
             yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)
 
         return cost
-
 
     def calculate_fitnesses(self, population, archive):
         self.calculate_objectives(population)
@@ -119,10 +119,12 @@ class SPEA2(DriverGen):
                                   for x in pop
                                   if id(p) != id(x) and self.dominates(p, x)])
 
-    def dominates(self, p1, p2):
+    @staticmethod
+    def dominates(p1, p2):
         return ea_utils.dominates(p1['objectives'], p2['objectives'])
 
-    def euclidean_distance(self, c1, c2):
+    @staticmethod
+    def euclidean_distance(c1, c2):
         return metrics.euclid_distance(c1, c2)
 
     def environmental_selection(self, pop, archive):
@@ -142,7 +144,8 @@ class SPEA2(DriverGen):
 
         return environment
 
-    def get_domination_index(self, sorted_pop):
+    @staticmethod
+    def get_domination_index(sorted_pop):
         for i, p in enumerate(sorted_pop):
             if p['fitness'] > 1:
                 return i
