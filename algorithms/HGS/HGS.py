@@ -8,7 +8,7 @@ from contextlib import suppress
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 from algorithms.base.drivertools import average_indiv, rank
-from evotools.metrics import euclid_distance
+from evotools.metrics_utils import euclid_distance
 from evotools.ea_utils import paretofront_layers, one_fitness
 from evotools.random_tools import take
 
