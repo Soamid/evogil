@@ -29,7 +29,19 @@ problems = [
     'ZDT3',
     'ZDT4',
     'ZDT6',
-    'kursawe'
+    'kursawe',
+    'UF1',
+    'UF2',
+    'UF3',
+    'UF4',
+    'UF5',
+    'UF6',
+    'UF7',
+    'UF8',
+    'UF9',
+    'UF10',
+    'UF11',
+    'UF12'
 ]
 
 metaconfig_populationsize = 100
