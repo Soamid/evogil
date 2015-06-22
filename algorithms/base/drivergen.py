@@ -1,6 +1,9 @@
 class DriverGen:
+    max_budget = None
+
     def __init__(self):
         pass
+
 
     def population_generator(self):
         """ Generator.

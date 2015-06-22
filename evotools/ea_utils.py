@@ -66,7 +66,7 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
         # Dla d=1 (jednowymiarowego przypadku): po prostu minimum.
         # Czas: O(n)
         # Dla d=2:
-        #   1. A_1, ..., A_n posortuj w kolejności leksykograficznej (tj. [1,2] < [1,3] < [2,0] < [2,2] )
+        # 1. A_1, ..., A_n posortuj w kolejności leksykograficznej (tj. [1,2] < [1,3] < [2,0] < [2,2] )
         #   2. i=1
         #   3. A_i należy do frontu Pareto
         #   4. znajdź j>i takie, że A_j[2] < A_i[2] (tj. pierwszy następny, którego wartość na indeksie 2 jest lepsza)
@@ -101,9 +101,11 @@ def split_front(pareto_front, epsilon):
 
     return groups
 
+
 def one_fitness(fitnesses):
     def res(xs):
         return [f(xs)
                 for f
                 in fitnesses]
+
     return res

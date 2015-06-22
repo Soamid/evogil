@@ -10,6 +10,7 @@ from pathlib import Path
 import random
 import re
 
+import evotools.metrics
 
 
 class RunResult:
@@ -50,10 +51,21 @@ class RunResult:
             @type result_list : list[RunResult.RunResultBudget]
             """
             yield "cost", "cost", [partial(float, x.cost) for x in result_list]
-            yield "distrib", "distribution", [x.distribution for x in result_list]
-            yield "extent", "extent", [x.extent for x in result_list]
-            yield "dst", "distance from pareto", [partial(x.distance_from_pareto, pareto=problem_mod.pareto_front)
+            yield "gd", "generational distance", [partial(x.generational_distance, pareto=problem_mod.pareto_front)
                                                   for x in result_list]
+            yield "igd", "inverse generational distance", [
+                partial(x.inverse_generational_distance, pareto=problem_mod.pareto_front)
+                for x in result_list]
+            yield "epsilon", "epsilon", [partial(x.epsilon, pareto=problem_mod.pareto_front)
+                                         for x in result_list]
+            yield "extent", "extent", [partial(x.extent, pareto=problem_mod.pareto_front)
+                                       for x in result_list]
+            yield "spacing", "spacing", [partial(x.spacing, pareto=problem_mod.pareto_front)
+                                         for x in result_list]
+            yield "ndr", "non domination ratio", [partial(x.non_domination_ratio, pareto=problem_mod.pareto_front)
+                                                  for x in result_list]
+            yield "hypervolume", "hypervolume", [partial(x.hypervolume, pareto=problem_mod.pareto_front)
+                                                 for x in result_list]
 
         def f_algo(problem_path, algo_path, problem_mod):
             by_budget = defaultdict(list)
@@ -104,10 +116,10 @@ class RunResult:
             json.dump(json_store, fh)
 
         self.budgets[budget] = RunResultBudget(budget,
-                                                         cost,
-                                                         population,
-                                                         population_fitnesses,
-                                                         store_path)
+                                               cost,
+                                               population,
+                                               population_fitnesses,
+                                               store_path)
 
     def load(self, budget):
         if budget in self.budgets:
@@ -116,10 +128,10 @@ class RunResult:
         store_path = self.path / "{budget}.json".format(**locals())
         population_json = self._load_file(store_path)
         res = RunResultBudget(budget,
-                                        population_json["cost"],
-                                        population_json["population"],
-                                        population_json["fitnesses"],
-                                        store_path)
+                              population_json["cost"],
+                              population_json["population"],
+                              population_json["fitnesses"],
+                              store_path)
         return self.budgets.setdefault(budget, res)
 
     @staticmethod
@@ -139,10 +151,10 @@ class RunResult:
                     population_json = self._load_file(candidate)
 
                     res = RunResultBudget(budget,
-                                                    population_json["cost"],
-                                                    population_json["population"],
-                                                    population_json["fitnesses"],
-                                                    candidate)
+                                          population_json["cost"],
+                                          population_json["population"],
+                                          population_json["fitnesses"],
+                                          candidate)
 
                     self.budgets[budget] = res
                 except (AttributeError, IsADirectoryError):
@@ -152,12 +164,14 @@ class RunResult:
         for budget in sorted(self.budgets):
             yield self.budgets[budget]
 
+
 class RunResultBudget:
     def __init__(self, budget, cost, population, fitnesses, path):
         self.budget = budget
         self.cost = cost
         self.population = population
         self.fitnesses = fitnesses
+        self.non_dominated_fitnesses = evotools.metrics.filter_not_dominated(fitnesses)
         self.path = path
         self.metrics = {}
 
@@ -190,7 +204,7 @@ class RunResultBudget:
             # noinspection PyUnreachableCode
             metric_mod = import_module('.'.join(metric_mod_name))
             metric_fun = getattr(metric_mod, metric_name)
-            metric_val = metric_fun(self.fitnesses, **metric_params)
+            metric_val = metric_fun(self.fitnesses, self.non_dominated_fitnesses, **metric_params)
 
             with metric_path.open(mode='w') as fh:
                 json_store = {"value": metric_val,
@@ -198,7 +212,7 @@ class RunResultBudget:
                                   "name": metric_name,
                                   "module": metric_mod_name,
                                   "params": metric_params}
-                              }
+                }
                 json.dump(json_store, fh)
 
             return self.metrics.setdefault(metric_name, metric_val)
@@ -208,11 +222,30 @@ class RunResultBudget:
                              exc_info=e)
             raise e
 
-    def distance_from_pareto(self, pareto):
-        return self._get_metric("distance_from_pareto", metric_params={"pareto": pareto})
+    def generational_distance(self, pareto):
+        return self._get_metric("generational_distance",
+                                metric_params={"pareto": pareto})
 
-    def distribution(self):
-        return self._get_metric("distribution", metric_params={"sigma": 0.5})
+    def inverse_generational_distance(self, pareto):
+        return self._get_metric("inverse_generational_distance",
+                                metric_params={"pareto": pareto})
 
-    def extent(self):
-        return self._get_metric("extent")
+    def epsilon(self, pareto):
+        return self._get_metric("epsilon",
+                                metric_params={"pareto": pareto})
+
+    def extent(self, pareto):
+        return self._get_metric("extent",
+                                metric_params={"pareto": pareto})
+
+    def spacing(self, pareto):
+        return self._get_metric("spacing",
+                                metric_params={"pareto": pareto})
+
+    def non_domination_ratio(self, pareto):
+        return self._get_metric("non_domination_ratio",
+                                metric_params={"pareto": pareto})
+
+    def hypervolume(self, pareto):
+        return self._get_metric("hypervolume",
+                                metric_params={"pareto": pareto})

@@ -62,6 +62,7 @@ class HyperVolume:
             # in the HV computation
             for j in range(len(relevantPoints)):
                 relevantPoints[j] = [relevantPoints[j][i] - referencePoint[i] for i in range(dimensions)]
+
         self.preProcess(relevantPoints)
         bounds = [-1.0e308] * dimensions
         hyperVolume = self.hvRecursive(dimensions - 1, len(relevantPoints), bounds)
@@ -162,6 +163,7 @@ class HyperVolume:
         """Sorts the list of nodes by the i-th value of the contained points."""
         # build a list of tuples of (point[i], node)
         decorated = [(node.cargo[i], node) for node in nodes]
+
         # sort by this value
         decorated.sort()
         # write back to original list
@@ -189,6 +191,9 @@ class MultiList:
     
         def __str__(self): 
             return str(self.cargo)
+
+        def __eq__(self, other):
+            return True
         
         
     def __init__(self, numberLists):  

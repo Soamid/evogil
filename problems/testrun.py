@@ -10,7 +10,7 @@
 # import unittest
 #
 # from evotools import ea_utils
-# from evotools.metrics import distance_from_pareto, distribution, extent
+# from evotools.metrics_utils import distance_from_pareto, distribution, extent
 # from evotools.serialization import get_current_time
 #
 #

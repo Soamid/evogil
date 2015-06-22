@@ -4,24 +4,48 @@ import random
 
 import numpy
 import numpy.linalg
-from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivergen import DriverGen
 
 EPSILON = numpy.finfo(float).eps
 
 import matplotlib.pyplot as plt
 
 
-class NSGAIII(DriverLegacy):
+class NSGAIII(DriverGen):
+
+    class NSGAIIIProxy(DriverGen.Proxy):
+        def __init__(self, cost, individuals):
+            super().__init__(cost)
+            self.individuals = individuals
+
+        def finalized_population(self):
+            return [x.v for x in self.individuals]
+
+        def current_population(self):
+            return [x.v for x in self.individuals]
+
+        def deport_emigrants(self, immigrants):
+            to_remove = [ind for ind in self.individuals if ind.v in immigrants]
+            for ind in to_remove:
+                self.individuals.remove(ind)
+            return to_remove
+
+        def assimilate_immigrants(self, emigrants):
+            self.individuals.extend(emigrants)
+
     def __init__(self,
                  population,
                  dims,
                  fitnesses,
+                 theta=5,
                  mutation_variance=0,
                  crossover_variance=0,
-                 theta=5):
-        super().__init__(population, dims, fitnesses, mutation_variance, crossover_variance)
-
+                 eta_crossover=20,
+                 eta_mutation=30):
+        super().__init__()
         self.theta = theta
+        self.eta_crossover = eta_crossover
+        self.eta_mutation = eta_mutation
 
         self.dims = dims
         self.dims_no = len(dims)
@@ -53,6 +77,10 @@ class NSGAIII(DriverLegacy):
         self.crossover_rate = 0.9
         self.mutation_rate = 1.0 / len(self.dims)
 
+        # unused, but required
+        self._unused_mutation_variance = mutation_variance
+        self._unused_crossover_variance = crossover_variance
+
     def generate_reference_points(self):
         return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
 
@@ -62,10 +90,11 @@ class NSGAIII(DriverLegacy):
 
     @population.setter
     def population(self, pop):
-        if len(pop) % 2 != 0:
-            raise ValueError("Population must be even")
-        if len(pop) < len(self.reference_points):
-            raise ValueError("Population too small for the requested amount of reference points")
+        # should work anyway, stabilize after each offspring generaion
+        # if len(pop) % 2 != 0:
+        #     raise ValueError("Population must be even")
+        # if len(pop) < len(self.reference_points):
+        #     raise ValueError("Population too small for the requested amount of reference points")
         self.individuals = [Individual(x) for x in pop]
         self.population_size = len(self.individuals)
 
@@ -82,13 +111,12 @@ class NSGAIII(DriverLegacy):
                 if self.ideal_point[i] > objective:
                     self.ideal_point[i] = objective
 
-    def steps(self, generator, budget=None):
+    def population_generator(self):
         if self.primary_cost_included:
             self.cost = 0
-        for _ in generator:
+        while True:
             self.next_step()
-            if budget is not None and self.cost > self.budget:
-                break
+            yield NSGAIII.NSGAIIIProxy(self.cost, self.individuals)
         self.primary_cost_included = True
         return self.cost
 
@@ -186,9 +214,9 @@ class NSGAIII(DriverLegacy):
             parent_a = random.choice(self.individuals)
             parent_b = random.choice(self.individuals)
             child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims,
-                                                          crossover_rate=self.crossover_rate)
-            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate)
-            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate)
+                                                          crossover_rate=self.crossover_rate, eta=self.eta_crossover)
+            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
+            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
             offspring_inds.append(child_a)
             offspring_inds.append(child_b)
         return offspring_inds
@@ -206,7 +234,7 @@ class NSGAIII(DriverLegacy):
 
         for ind in individuals:
             ind.normalized_objectives = numpy.array(
-                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i])
+                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i] + EPSILON)
                  for i, obj in enumerate(ind.objectives)])
 
     def clustering(self, individuals):
@@ -351,14 +379,14 @@ def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta
         rand = random.random()
 
         # child a
-        beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1))
+        beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1 + EPSILON))
         alpha = 2.0 - pow(beta, -(eta + 1.0))
         beta_q = get_beta_q(rand, alpha, eta)
 
         child_a.v[i] = 0.5 * ((y1 + y2) - beta_q * (y2 - y1))
 
         # child b
-        beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1))
+        beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1 + EPSILON))
         alpha = 2.0 - pow(beta, -(eta + 1.0))
         beta_q = get_beta_q(rand, alpha, eta)
 
@@ -392,8 +420,8 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20):
         y = ind.v[i]
         lb, ub = dim
 
-        delta1 = (y - lb) / (ub - lb)
-        delta2 = (ub - y) / (ub - lb)
+        delta1 = (y - lb) / (ub - lb + EPSILON)
+        delta2 = (ub - y) / (ub - lb + EPSILON)
 
         mut_pow = 1.0 / (eta + 1.0)
 
@@ -422,16 +450,16 @@ if __name__ == '__main__':
     dimensions = [(-10, 10), (-10, 10)]
     my_individuals = [[random.uniform(-10, 10), random.uniform(-10, 10)] for _ in range(250)]
 
-    popu = NSGAIII(my_individuals, dimensions, objectives, theta=0)
+    my_pop = NSGAIII(my_individuals, dimensions, objectives, theta=0)
     # population.steps(range(100))
 
     for j in range(100):
-        popu.next_step()
+        my_pop.next_step()
         print(j)
 
-        effect = popu.finish()
-        X = [popu.objectives[0](x) for x in effect]
-        Y = [popu.objectives[1](x) for x in effect]
+        effect = my_pop.finish()
+        X = [my_pop.objectives[0](x) for x in effect]
+        Y = [my_pop.objectives[1](x) for x in effect]
         plt.scatter(X, Y)
         # pylab.xlim(-10.,250.)
         # pylab.ylim(-10.,250.)

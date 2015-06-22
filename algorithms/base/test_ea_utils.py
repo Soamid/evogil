@@ -5,7 +5,7 @@ import operator
 from algorithms.utils.ea_utils import *
 import time
 from evotools.ea_utils import paretofront_layers, domination_cmp, dominates, gen_population
-from evotools.metrics import euclid_sqr_distance
+from evotools.metrics_utils import euclid_sqr_distance
 import problems.kursawe.problem as kursawe
 
 

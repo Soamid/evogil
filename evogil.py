@@ -88,7 +88,6 @@ def main_worker(queue, configurer):
     configurer(queue)
 
     logger = logging.getLogger(__name__)
-
     logger.debug("Starting the evogil. Parsing arguments.")
     with log_time(system_time, logger, "Parsing done in {time_res}s"):
         argv = docopt(__doc__, version='EvoGIL 3.0')

@@ -61,6 +61,8 @@ class OMOPSO(DriverGen):
         gen_no = 0
 
         cost += self.calculate_objectives()
+        total_cost = cost
+
         self.init_leaders()
         self.init_personal_best()
         self.leader_archive.crowding()
@@ -71,12 +73,14 @@ class OMOPSO(DriverGen):
             self.compute_speed()
             self.move()
 
-            #TODO EVOLUTION PROGRESS NEEDED FOR NONUNIFORM MUTATION!!!
             # dirty hack for unknown evolution length
-            progress = 0.5  # cost / budget if budget else gen_no / float(len(condI))
+
+            progress = min(1.0, total_cost / self.max_budget) if self.max_budget else None
             self.mopso_mutation(progress)
 
             cost += self.calculate_objectives()
+            total_cost += self.calculate_objectives()
+
             self.update_leaders()
             self.update_personal_best()
 
@@ -86,8 +90,9 @@ class OMOPSO(DriverGen):
             gen_no += 1
 
             yield OMOPSO.OMOPSOProxy(cost, self.archive, self.population)
+            cost = 0
 
-        return cost
+        return total_cost
 
     def init_leaders(self):
         for p in self.population:
@@ -151,13 +156,12 @@ class OMOPSO(DriverGen):
         pop_len = len(self.population)
         pop_part = int(pop_len / 3)
         uniform_mutation = UniformMutation(self.mutation_probability, self.mutation_perturbation, self.dims)
-        non_uniform_mutation = NonUniformMutation(evolution_progress, self.mutation_probability,
-                                                  self.mutation_perturbation, self.dims)
         map(uniform_mutation, self.population[0:pop_part])
-        map(non_uniform_mutation, self.population[pop_part: 2 * pop_part])
 
-
-
+        if evolution_progress:
+            non_uniform_mutation = NonUniformMutation(evolution_progress, self.mutation_probability,
+                                                      self.mutation_perturbation, self.dims)
+            map(non_uniform_mutation, self.population[pop_part: 2 * pop_part])
 
 
 class Mutation(object):
