@@ -56,9 +56,11 @@ algo_base = {
         "kappa":                  0.05,
         "mating_population_size": 0.5,
     },
+
     "NSGAII": {
         "mating_population_size": 0.5,
     },
+
     "HGS": {
         "population_per_level": [50,   12, 4],
         "scaling_coefficients": [10., 2.5, 1.],
@@ -71,8 +73,10 @@ algo_base = {
         "__metaconfig__sprouting_variance":   1.,
         "__metaconfig__mutation_variance":    1.,
     },
+
     "SPEA2": {
     },
+
     "IMGA": {
         "islands_number": 3,
         "migrants_number": 5,
@@ -84,64 +88,20 @@ algo_base = {
     },
 
     ('HGS', ('NSGAIII',)): {
-        'driver_kwargs_per_level': [{"eta_crossover": 20, "eta_mutation": 20},
-                                    {"eta_crossover": 20, "eta_mutation": 20},
-                                    {"eta_crossover": 20, "eta_mutation": 20},
-                                    ]
-    },
-
-    (("IMGA", ), "IBEA"): {
-        "kappa": 0.05,
+        'driver_kwargs_per_level': [
+            {"eta_crossover": 20.0, "eta_mutation": 30.0},
+            {"eta_crossover": 80.0, "eta_mutation": 120.0},
+            {"eta_crossover": 200.0, "eta_mutation": 300.0},
+        ]
     },
 }
 
 prob_base = {
-    "ackley": {
-        "__metaconfig__budgets": list(range(50, 950, 100)),
-    }
+
 }
 
 cust_base = {
 
-
-    ('IBEA', 'ackley'): {
-        "__metaconfig__populationsize": 40,
-    },
-    
-    ('IBEA', 'ZDT3'): {
-        "kappa": 0.25,
-    },
-
-
-    (('HGS',), 'IBEA', (), 'ackley'): {
-        "kappa": 0.05
-    },
-
-
-    ('HGS', 'ackley'): {
-        "__metaconfig__sclng_coeffs": [[4, 4], [2, 2], [1, 1]],
-        "__metaconfig__brnch_comps": [0.05, 0.25, 0.01],
-        "max_children": 2
-    },
-
-    ((), 'HGS', ('NSGAII',), 'ackley'): {
-        "__metaconfig__popln_sizes":    [75, 10, 5],
-    },
-
-    ((), 'HGS', ('SPEA2',), 'ackley'): {
-        "__metaconfig__popln_sizes":    [100, 10, 5],
-    },
-
-    ((), 'HGS', ('IBEA',), 'ackley'): {
-        "__metaconfig__popln_sizes":    [20, 9, 5],
-        "__metaconfig__sclng_coeffs":   [[10, 10], [5, 5], [1, 1]],
-        "metaepoch_len":                5,
-        "__metaconfig__brnch_comps":    [0.5, 0.125, 0.01]
-    },
-
-    ((), 'IMGA', ('IBEA',), 'ackley'): {
-        "__metaconfig__populationsize": 40,
-    },
 }
 
 
