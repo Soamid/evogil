@@ -38,6 +38,7 @@ class Epsilon:
     def set_params(self):
         self._obj = [0 for _ in range(self._dim)]
 
+
 if __name__ == '__main__':
     opt = [[0., 1., 1.], [1., 0., 1.], [1., 1., 0.]]
     mine = [[0.3, 1.5, 1.3]]
