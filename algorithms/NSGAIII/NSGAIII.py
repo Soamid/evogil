@@ -39,10 +39,13 @@ class NSGAIII(DriverGen):
                  fitnesses,
                  theta=5,
                  mutation_variance=0,
-                 crossover_variance=0):
+                 crossover_variance=0,
+                 eta_crossover=20,
+                 eta_mutation=30):
         super().__init__()
-
         self.theta = theta
+        self.eta_crossover = eta_crossover
+        self.eta_mutation = eta_mutation
 
         self.dims = dims
         self.dims_no = len(dims)
@@ -211,9 +214,9 @@ class NSGAIII(DriverGen):
             parent_a = random.choice(self.individuals)
             parent_b = random.choice(self.individuals)
             child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims,
-                                                          crossover_rate=self.crossover_rate)
-            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate)
-            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate)
+                                                          crossover_rate=self.crossover_rate, eta=self.eta_crossover)
+            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
+            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
             offspring_inds.append(child_a)
             offspring_inds.append(child_b)
         return offspring_inds
@@ -231,7 +234,7 @@ class NSGAIII(DriverGen):
 
         for ind in individuals:
             ind.normalized_objectives = numpy.array(
-                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i])
+                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i] + EPSILON)
                  for i, obj in enumerate(ind.objectives)])
 
     def clustering(self, individuals):
@@ -376,14 +379,14 @@ def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta
         rand = random.random()
 
         # child a
-        beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1))
+        beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1 + EPSILON))
         alpha = 2.0 - pow(beta, -(eta + 1.0))
         beta_q = get_beta_q(rand, alpha, eta)
 
         child_a.v[i] = 0.5 * ((y1 + y2) - beta_q * (y2 - y1))
 
         # child b
-        beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1))
+        beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1 + EPSILON))
         alpha = 2.0 - pow(beta, -(eta + 1.0))
         beta_q = get_beta_q(rand, alpha, eta)
 
@@ -417,8 +420,8 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20):
         y = ind.v[i]
         lb, ub = dim
 
-        delta1 = (y - lb) / (ub - lb)
-        delta2 = (ub - y) / (ub - lb)
+        delta1 = (y - lb) / (ub - lb + EPSILON)
+        delta2 = (ub - y) / (ub - lb + EPSILON)
 
         mut_pow = 1.0 / (eta + 1.0)
 
