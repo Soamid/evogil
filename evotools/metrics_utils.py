@@ -92,7 +92,7 @@ def distance(from_set, to_set):
         min([euclid_sqr_distance(f, t) for t in to_set])
         for f in from_set
     ]
-    return math.sqrt(sum(distances)) / len(distances)
+    return math.sqrt(sum(distances) / len(distances))
 
 
 def filter_not_dominated(ind_set):

@@ -55,8 +55,15 @@ def hypervolume(solution, not_dominated_solution, pareto):
 
 
 if __name__ == '__main__':
-    my_pareto = [[0., 1., 1.], [1., 0., 1.], [1., 1., 0.]]
-    my_solution = [[4.3, 1.5, 1.3], [13.0, 1.5, 1.37], [0.34, 14.5, 14.3], [1.3, 11.5, 6.3]]
+    # my_pareto = [[0., 1., 1.], [1., 0., 1.], [1., 1., 0.]]
+    # my_solution = [[4.3, 1.5, 1.3], [13.0, 1.5, 1.37], [0.34, 14.5, 14.3], [1.3, 11.5, 6.3]]
+    my_pareto = [[1, 5], [5, 1],
+                 # [2,2]
+    ]
+    my_solution = [[2, 6], [6, 2],
+                   # [3,3]
+                   # [6,6]
+    ]
     my_not_dominated_solution = filter_not_dominated(my_solution)
     print(my_not_dominated_solution)
 
