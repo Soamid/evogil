@@ -66,7 +66,7 @@ algo_base = {
         "scaling_coefficients": [10., 2.5, 1.],
         "mutation_probability": 0.05,
         "branch_comparison":    0.05,
-        "metaepoch_len":        5,
+        "metaepoch_len":        3,
         "max_children":         3,
         "sproutiveness":        2,
         "__metaconfig__populationsize":     50,
