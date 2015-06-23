@@ -218,7 +218,8 @@ class HGS(DriverGen):
                                        **outer.driver_kwargs_per_level[level])
             """ :type : T <= DriverGen | DriverLegacy """
 
-            self.driver_generator = self.driver.population_generator()
+            if isinstance(self.driver, DriverGen):
+                self.driver_generator = self.driver.population_generator()
 
             if isinstance(self.driver, DriverGen):
                 self.last_proxy = None
