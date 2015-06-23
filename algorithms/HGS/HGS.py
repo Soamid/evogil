@@ -290,9 +290,10 @@ class HGS(DriverGen):
                 if self.last_proxy:
                     return self.last_proxy.finalized_population()
                 else:
-                    logger.debug("Wow, last_proxy=%s and someone wanted the population. self=%s",
-                                 self.last_proxy, self, stack_info=True)
-                    return []
+                    logger.debug("Node #%d :: Wow, last_proxy=%s and someone wanted the population. self=%s",
+                                 self.id, self.last_proxy, self)
+                    raise Exception("Node #{} :: Wow, last_proxy={} and someone wanted the population. self={} metaepochs_ran={}".format(
+                                    self.id, self.last_proxy, self, self.metaepochs_ran))
 
         @property
         def population(self):
@@ -352,13 +353,15 @@ class HGS(DriverGen):
             # TODO: włączyć to flagą
             # while already_taken < sproutiveness:
             for candidate in take(sproutiveness, candidates):
+                logger.debug("Node #%d . sprout :: candidate %s", self.id, candidate)
+
                 scaled_candidate = self.outer.scale(candidate, lvl=self.level)
 
-                if any(euclid_distance(s.average, scaled_candidate)
-                        < self.outer.branch_comparison
-                       for s
-                       in (iter(self.sprouts))):
+                if any(euclid_distance(s.average, scaled_candidate) < self.outer.branch_comparison
+                       for s in iter(self.sprouts)
+                       if s.metaepochs_ran > 0):
                     # jeśli istnieje podobny sprout to bierzemy następnego kandydata
+                    logger.debug("Node #%d . sprout :: next candidate", self.id)
                     continue
 
                 # TODO: verify
