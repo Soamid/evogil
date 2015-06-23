@@ -23,21 +23,37 @@ class HGS(DriverGen):
                  sprouting_variance, mutation_variance, branch_comparison, metaepoch_len, driver, max_children,
                  mutation_probability=0.05, sproutiveness=1, driver_kwargs_per_level=None):
         """
-        @type dims: list[(float,float)]  # dimensions' ranges, one per dimension
-        @type population: list[list[float]]  # initial population
-        @type fitnesses: list[(list[float], ) -> list[float]]  # fitness functions
-        @type population_per_level: list[int]  # one per depth
-        @type scaling_coefficients: list[float]  # scaling the universa, one per level
-        @type crossover_variance: list[float]  # one per dimension
-        @type sprouting_variance: list[float]  # one per dimension
-        @type mutation_variance: list[float]  # one per dimension
-        @type branch_comparison: float
-        @type metaepoch_len: int  # length of the metaepoch
-        @type driver: T <= DriverGen | T <= DriverLegacy
-        @type max_children: int  # limit the number of immediate sprouts
-        @type mutation_probability : float
-        @type sproutiveness: int  # number of sprouts generated on each metaepoch
-        @type driver_kwargs_per_level : list[dict]
+        :param dims: dimensions' ranges, one per dimension
+        :param population: initial population
+        :param fitnesses: fitness functions
+        :param population_per_level: one per depth
+        :param scaling_coefficients: scaling the universa, one per level
+        :param crossover_variance: one per dimension
+        :param sprouting_variance: one per dimension
+        :param mutation_variance: one per dimension
+        :param branch_comparison:
+        :param metaepoch_len: length of the metaepoch
+        :param driver:
+        :param max_children: limit the number of immediate sprouts
+        :param mutation_probability:
+        :param sproutiveness: number of sprouts generated on each metaepoch
+        :param driver_kwargs_per_level:
+        :return:
+        :type dims: list[(float,float)]
+        :type population: list[list[float]]
+        :type fitnesses: list[(list[float]) -> list[float]]
+        :type population_per_level: list[int]
+        :type scaling_coefficients: list[float]
+        :type crossover_variance: list[float]
+        :type sprouting_variance: list[float]
+        :type mutation_variance: list[float]
+        :type branch_comparison: float
+        :type metaepoch_len: int
+        :type driver: (Any) -> (DriverGen | DriverLegacy)
+        :type max_children: int
+        :type mutation_probability : float
+        :type sproutiveness: int
+        :type driver_kwargs_per_level : list[dict]
         :rtype: HGS
         """
         if not driver_kwargs_per_level:
@@ -91,8 +107,8 @@ class HGS(DriverGen):
 
     def code(self, xs, lvl):
         """ U_l -> [a,b]^d, l=1..m
-        @type xs: list[float]
-        @type lvl: int
+        :type xs: list[float]
+        :type lvl: int
         :rtype: list[float]
         """
         return [(x * self.scaling_coefficients[lvl] + a)
@@ -102,8 +118,8 @@ class HGS(DriverGen):
 
     def decode(self, xs, lvl):
         """ [a,b]^d -> U_l, l=1..m
-        @type xs: list[float]
-        @type lvl: int
+        :type xs: list[float]
+        :type lvl: int
         :return: list[float]
         """
         return [(x - a) / self.scaling_coefficients[lvl]
@@ -113,8 +129,8 @@ class HGS(DriverGen):
 
     def scale(self, xs, lvl):
         """ U_i -> U_{i+1}
-        @type xs: list[float]
-        @type lvl: int
+        :type xs: list[float]
+        :type lvl: int
         :return: list[float]
         """
         coeff_i = self.scaling_coefficients[lvl]
@@ -179,9 +195,13 @@ class HGS(DriverGen):
 
         def __init__(self, outer, level, population):
             """
-            @type outer: HGS
-            @type level: int
-            @type population: list[list[float]]  # scaled population
+            :type outer: HGS
+            :type level: int
+            :type population: list[list[float]]
+            :param outer:
+            :param level:
+            :param population: scaled population
+            :return:
             """
             self.outer = outer
             self.id = next(outer.id_cnt)
