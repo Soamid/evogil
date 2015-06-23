@@ -198,23 +198,22 @@ def worker(args):
                 logger.debug("Starting processing")
 
                 for budget in budgets:
-                    logger.debug("Next budget step is %d", budget)
-                    while True:  # loop until budget met or exceeded
+                    logger.debug("Curr budget step is %d", budget)
+                    while total_cost < budget:
                         logger.debug("Waiting for next proxy")
-                        with log_time(process_time, logger, "Got proxy in {time_res}s CPU time"):
-                            proxy = gen.send(proxy)
+                        proxy = gen.send(proxy)
                         logger.debug("Proxy.cost: %d", proxy.cost)
                         total_cost += proxy.cost
                         logger.debug("total_cost: %d", total_cost)
-                        if total_cost >= budget:
-                            logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
-                                         total_cost,
-                                         budgets[0])
-                            finalpop = proxy.finalized_population()
-                            finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                            runres.store(budget, total_cost, finalpop, finalpop_fit)
-                            results.append((total_cost, finalpop))
-                            break
+
+                    logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
+                                 total_cost,
+                                 budget)
+                    finalpop = proxy.finalized_population()
+                    finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+                    runres.store(budget, total_cost, finalpop, finalpop_fit)
+                    results.append((total_cost, finalpop))
+
                 logger.debug("End loop, total_cost:%d", total_cost)
                 logger.debug("Final population: %s", proxy.finalized_population())
 
