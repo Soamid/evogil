@@ -80,6 +80,8 @@ class NSGAII(DriverGen):
         self.mating_size = 0
         self.population = population
 
+        self._calculate_objectives()
+
     @property
     def population(self):
         return [x.v for x in self.individuals]
@@ -116,7 +118,6 @@ class NSGAII(DriverGen):
         return [x.v for x in self.individuals]
 
     def _next_step(self):
-        self._calculate_objectives()
         self._nd_sort()
         self._crowding()
         self._environmental_selection()
@@ -124,6 +125,7 @@ class NSGAII(DriverGen):
         self._crossover()
         self._mutation()  # (0.05)
         self.individuals += self.mating_individuals
+        self._calculate_objectives()
         self.generation_counter += 1
 
     def _calculate_objectives(self):

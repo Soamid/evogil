@@ -58,6 +58,8 @@ class IBEA(DriverGen):
         self.mating_size_c = mating_population_size
         self.population = population
 
+        self._scale_objectives()
+
     def step(self, steps=1):
         for _ in range(steps):
             self._next_step()
@@ -82,13 +84,13 @@ class IBEA(DriverGen):
         return [x.v for x in self.individuals]
 
     def _next_step(self):
-        self._scale_objectives()
         self._calculate_fitness()
         self._environmental_selection()
         self._mating_selection(0.9)
         self._crossover()
         self._mutation()  # (0.05)
         self.individuals += self.mating_individuals
+        self._scale_objectives()
         self.generation_counter += 1
 
     def _scale_objectives(self):
