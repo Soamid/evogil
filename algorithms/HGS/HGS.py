@@ -56,6 +56,10 @@ class HGS(DriverGen):
         :type driver_kwargs_per_level : list[dict]
         :rtype: HGS
         """
+        logger = logging.getLogger(__name__)
+
+        logger.debug("Created HGS %s", self)
+
         if not driver_kwargs_per_level:
             driver_kwargs_per_level = [{} for _ in population_per_level]
         super().__init__()
@@ -100,6 +104,7 @@ class HGS(DriverGen):
         self.driver = driver
 
         self.id_cnt = count()  # counter for sprouts
+        logger.debug("Creating root node with %d indivs", len(population))
         self.root = HGS.Node(self,
                              level=0,
                              population=[self.decode(p, lvl=0)
@@ -141,6 +146,8 @@ class HGS(DriverGen):
 
     def get_nodes(self, include_finished=False):
         """ HGS nodes in level-order. """
+        logger = logging.getLogger(__name__)
+        logger.debug("HGS.get_nodes(include_finished=%s)", include_finished)
         deq = deque([self.root])
 
         with suppress(IndexError):
@@ -148,10 +155,16 @@ class HGS(DriverGen):
                 x = deq.popleft()
                 deq.extend(x.sprouts)
                 if not x.finished or include_finished:
+                    logger.debug("HGS.get_nodes :: yielding #%d", x.id)
                     yield x
+                else:
+                    logger.debug("HGS.get_nodes :: not yielding #%d", x.id)
 
     def population_generator(self):
+        logger = logging.getLogger(__name__)
+        logger.debug("HGS.population_generator()")
         while True:
+            logger.debug("HGS.population_generator :: loop")
             this_metaepoch_cost = sum(
                 node_cost
                 for node
@@ -160,6 +173,7 @@ class HGS(DriverGen):
                 in take(self.metaepoch_len,
                         node.step_iter())
             )
+            logger.debug("HGS.opulation_generator :: yield cost %d", this_metaepoch_cost)
             yield HGS.HGSProxy(this_metaepoch_cost,
                                self.get_nodes(include_finished=True))
 
@@ -170,6 +184,8 @@ class HGS(DriverGen):
             @type all_nodes: HGS.Node
             :rtype: HGS.HGSProxy
             """
+            logger = logging.getLogger(__name__)
+            logger.debug("Create HGSProxy %s", self)
             super().__init__(cost)
             self.all_nodes = all_nodes
 
@@ -180,9 +196,13 @@ class HGS(DriverGen):
             raise Exception("HGS does not support migrations")
 
         def current_population(self):
+            logger = logging.getLogger(__name__)
+            logger.debug("HGSProxy.current_population -> finalized_population")
             return self.finalized_population()
 
         def finalized_population(self):
+            logger = logging.getLogger(__name__)
+            logger.debug("HGSProxy.finalized_population")
             return [
                 p
                 for n in self.all_nodes
@@ -203,13 +223,17 @@ class HGS(DriverGen):
             :param population: scaled population
             :return:
             """
+            logger = logging.getLogger(__name__)
+
             self.outer = outer
             self.id = next(outer.id_cnt)
+            logger.debug("Creating Node %d", self.id)
             self.metaepochs_ran = 0
             self.level = level
             self.sprouts = []
             self.reduced = False
 
+            logger.debug("Node #%d creating driver with %d indivs", self.id, len(population))
             self.driver = outer.driver(population=population,
                                        dims=outer.dims_per_lvl[level],
                                        fitnesses=outer.fitnesses_per_lvl[level],
@@ -226,18 +250,21 @@ class HGS(DriverGen):
                 """ :type : HGS.HGSProxy """
 
         def step_iter(self):
+            logger = logging.getLogger(__name__)
+            logger.debug("Node #%d :: step_iter()", self.id)
             if isinstance(self.driver, DriverGen):
-                # note to self: don't drink and code
-                # note to self: don't undersleep and code
                 while True:
+                    logger.debug("Node #%d :: step_iter loop", self.id)
                     cost_iter = 0
-                    # note to self: don't EVER code in python w/o tests
                     for self.last_proxy in take(self.outer.metaepoch_len,
                                                 self.driver_generator):
+                        logger.debug("Node #%d :: step_iter loop : driver epoch yielded %d while having %d indivs",
+                                     self.id, self.last_proxy.cost, len(self.driver.individuals))
                         cost_iter += self.last_proxy.cost
                     self.sprout()
                     self.branch_reduction()
                     self.metaepochs_ran += 1
+                    logger.debug("Node #%d :: step_iter yielding cost %d", self.id, cost_iter)
                     yield cost_iter
 
             elif isinstance(self.driver, DriverLegacy):
@@ -250,7 +277,10 @@ class HGS(DriverGen):
 
         @property
         def average(self):
-            return average_indiv(self._get_driver_pop())
+            logger = logging.getLogger(__name__)
+            res = average_indiv(self._get_driver_pop())
+            logger.debug("Node #%d :: average = %s", self.id, res)
+            return res
 
         def _get_driver_pop(self):
             logger = logging.getLogger(__name__)
@@ -266,6 +296,7 @@ class HGS(DriverGen):
 
         @property
         def population(self):
+            logger = logging.getLogger(__name__)
             the_pop = self._get_driver_pop()
             """ :type : list[list[float]] """
             if HGS.node_population_returns_only_front:
@@ -282,18 +313,27 @@ class HGS(DriverGen):
 
         @property
         def finished(self):
-            return self.reduced or (isinstance(self.driver, DriverLegacy) and self.driver.finished)
+            logger = logging.getLogger(__name__)
+            res = self.reduced or (isinstance(self.driver, DriverLegacy) and self.driver.finished)
+            if res:
+                logger.debug("Node #%d is finished", self.id)
+            return res
 
         def sprout(self):
             logger = logging.getLogger(__name__)
+            logger.debug("Node #%d . sprout()", self.id)
             with suppress(AttributeError):
                 if self.driver.finished:
+                    logger.debug("Node #%d . sprout :: not sprouting (A)", self.id)
                     return
             if self.reduced:
+                logger.debug("Node #%d . sprout :: not sprouting (B)", self.id)
                 return
             if 1 + self.level >= len(self.outer.population_per_level):
+                logger.debug("Node #%d . sprout :: not sprouting (C)", self.id)
                 return
             if self.metaepochs_ran < 1:
+                logger.debug("Node #%d . sprout :: not sprouting (D)", self.id)
                 return
 
             sproutiveness = self.outer.sproutiveness
@@ -336,11 +376,14 @@ class HGS(DriverGen):
 
                 newnode = HGS.Node(self.outer, self.level + 1, initial_population)
                 self.sprouts.append(newnode)
-                logger.debug("sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                  aep=self.metaepochs_ran))
                 break
+                logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
+                                                                              aep=self.metaepochs_ran),)
 
         def branch_reduction(self):
+            logger = logging.getLogger(__name__)
+            logger.debug("Node #%d . branch_reduction", self.id)
+
             if HGS.global_branch_compare:
                 comparab_sprouts = list(self.outer.get_nodes(include_finished=True))
             else:
