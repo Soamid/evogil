@@ -66,12 +66,12 @@ algo_base = {
         "scaling_coefficients": [10., 2.5, 1.],
         "mutation_probability": 0.05,
         "branch_comparison":    0.05,
-        "metaepoch_len":        1,
+        "metaepoch_len":        5,
         "max_children":         3,
         "sproutiveness":        2,
-        "__metaconfig__crossover_variance":   1.,
-        "__metaconfig__sprouting_variance":   1.,
-        "__metaconfig__mutation_variance":    1.,
+        "__metaconfig__crossover_variance": 0.0125,
+        "__metaconfig__sprouting_variance": 0.0125,
+        "__metaconfig__mutation_variance":  0.005,
     },
 
     "SPEA2": {
@@ -145,7 +145,7 @@ def init_alg_IMGA___SPEA2(algo_config, problem_mod):
 def init_alg___HGS(algo_config, problem_mod):
     def multiply_per_dim(x):
         return [x * abs(b-a)
-                for (a,b)
+                for (a, b)
                 in problem_mod.dims]
     algo_config.update({
         "crossover_variance": multiply_per_dim(algo_config["__metaconfig__crossover_variance"]),

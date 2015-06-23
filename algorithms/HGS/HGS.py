@@ -198,20 +198,26 @@ class HGS(DriverGen):
                                        **outer.driver_kwargs_per_level[level])
             """ :type : T <= DriverGen | DriverLegacy """
 
+            self.driver_generator = self.driver.population_generator()
+
             if isinstance(self.driver, DriverGen):
                 self.last_proxy = None
                 """ :type : HGS.HGSProxy """
 
         def step_iter(self):
             if isinstance(self.driver, DriverGen):
+                # note to self: don't drink and code
+                # note to self: don't undersleep and code
                 while True:
+                    cost_iter = 0
+                    # note to self: don't EVER code in python w/o tests
                     for self.last_proxy in take(self.outer.metaepoch_len,
-                                                self.driver.population_generator()):
-                        pass
+                                                self.driver_generator):
+                        cost_iter += self.last_proxy.cost
                     self.sprout()
                     self.branch_reduction()
                     self.metaepochs_ran += 1
-                    yield self.last_proxy.cost
+                    yield cost_iter
 
             elif isinstance(self.driver, DriverLegacy):
                 while True:
@@ -278,9 +284,12 @@ class HGS(DriverGen):
             if isinstance(self.driver, DriverLegacy):
                 candidates = iter(self.driver.get_indivs_inorder())
             elif isinstance(self.driver, DriverGen):
+                # TODO: wykorzystać paretofront_layers <-- to będzie flagą włączane
                 candidates = iter(rank(self.last_proxy.finalized_population(),
                                        one_fitness(self.outer.fitnesses_per_lvl[self.level])))
 
+            # TODO: włączyć to flagą
+            # while already_taken < sproutiveness:
             for candidate in take(sproutiveness, candidates):
                 scaled_candidate = self.outer.scale(candidate, lvl=self.level)
 
@@ -291,6 +300,7 @@ class HGS(DriverGen):
                     # jeśli istnieje podobny sprout to bierzemy następnego kandydata
                     continue
 
+                # TODO: verify
                 initial_population = [
                     [
                         min(max(a, (random.gauss(x, sigma))), b)
@@ -315,8 +325,9 @@ class HGS(DriverGen):
             else:
                 comparab_sprouts = self.sprouts
 
+            # itertools.permutations(comparab_sprouts, take=2)
             for i, a in enumerate(comparab_sprouts):
-                if a.finished:
+                if a.finished or a.reduced:
                     continue
                 for b in comparab_sprouts[i + 1:]:
                     if a.level != b.level or b.finished:
