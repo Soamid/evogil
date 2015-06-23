@@ -1,5 +1,5 @@
 # coding=utf-8
-from itertools import count
+from itertools import count, combinations
 import logging
 import random
 from collections import deque
@@ -388,12 +388,13 @@ class HGS(DriverGen):
             else:
                 comparab_sprouts = self.sprouts
 
-            # itertools.permutations(comparab_sprouts, take=2)
-            for i, a in enumerate(comparab_sprouts):
-                if a.finished or a.reduced:
-                    continue
-                for b in comparab_sprouts[i + 1:]:
-                    if a.level != b.level or b.finished:
-                        continue
-                    if euclid_distance(a.average, b.average) < self.outer.branch_comparison:
-                        b.reduced = True
+            comparab_sprouts = [
+                x
+                for x in comparab_sprouts
+                if not x.finished and not x.reduced and x.metaepochs_ran > 0
+            ]
+
+            for a, b in combinations(comparab_sprouts, 2):
+                if a.level == b.level and euclid_distance(a.average, b.average) < self.outer.branch_comparison:
+                    logger.debug("Node #%d . reducing #%d", self.id, b.id)
+                    b.reduced = True
