@@ -8,7 +8,7 @@ from evotools.serialization import RunResult
 
 
 def analyse_results(*args, **kwargs):
-    for problem_name, algorithms in RunResult.each_result():
+    for problem_name, problem_mod, algorithms in RunResult.each_result():
         for algo_name, budgets in algorithms:
             for result in budgets:
                 print(

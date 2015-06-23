@@ -7,6 +7,7 @@ from evotools import ea_utils
 from evotools.pictures import algos, algos_order
 
 from contextlib import suppress
+from evotools.serialization import RunResult, RunResultBudget
 
 PLOTS_DIR = Path('plots')
 RESULTS_DIR = Path('pareto_results')
@@ -46,11 +47,11 @@ def plot_front(f, series, scatter=False):
     f.plot(x, y, c='0.6', lw=6, zorder=1)
 
 
-def plot_results(f, best_result):
-    name, _, markers, color = algos[best_result['algorithm']]
+def plot_results(f, best_result, best_result_name):
+    name, _, markers, color = algos[best_result_name]
 
-    res_x = [x[0] for x in best_result['result']]
-    res_y = [x[1] for x in best_result['result']]
+    res_x = [x[0] for x in best_result.fitnesses]
+    res_y = [x[1] for x in best_result.fitnesses]
     f.scatter(res_x, res_y, marker=markers, s=60, color=color,  label=name, zorder=2)
     # f.scatter(res_x, res_y, marker=markers, s=60, edgecolors=color, facecolors='none', label=name, zorder=2)
 
@@ -77,37 +78,26 @@ def save_plot(ax, f, d_problem):
 
 def main(*args, **kwargs):
 
-    root = Path('jsoned')
-    for d_problem in [p_problem
-                      for p_problem in root.iterdir()
-                      if p_problem.is_dir()]:
-
-        problem_mod = __import__('problems.{}.problem'.format(d_problem.name), fromlist=[d_problem.name])
+    for problem_name, problem_mod, algorithms in RunResult.each_result():
         original_front = problem_mod.pareto_front
-        ax, f = plot_problem_front(original_front, multimodal=d_problem.name == 'ZDT3', scatter=d_problem.name == 'ackley')
+        ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
 
-        for d_algorithm in [p_algo
-                            for p_algo in d_problem.iterdir()
-                            if p_algo.is_dir()]:
+        for algo_name, budgets in algorithms:
+            best_result, best_result_name, best_result_metric = None, None, None
+            """:type: RunResultBudget """
 
-            best_result = None
+            for result in budgets:
+                # print(result)
+                for metrics_name, _, precomp in result["analysis"]:
+                    if metrics_name == "igd":
+                        precomp = [x() for x in precomp]
+                        for runresbud, metric_val in zip(result["results"], precomp):
+                            print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
 
-            for d_testname in [p_testname
-                               for p_testname in d_algorithm.iterdir()
-                               if p_testname.is_dir()]:
+                            if best_result_metric is None or metric_val < best_result_metric:
+                                best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
 
-                d_budget = max([p_budget
-                                for p_budget in d_testname.iterdir()
-                                if p_budget.is_dir()],
-                               key=lambda x: int(x.name))
+            plot_results(ax, best_result, best_result_name)
+        save_plot(ax, f, problem_mod)
 
-                for results in d_budget.glob(metrics_name_long + "*.json"):
-                    with results.open(mode="r") as fh:
-                        test_results = json.load(fh)
-                        if not best_result or test_results["metrics"] < best_result["metrics"]:
-                            best_result = test_results
-
-            plot_results(ax, best_result)
-
-        save_plot(ax, f, d_problem)
 

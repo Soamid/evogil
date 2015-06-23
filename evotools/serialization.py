@@ -17,7 +17,7 @@ class RunResult:
     @staticmethod
     def get_bounds():
         """ Wylicza górne granice wymiarów przeciwdziedziny dla wyznaczonych problemów """
-        for problem_name, algorithms in RunResult.each_result():
+        for problem_name, problem_mod, algorithms in RunResult.each_result():
             all_results = chain.from_iterable(run.fitnesses
                                               for algo_name, budgets in algorithms
                                               for result in budgets
@@ -48,6 +48,7 @@ class RunResult:
     def each_result():
         def f_metrics(result_list, problem_mod):
             """ Pierwszy *zawsze* będzie cost. To ważne.
+            Nazwa `igd` nie może się zmieniać, to ważne dla `best_fronts`.
             @type result_list : list[RunResult.RunResultBudget]
             """
             yield "cost", "cost", [partial(float, x.cost) for x in result_list]
@@ -89,7 +90,7 @@ class RunResult:
             for problem in Path('results').iterdir():
                 problem_mod = '.'.join(['problems', problem.name, 'problem'])
                 problem_mod = import_module(problem_mod)
-                yield problem.name, f_problem(problem, problem_mod)
+                yield problem.name, problem_mod, f_problem(problem, problem_mod)
 
     def __init__(self, algo, problem, rundate=None, runid=None):
         if not rundate:

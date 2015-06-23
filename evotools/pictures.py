@@ -347,7 +347,7 @@ def pictures_from_stats(args, queue):
 
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, algorithms in RunResult.each_result():
+        for problem_name, problem_mod, algorithms in RunResult.each_result():
             for algo_name, budgets in algorithms:
                 for result in budgets:
                     _, _, cost_data = next(result["analysis"])
