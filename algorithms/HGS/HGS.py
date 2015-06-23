@@ -350,37 +350,36 @@ class HGS(DriverGen):
                 candidates = iter(rank(self.last_proxy.finalized_population(),
                                        one_fitness(self.outer.fitnesses_per_lvl[self.level])))
 
-            # TODO: włączyć to flagą
-            # while already_taken < sproutiveness:
-            for candidate in take(sproutiveness, candidates):
-                logger.debug("Node #%d . sprout :: candidate %s", self.id, candidate)
+            for i in range(sproutiveness):
+                for candidate in candidates:
+                    logger.debug("Node #%d . sprout :: candidate %s", self.id, candidate)
 
-                scaled_candidate = self.outer.scale(candidate, lvl=self.level)
+                    scaled_candidate = self.outer.scale(candidate, lvl=self.level)
 
-                if any(euclid_distance(s.average, scaled_candidate) < self.outer.branch_comparison
-                       for s in iter(self.sprouts)
-                       if s.metaepochs_ran > 0):
-                    # jeśli istnieje podobny sprout to bierzemy następnego kandydata
-                    logger.debug("Node #%d . sprout :: next candidate", self.id)
-                    continue
+                    if any(euclid_distance(s.average, scaled_candidate) < self.outer.branch_comparison
+                           for s in iter(self.sprouts)
+                           if s.metaepochs_ran > 0):
+                        # jeśli istnieje podobny sprout to bierzemy następnego kandydata
+                        logger.debug("Node #%d . sprout :: next candidate", self.id)
+                        continue
 
-                # TODO: verify
-                initial_population = [
-                    [
-                        min(max(a, (random.gauss(x, sigma))), b)
-                        for x, (a, b), sigma
-                        in zip(scaled_candidate,
-                               self.outer.dims_per_lvl[self.level + 1],
-                               self.outer.sprouting_variance)
+                    # TODO: verify
+                    initial_population = [
+                        [
+                            min(max(a, (random.gauss(x, sigma))), b)
+                            for x, (a, b), sigma
+                            in zip(scaled_candidate,
+                                   self.outer.dims_per_lvl[self.level + 1],
+                                   self.outer.sprouting_variance)
+                        ]
+                        for _
+                        in range(self.outer.population_per_level[self.level + 1])
                     ]
-                    for _
-                    in range(self.outer.population_per_level[self.level + 1])
-                ]
 
-                newnode = HGS.Node(self.outer, self.level + 1, initial_population)
-                self.sprouts.append(newnode)
-                logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                              aep=self.metaepochs_ran),)
+                    newnode = HGS.Node(self.outer, self.level + 1, initial_population)
+                    self.sprouts.append(newnode)
+                    logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
+                                                                                  aep=self.metaepochs_ran),)
 
         def branch_reduction(self):
             logger = logging.getLogger(__name__)
