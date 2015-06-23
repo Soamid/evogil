@@ -69,6 +69,7 @@ algo_base = {
         "metaepoch_len":        5,
         "max_children":         3,
         "sproutiveness":        2,
+        "__metaconfig__populationsize":     50,
         "__metaconfig__crossover_variance": 0.0125,
         "__metaconfig__sprouting_variance": 0.0125,
         "__metaconfig__mutation_variance":  0.005,
