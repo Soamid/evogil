@@ -376,7 +376,6 @@ class HGS(DriverGen):
 
                 newnode = HGS.Node(self.outer, self.level + 1, initial_population)
                 self.sprouts.append(newnode)
-                break
                 logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
                                                                               aep=self.metaepochs_ran),)
 
