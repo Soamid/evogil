@@ -51,6 +51,9 @@ class NotViableConfiguration(Exception):
     pass
 
 
+sclng_coeffs = [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]]
+
+
 algo_base = {
     "IBEA": {
         "kappa":                  0.05,
@@ -62,16 +65,22 @@ algo_base = {
     },
 
     "HGS": {
-        "population_per_level": [50,   12, 4],
-        "scaling_coefficients": [10., 2.5, 1.],
-        "mutation_probability": 0.05,
-        "branch_comparison":    0.05,
         "metaepoch_len":        5,
         "max_children":         3,
         "sproutiveness":        2,
         "__metaconfig__crossover_variance": 0.0125,
         "__metaconfig__sprouting_variance": 0.0125,
         "__metaconfig__mutation_variance":  0.005,
+
+        "lvl_params": {
+            'sclng_coeffss': sclng_coeffs,
+            'popln_sizes': [50, 12, 4],
+            'muttn_varss': 20,
+            'csovr_varss': 10,
+            'sprtn_varss': 100,
+            'brnch_comps': [1, 0.25, 0.05]
+        },
+        "stop_conditions": [],
     },
 
     "SPEA2": {

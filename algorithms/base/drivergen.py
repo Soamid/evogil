@@ -2,6 +2,7 @@ class DriverGen:
     max_budget = None
 
     def __init__(self):
+        self.finished = False
         pass
 
 
