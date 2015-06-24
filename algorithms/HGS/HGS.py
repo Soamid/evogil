@@ -113,7 +113,7 @@ class HGS(DriverLegacy):
         self.last_proxy = None
 
         self.popln_size = [len(population)] + lvl_params['popln_sizes'][1:]
-        self.sclng_coeffs = lvl_params['sclng_coeffss']
+        self.sclng_coeffs = [[x for _ in dims] for x in lvl_params['sclng_coeffss']]
         self.csvrs_vars = HGS.make_sigmas(lvl_params['csovr_varss'], self.sclng_coeffs, dims)
         self.muttn_vars = HGS.make_sigmas(lvl_params['muttn_varss'], self.sclng_coeffs, dims)
         self.sprtn_vars = HGS.make_sigmas(lvl_params['sprtn_varss'], self.sclng_coeffs, dims)
@@ -123,12 +123,22 @@ class HGS(DriverLegacy):
         # HGS sobie wszystko skaluje do U_l (zależnych od poziomu).
 
         def encode_ind(xs, ns, ds):  # U_l -> [a,b]^d, l=1..m
-            return [(x * n + a) for x, n, (a, b) in zip(xs, ns, ds)]
+            nss = [ns[0] for _ in xs]
+            # print("XS", len(xs))
+            # print("NS", len(nss))
+            # print("DS", len(ds))
+            # print("ZIP", len([x for x in zip(xs, nss, ds)]))
+            return [(x * n + a) for x, n, (a, b) in zip(xs, nss, ds)]
 
         self.code = [functools.partial(encode_ind, ns=coeffs, ds=dims) for coeffs in self.sclng_coeffs]
 
         def decode_ind(xs, ns, ds):  # [a,b]^d -> U_l, l=1..m
-            return [(x - a) / n for x, n, (a, b) in zip(xs, ns, ds)]
+            nss = [ns[0] for _ in xs]
+            # print("D XS", len(xs))
+            # print("D NS", len(nss))
+            # print("D DS", len(ds))
+            # print("D ZIP", len([x for x in zip(xs, nss, ds)]))
+            return [(x - a) / n for x, n, (a, b) in zip(xs, nss, ds)]
 
         self.decode = [functools.partial(decode_ind, ns=coeffs, ds=dims) for coeffs in self.sclng_coeffs]
 
@@ -139,6 +149,9 @@ class HGS(DriverLegacy):
                       for cfa, cfb in zip(self.sclng_coeffs, self.sclng_coeffs[1:])]
 
         def fitness_decorated(xs, encoding_f, f):
+            # print("LEN DIMS", len(self.dims))
+            # print("LEN", len(xs))
+            # print("ENCODING LEN " + str(len(encoding_f(xs))))
             return f(encoding_f(xs))
 
         self.fitnesses_per_lvl = [[functools.partial(fitness_decorated, f=f, encoding_f=codef)
@@ -209,7 +222,7 @@ class HGS(DriverLegacy):
                 i.metaepochs_ran = 0
             i.sprout()
             i.branch_reduction()
-            cost_fun_res = cost_fun(cost)
+            cost_fun_res = sum(cost)
             if self.budget and self.budget < cost_fun_res:
                 return cost_fun_res
         return cost_fun(cost)

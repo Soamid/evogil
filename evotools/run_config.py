@@ -51,7 +51,7 @@ class NotViableConfiguration(Exception):
     pass
 
 
-sclng_coeffs = [[10, 10, 10], [2.5, 2.5, 2.5], [1, 1, 1]]
+sclng_coeffs = [10, 2.5, 1]
 
 
 algo_base = {
