@@ -14,6 +14,7 @@ _drivers = [
 
 _metaalgorithms = [
     'HGS',
+    'RHGS',
     'IMGA',
 ]
 
@@ -155,6 +156,17 @@ def init_alg_IMGA___SPEA2(algo_config, problem_mod):
 
 
 
+
+def init_alg___RHGS(algo_config, problem_mod):
+    def multiply_per_dim(x):
+        return [x * abs(b-a)
+                for (a, b)
+                in problem_mod.dims]
+    algo_config.update({
+        "crossover_variance": multiply_per_dim(algo_config["__metaconfig__crossover_variance"]),
+        "sprouting_variance": multiply_per_dim(algo_config["__metaconfig__sprouting_variance"]),
+        "mutation_variance":  multiply_per_dim(algo_config["__metaconfig__mutation_variance"]),
+    })
 
 def init_alg___HGS(algo_config, problem_mod):
     def multiply_per_dim(x):
