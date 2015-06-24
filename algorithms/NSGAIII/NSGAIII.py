@@ -55,6 +55,13 @@ class NSGAIII(DriverGen):
         self.eta_crossover = eta_crossover
         self.eta_mutation = eta_mutation
 
+        if self.level is not None and self.level == 1:
+            self.eta_crossover = 80.0
+            self.eta_mutation = 120.0
+        elif self.level is not None and self.level == 2:
+            self.eta_crossover = 200.0
+            self.eta_mutation = 300.0
+
         self.dims = dims
         self.dims_no = len(dims)
         self.objectives = fitnesses

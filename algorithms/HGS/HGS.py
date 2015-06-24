@@ -21,7 +21,7 @@ class HGS(DriverLegacy):
         return [
             [sigma * (abs(b - a) / n) ** (1. / len(dims))  # n-ty pierwiastek z rozmiaru wymiaru, n to ilość wymiarów
              for (a, b), n in zip(dims, ns)]
-            for ns in sclng_coeffs]
+            for ns in [[1.0 for _ in dims] for _ in sclng_coeffs]]
 
     @classmethod
     def make_std(cls,
@@ -253,6 +253,7 @@ class HGS(DriverLegacy):
                                        fitnesses=outer.fitnesses_per_lvl[level],
                                        mutation_variance=outer.muttn_vars[level],
                                        crossover_variance=outer.csvrs_vars[level])
+            self.driver.level = level
             self.driver_generator = self.driver.population_generator()
             self.last_proxy = None
 
@@ -336,8 +337,8 @@ class HGS(DriverLegacy):
                                           for _ in range(self.outer.popln_size[self.level + 1])]
                     newnode = HGS.Node(self.outer, self.level + 1, initial_population)
                     self.sprouts.append(newnode)
-                    print("  #    HGS>>> sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                             aep=self.metaepochs_ran))
+                    #print("  #    HGS>>> sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
+                    #                                                         aep=self.metaepochs_ran))
                     break
 
         def branch_reduction(self):

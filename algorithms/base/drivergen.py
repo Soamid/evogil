@@ -3,8 +3,8 @@ class DriverGen:
 
     def __init__(self):
         self.finished = False
+        self.level = None
         pass
-
 
     def population_generator(self):
         """ Generator.
