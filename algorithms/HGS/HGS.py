@@ -203,7 +203,7 @@ class HGS(DriverGen):
 
         def finalized_population(self):
             logger = logging.getLogger(__name__)
-            logger.debug("HGSProxy.finalized_population")
+            #logger.debug("HGSProxy.finalized_population")
 
 
             result = []
@@ -295,8 +295,8 @@ class HGS(DriverGen):
                 if self.last_proxy:
                     return self.last_proxy.finalized_population()
                 else:
-                    logger.debug("Node #%d :: Wow, last_proxy=%s and someone wanted the population. self=%s",
-                                 self.id, self.last_proxy, self)
+                    #logger.debug("Node #%d :: Wow, last_proxy=%s and someone wanted the population. self=%s",
+                    #             self.id, self.last_proxy, self)
                     raise NoMetaepochsException(
                         "Node #{} :: Wow, last_proxy={} and someone wanted the population. self={} metaepochs_ran={}".format(
                             self.id, self.last_proxy, self, self.metaepochs_ran))
@@ -347,6 +347,10 @@ class HGS(DriverGen):
             if self.outer.max_children:
                 sproutiveness = min(sproutiveness,
                                     self.outer.max_children - len(self.sprouts))
+            logger.debug("self.outer.sproutiveness = %d self.outer.max_children - len(self.sprouts) = %d = %d - %d",
+                         self.outer.sproutiveness, self.outer.max_children - len(self.sprouts),
+                         self.outer.max_children, len(self.sprouts))
+            logger.debug("  >> %d", sproutiveness)
 
             candidates = None
             if isinstance(self.driver, DriverLegacy):
@@ -356,6 +360,7 @@ class HGS(DriverGen):
                 candidates = iter(rank(self.last_proxy.finalized_population(),
                                        one_fitness(self.outer.fitnesses_per_lvl[self.level])))
 
+            logger.debug("%d has %d, adding %d up to %d", self.id, len(self.sprouts), sproutiveness, self.outer.max_children)
             for i in range(sproutiveness):
                 for candidate in candidates:
                     #logger.debug("Node #%d . sprout :: candidate %s", self.id, candidate)
@@ -384,8 +389,8 @@ class HGS(DriverGen):
 
                     newnode = HGS.Node(self.outer, self.level + 1, initial_population)
                     self.sprouts.append(newnode)
-                    logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                                  aep=self.metaepochs_ran),)
+                    #logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
+                    #                                                              aep=self.metaepochs_ran),)
 
         def branch_reduction(self):
             logger = logging.getLogger(__name__)
