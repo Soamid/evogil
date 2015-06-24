@@ -60,7 +60,7 @@ def statistics(args, queue):
               flush=True)
         return True
 
-    with close_and_join(multiprocessing.Pool(min(int(args['-j']), 4))) as p:
+    with close_and_join(multiprocessing.Pool(min(int(args['-j']), 8))) as p:
         for problem_name, problem_mod, algorithms in RunResult.each_result():
             for algo_name, budgets in algorithms:
                 header_just_printed = print_header()
