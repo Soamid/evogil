@@ -3,18 +3,29 @@ import tempfile
 import matplotlib.pyplot as plt
 
 
+class NoMetaepochsException(Exception): pass
+
 def generate_hierarchy(result_file, hgs, xminmax, yminmax, problem_mod, dbg_prefix=""):
     print("{dbg_prefix}generating {result_file}".format(**locals()))
     with tempfile.TemporaryDirectory() as tmpdir:
         print("{dbg_prefix}temp directory: {tmpdir}".format(**locals()))
         inp = "digraph G {\n"
 
+        nodes_num = 0
+
         for node_a in hgs.get_nodes(include_finished=True):
-            node_a_poplen = len(list(node_a.population))
+            nodes_num += 1
+            try:
+                node_a_poplen = len(list(node_a.population))
+            except NoMetaepochsException:
+                node_a_poplen = 0
             node_a_id = node_a.id
             print("{dbg_prefix}processing node #{node_a_id} (has {node_a_poplen} individuals)".format(**locals()))
 
-            label = ', '.join('{0:.3}'.format(x) for x in node_a.average)
+            try:
+                label = ', '.join('{0:.3}'.format(x) for x in node_a.average)
+            except NoMetaepochsException:
+                label = 'empty'
             space = ' x '.join('[{0:.3}; {1:.3}]'.format(float(a), float(b))
                                for a, b in hgs.dims_per_lvl[node_a.level])
 
@@ -48,8 +59,11 @@ def generate_hierarchy(result_file, hgs, xminmax, yminmax, problem_mod, dbg_pref
                 prto_y = [x[1] for x in problem_mod.pareto_front]
                 plt.scatter(prto_x, prto_y, c='r', s=10, alpha=0.25)
 
-            res_x = [problem_mod.fitnesses[0](x) for x in node_a.population]
-            res_y = [problem_mod.fitnesses[1](x) for x in node_a.population]
+            try:
+                res_x = [problem_mod.fitnesses[0](x) for x in node_a.population]
+                res_y = [problem_mod.fitnesses[1](x) for x in node_a.population]
+            except NoMetaepochsException:
+                res_x, res_y = [], []
             plt.scatter(res_x, res_y, c='b', s=30, alpha=1.0)
 
             plt.savefig("{tmpdir}/hierarchy_{node_a_id}.png".format(**locals()))
@@ -61,7 +75,7 @@ def generate_hierarchy(result_file, hgs, xminmax, yminmax, problem_mod, dbg_pref
                                                                              j=node_b.id)
 
         inp += "}\n"
-        print("{dbg_prefix}running dot".format(**locals()))
+        print("{dbg_prefix}running dot for {nodes_num} nodes".format(**locals()))
         dot = subprocess.Popen(['dot', '-Tpng', '-o{result_file}'.format(**locals())],
                                universal_newlines=True,
                                stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
