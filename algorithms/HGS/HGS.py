@@ -13,6 +13,7 @@ from evotools.ea_utils import paretofront_layers, one_fitness
 from evotools.random_tools import take
 
 
+class NoMetaepochsException(Exception): pass
 
 class HGS(DriverGen):
     # Kilka ustawień HGS-u
@@ -203,11 +204,15 @@ class HGS(DriverGen):
         def finalized_population(self):
             logger = logging.getLogger(__name__)
             logger.debug("HGSProxy.finalized_population")
-            return [
-                p
-                for n in self.all_nodes
-                for p in n.population
-                ]
+
+
+            result = []
+            for n in self.all_nodes:
+                with suppress(NoMetaepochsException):
+                    for p in n.population:
+                        result.append(p)
+
+            return result
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -292,8 +297,9 @@ class HGS(DriverGen):
                 else:
                     logger.debug("Node #%d :: Wow, last_proxy=%s and someone wanted the population. self=%s",
                                  self.id, self.last_proxy, self)
-                    raise Exception("Node #{} :: Wow, last_proxy={} and someone wanted the population. self={} metaepochs_ran={}".format(
-                                    self.id, self.last_proxy, self, self.metaepochs_ran))
+                    raise NoMetaepochsException(
+                        "Node #{} :: Wow, last_proxy={} and someone wanted the population. self={} metaepochs_ran={}".format(
+                            self.id, self.last_proxy, self, self.metaepochs_ran))
 
         @property
         def population(self):
