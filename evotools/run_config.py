@@ -95,14 +95,6 @@ algo_base = {
     "SMSEMOA": {
         "__metaconfig__var_mult": 0.1  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
     },
-
-    ('HGS', ('NSGAIII',)): {
-        'driver_kwargs_per_level': [
-            {"eta_crossover": 20.0, "eta_mutation": 30.0},
-            {"eta_crossover": 80.0, "eta_mutation": 120.0},
-            {"eta_crossover": 200.0, "eta_mutation": 300.0},
-        ]
-    },
 }
 
 prob_base = {
