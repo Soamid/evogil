@@ -51,6 +51,9 @@ class NotViableConfiguration(Exception):
     pass
 
 
+sclng_coeffs = [10, 2.5, 1]
+
+
 algo_base = {
     "IBEA": {
         "kappa":                  0.05,
@@ -61,6 +64,24 @@ algo_base = {
         "mating_population_size": 0.5,
     },
 
+    "RHGS": {
+        "metaepoch_len":        5,
+        "max_children":         3,
+        "sproutiveness":        2,
+        "__metaconfig__crossover_variance": 0.0125,
+        "__metaconfig__sprouting_variance": 0.0125,
+        "__metaconfig__mutation_variance":  0.005,
+
+        "lvl_params": {
+            'sclng_coeffss': sclng_coeffs,
+            'popln_sizes': [50, 12, 4],
+            'muttn_varss': 20,
+            'csovr_varss': 10,
+            'sprtn_varss': 100,
+            'brnch_comps': [1, 0.25, 0.05]
+        },
+        "stop_conditions": [],
+    },
     "HGS": {
         "population_per_level": [50,   12, 4],
         "scaling_coefficients": [10., 2.5, 1.],
@@ -86,14 +107,6 @@ algo_base = {
 
     "SMSEMOA": {
         "__metaconfig__var_mult": 0.1  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
-    },
-
-    ('HGS', ('NSGAIII',)): {
-        'driver_kwargs_per_level': [
-            {"eta_crossover": 20.0, "eta_mutation": 30.0},
-            {"eta_crossover": 80.0, "eta_mutation": 120.0},
-            {"eta_crossover": 200.0, "eta_mutation": 300.0},
-        ]
     },
 }
 

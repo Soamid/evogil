@@ -66,6 +66,9 @@ class NSGAII(DriverGen):
         super().__init__()
 
         self.dims = dims
+
+        # print("LEN DIMS DRIVER", self.dims)
+
         self.mutation_variance = mutation_variance
         self.mutation_probability = mutation_probability
         self.crossover_variance = crossover_variance
