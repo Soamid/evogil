@@ -66,7 +66,7 @@ algo_base = {
 
     "HGS": {
         "metaepoch_len":        5,
-        "max_children":         3,
+        "max_children":        20,
         "sproutiveness":        2,
         "__metaconfig__crossover_variance": 0.0125,
         "__metaconfig__sprouting_variance": 0.0125,
