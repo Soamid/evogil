@@ -1,27 +1,53 @@
 import functools
 import math
 import random
+from algorithms.base.drivergen import DriverGen
 
 from evotools.metrics_utils import euclid_distance
 from evotools.ea_utils import paretofront_layers, gen_population, one_fitness
 from evotools.random_tools import take
 
-from algorithms.base.driverlegacy import DriverLegacy
 from algorithms.base.drivertools import average_indiv, rank
 
 
-class HGS(DriverLegacy):
+class HGS(DriverGen):
     # Kilka ustawień HGS-u
     global_branch_compare = False
     global_sprout_test = False
     node_population_returns_only_front = False
 
+    class HGSProxy(DriverGen.Proxy):
+        def __init__(self, cost, all_nodes):
+            """
+            @type cost: int
+            @type all_nodes: HGS.Node
+            :rtype: HGS.HGSProxy
+            """
+            super().__init__(cost)
+            self.all_nodes = all_nodes
+
+        def assimilate_immigrants(self, emigrants):
+            raise Exception("HGS does not support migrations")
+
+        def deport_emigrants(self, immigrants):
+            raise Exception("HGS does not support migrations")
+
+        def current_population(self):
+            return self.finalized_population()
+
+        def finalized_population(self):
+            return [
+                p
+                for n in self.all_nodes
+                for p in n.population
+                ]
+
     @staticmethod
     def make_sigmas(sigma, sclng_coeffs, dims):
         return [
-            [sigma * (abs(b - a) / n) ** (1. / len(dims))  # n-ty pierwiastek z rozmiaru wymiaru, n to ilość wymiarów
+            [(sigma / n) * ((abs(b - a)) ** (1. / len(dims)))  # n-ty pierwiastek z rozmiaru wymiaru, n to ilość wymiarów
              for (a, b), n in zip(dims, ns)]
-            for ns in [[1.0 for _ in dims] for _ in sclng_coeffs]]
+            for ns in [[100.0 for _ in dims] for _ in sclng_coeffs]]
 
     @classmethod
     def make_std(cls,
@@ -95,11 +121,11 @@ class HGS(DriverLegacy):
                  max_children:     ':: Int'=3,
                  sproutiveness:    ':: Int'=1,):
 
-        super().__init__(fitnesses=None,
-                         dims=dims,
-                         mutation_variance=None,
-                         crossover_variance=None,
-                         population=None)
+        super().__init__()
+
+        self.dims = dims
+        self.mutation_probability = 0.05
+        self.finished = False
 
         self.budget = -1
         self.id_cnt = 0
@@ -180,18 +206,17 @@ class HGS(DriverLegacy):
                 yield todo[0]
             todo = todo[1:] + todo[0].sprouts
 
-    def steps(self, gen, budget=None):
-        self.budget = budget
+    def population_generator(self):
+
         cost = 0
-        for _ in gen:
-            if budget is not None and cost > budget:
-                return cost
-            cost += self.metaepoch()
-            for stop_f in self.stop_conditions:
-                stop_f(hgs=self, root=self.root)
-                if self.finished:
-                    return cost
-        return cost
+        total_cost = cost
+        while True:
+            cost = self.metaepoch()
+            total_cost += cost
+
+            yield HGS.HGSProxy(cost, self.get_nodes(include_finished=True))
+
+        return total_cost
 
     def metaepoch(self):
         def cost_fun(cs):
@@ -206,6 +231,7 @@ class HGS(DriverLegacy):
                 target_max = max(subtarget, target_max)
             return math.ceil(target_max * 1.2)  # 1.2 to współczynnik pesymizmu. TODO: Gdy nastąpi poniedziałek zmienić na 1.3.
         cost = []
+        cost_fun_res = 0
         for i in self.get_nodes():
             if not i.finished:
                 #TODO ogarnac nowe drivery
@@ -225,7 +251,7 @@ class HGS(DriverLegacy):
             cost_fun_res = sum(cost)
             if self.budget and self.budget < cost_fun_res:
                 return cost_fun_res
-        return cost_fun(cost)
+        return cost_fun_res
 
     def rank(self, population):
         return rank(population)

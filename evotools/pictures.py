@@ -36,8 +36,8 @@ OMOPSO_M = '>'
 NSGAIII_M = 'v'
 SMSEMOA_M = '<'
 
-BARE_CL = '0.8'
-IMGA_CL = '0.4'
+BARE_CL = 'b'  # '0.8'
+IMGA_CL = 'r'  # 0.4'
 HGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
@@ -67,6 +67,31 @@ algos_order = [
     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
     'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA',
 ]
+
+algos_groups_configuration_all_together = {
+    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
+     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
+     'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA'): ('',)
+}
+
+algos_groups_configuration_splitted = {
+    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA'): (0, 1),
+    ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA'): (0, 2),
+    ('HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA'): (1, 2)
+}
+
+algos_groups_configuration_tres_caballeros = {
+    ('SPEA2', 'IMGA+SPEA2', 'HGS+SPEA2'): ('_spea2',),
+    ('NSGAII', 'IMGA+NSGAII', 'HGS+NSGAII'): ('_nsgaii',),
+    ('IBEA', 'IMGA+IBEA', 'HGS+IBEA'): ('_ibea',),
+    ('NSGAIII', 'IMGA+NSGAIII', 'HGS+NSGAIII'): ('_nsgaiii',),
+    ('SMSEMOA', 'IMGA+SMSEMOA', 'HGS+SMSEMOA'): ('_smsemoa',),
+    ('OMOPSO', 'IMGA+OMOPSO', 'HGS+OMOPSO'): ('_omopso',),
+}
+
+algos_groups_configuration = algos_groups_configuration_tres_caballeros
+
+algos_groups = {a: group for algorithms, group in algos_groups_configuration.items() for a in algorithms}
 
 
 def plot_pareto_fronts():
@@ -250,7 +275,7 @@ def plot_results(results):
     legend_saved = False
     to_plot = collections.defaultdict(list)
     for key, values in results.items():
-        (problem, algo, metric) = key
+        (problem, algo, metric, group) = key
         xs = []
         xerr = []
         ys = []
@@ -261,7 +286,7 @@ def plot_results(results):
             xerr.append(be)
             ys.append(s)
             yerr.append(se)
-        to_plot[(problem, metric)].append((algo, ((xs, xerr), (ys, yerr))))
+        to_plot[(problem, metric, group)].append((algo, ((xs, xerr), (ys, yerr))))
 
     logger.debug("to_plot = %s", list(to_plot.items()))
 
@@ -270,7 +295,7 @@ def plot_results(results):
         plt.figure(num=None, facecolor='w', edgecolor='k', figsize=(15, 7))
         ax = plt.subplot(111)
         # plt.title(plot_name)
-        (problem, metric) = plot_name
+        (problem, metric, group) = plot_name
         if metric == 'dst':
             metric = 'distance from Pareto front'
             if problem == 'ackley':
@@ -313,7 +338,7 @@ def plot_results(results):
                 last_plt[-1].set_dashes(lines)
 
         logger.debug("last_plt = %s", last_plt)
-        problem, metric = plot_name
+        problem, metric, group = plot_name
 
         # plt.legend(loc='best', fontsize=6)
         # plt.show()
@@ -330,11 +355,12 @@ def plot_results(results):
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
-        path = PLOTS_DIR / 'plots_bnw' / '{}_{}.pdf'.format(problem_moea, metric_short)
+        path = PLOTS_DIR / 'plots_bnw' / '{}_{}.pdf'.format(problem_moea, metric_short + str(group))
 
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
+        plt.close()
 
 
 def pictures_from_stats(args, queue):
@@ -367,9 +393,10 @@ def pictures_from_stats(args, queue):
                         score = data_analysis["btstrpd"]["metrics"]
                         score_err = data_analysis["stdev"]
 
-                        key = (problem_name, algo_name, metric_name)
+                        keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
                         value = (budget, budget_err, score, score_err)
 
-                        results[key].append(value)
+                        for key in keys:
+                            results[key].append(value)
 
     plot_results(results)
