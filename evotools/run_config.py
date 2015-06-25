@@ -66,7 +66,7 @@ algo_base = {
 
     "HGS": {
         "metaepoch_len":        5,
-        "max_children":         3,
+        "max_children":         20,
         "sproutiveness":        2,
         "__metaconfig__crossover_variance": 0.0125,
         "__metaconfig__sprouting_variance": 0.0125,
@@ -75,9 +75,9 @@ algo_base = {
         "lvl_params": {
             'sclng_coeffss': sclng_coeffs,
             'popln_sizes': [50, 12, 4],
-            'muttn_varss': 20,
+            'muttn_varss': 10,
             'csovr_varss': 10,
-            'sprtn_varss': 100,
+            'sprtn_varss': 50,
             'brnch_comps': [1, 0.25, 0.05]
         },
         "stop_conditions": [],
