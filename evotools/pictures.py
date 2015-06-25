@@ -36,8 +36,8 @@ OMOPSO_M = '>'
 NSGAIII_M = 'v'
 SMSEMOA_M = '<'
 
-BARE_CL = '0.8'
-IMGA_CL = '0.4'
+BARE_CL = 'b'  # '0.8'
+IMGA_CL = 'r'  # 0.4'
 HGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
@@ -80,7 +80,16 @@ algos_groups_configuration_splitted = {
     ('HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA'): (1, 2)
 }
 
-algos_groups_configuration = algos_groups_configuration_splitted
+algos_groups_configuration_tres_caballeros = {
+    ('SPEA2', 'IMGA+SPEA2', 'HGS+SPEA2'): ('_spea2',),
+    ('NSGAII', 'IMGA+NSGAII', 'HGS+NSGAII'): ('_nsgaii',),
+    ('IBEA', 'IMGA+IBEA', 'HGS+IBEA'): ('_ibea',),
+    ('NSGAIII', 'IMGA+NSGAIII', 'HGS+NSGAIII'): ('_nsgaiii',),
+    ('SMSEMOA', 'IMGA+SMSEMOA', 'HGS+SMSEMOA'): ('_smsemoa',),
+    ('OMOPSO', 'IMGA+OMOPSO', 'HGS+OMOPSO'): ('_omopso',),
+}
+
+algos_groups_configuration = algos_groups_configuration_tres_caballeros
 
 algos_groups = {a: group for algorithms, group in algos_groups_configuration.items() for a in algorithms}
 
@@ -351,6 +360,7 @@ def plot_results(results):
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
+        plt.close()
 
 
 def pictures_from_stats(args, queue):
