@@ -91,7 +91,7 @@ if __name__ == '__main__':
     start = [0.5, 0.5]
     dims = [(0.0, 1.0), (0.0, 1.0)]
     import constants
-    eta_mut = constants.ETA_MUTATION_0
+    eta_mut = 10.0
     rate = 1.0 / len(dims)
     mutated = [mutate(start, dims, rate, eta_mut) for _ in range(100)]
     import matplotlib.pyplot as plt
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     start_a = [0.2, 0.2]
     start_b = [0.8, 0.8]
     dims = [(0.0, 1.0), (0.0, 1.0)]
-    eta_cross = constants.ETA_CROSSOVER_0
+    eta_cross = 15.0
     rate = 0.9
     mutated = [crossover(start_a, start_b, dims, rate, eta_mut) for _ in range(100)]
     import matplotlib.pyplot as plt

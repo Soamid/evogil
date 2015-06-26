@@ -96,6 +96,12 @@ class NSGAIII(DriverGen):
         self._unused_mutation_variance = mutation_variance
         self._unused_crossover_variance = crossover_variance
 
+        import constants
+        self.eta_crossover = constants.ETA_CROSSOVER_BASE
+        self.eta_mutation = constants.ETA_MUTATION_BASE
+        self.crossover_rate = 0.9
+        self.mutation_rate = 1.0 / len(self.dims)
+
     def generate_reference_points(self):
         return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
 

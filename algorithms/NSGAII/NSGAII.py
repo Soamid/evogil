@@ -89,14 +89,8 @@ class NSGAII(DriverGen):
         self._calculate_objectives()
 
         import constants
-        self.eta_crossover = constants.ETA_CROSSOVER_0
-        self.eta_mutation = constants.ETA_MUTATION_0
-        if self.level == 1:
-            self.eta_crossover = constants.ETA_CROSSOVER_1
-            self.eta_mutation = constants.ETA_MUTATION_1
-        elif self.level == 2:
-            self.eta_crossover = constants.ETA_CROSSOVER_2
-            self.eta_mutation = constants.ETA_MUTATION_2
+        self.eta_crossover = constants.ETA_CROSSOVER_BASE
+        self.eta_mutation = constants.ETA_MUTATION_BASE
         self.crossover_rate = 0.9
         self.mutation_rate = 1.0 / len(self.dims)
 

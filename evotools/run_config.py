@@ -88,10 +88,6 @@ algo_base = {
         "migrants_number": 5,
         "epoch_length": 5,
     },
-
-    "SMSEMOA": {
-        "__metaconfig__var_mult": 10.0  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
-    },
 }
 
 prob_base = {

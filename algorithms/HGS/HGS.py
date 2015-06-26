@@ -280,6 +280,7 @@ class HGS(DriverGen):
                                        mutation_variance=outer.muttn_vars[level],
                                        crossover_variance=outer.csvrs_vars[level])
             self.driver.level = level
+            self.driver.refresh_etas()
             self.driver_generator = self.driver.population_generator()
             self.last_proxy = None
 
