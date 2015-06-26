@@ -77,7 +77,7 @@ algo_base = {
             'popln_sizes': [50, 12, 4],
             'muttn_varss': 1.,
             'csovr_varss': 1.,
-            'sprtn_varss': 5,
+            'sprtn_varss': 5.,
             'brnch_comps': [1, 0.25, 0.05]
         },
         "stop_conditions": [],
@@ -136,16 +136,11 @@ def init_alg___HGS(algo_config, problem_mod):
 
 
 def init_alg___SMSEMOA(algo_config, problem_mod):
-    var = [abs(maxa - mina) / algo_config["__metaconfig__var_mult"]
-           for (mina, maxa)
-           in problem_mod.dims]
-    reference_point = tuple(max(problem_mod.pareto_front,
-                                key=itemgetter(i))[i]
-                            for i
+    standard_variance(algo_config, problem_mod)
+    reference_point = tuple(100.0
+                            for _
                             in range(len(problem_mod.pareto_front[0])))
 
     algo_config.update({
-        "mutation_variance": var,
-        "crossover_variance": var,
         "reference_point": reference_point
     })
