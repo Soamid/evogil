@@ -89,7 +89,7 @@ algos_groups_configuration_tres_caballeros = {
     ('OMOPSO', 'IMGA+OMOPSO', 'HGS+OMOPSO'): ('_omopso',),
 }
 
-algos_groups_configuration = algos_groups_configuration_tres_caballeros
+algos_groups_configuration = algos_groups_configuration_all_together
 
 algos_groups = {a: group for algorithms, group in algos_groups_configuration.items() for a in algorithms}
 
