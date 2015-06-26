@@ -86,3 +86,31 @@ def get_indivs_inorder(self, fitnesses, population):
         ]
 
     return rank(population, calc_objective)
+
+if __name__ == '__main__':
+    start = [0.5, 0.5]
+    dims = [(0.0, 1.0), (0.0, 1.0)]
+    import constants
+    eta_mut = constants.ETA_MUTATION_0
+    rate = 1.0 / len(dims)
+    mutated = [mutate(start, dims, rate, eta_mut) for _ in range(100)]
+    import matplotlib.pyplot as plt
+    plt.scatter([x[0] for x in mutated], [x[1] for x in mutated])
+    plt.xlim(0.0, 1.0)
+    plt.ylim(0.0, 1.0)
+    print(start)
+    plt.show()
+
+    start_a = [0.2, 0.2]
+    start_b = [0.8, 0.8]
+    dims = [(0.0, 1.0), (0.0, 1.0)]
+    eta_cross = constants.ETA_CROSSOVER_0
+    rate = 0.9
+    mutated = [crossover(start_a, start_b, dims, rate, eta_mut) for _ in range(100)]
+    import matplotlib.pyplot as plt
+    plt.scatter([x[0] for x in mutated], [x[1] for x in mutated])
+    plt.xlim(0.0, 1.0)
+    plt.ylim(0.0, 1.0)
+    print(start_a)
+    print(start_b)
+    plt.show()
