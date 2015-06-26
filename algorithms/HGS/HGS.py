@@ -45,7 +45,7 @@ class HGS(DriverGen):
     @staticmethod
     def make_sigmas(sigma, sclng_coeffs, dims):
         return [
-            [(sigma / n) * ((abs(b - a)) ** (1. / len(dims)))  # n-ty pierwiastek z rozmiaru wymiaru, n to ilość wymiarów
+            [(sigma / n) * abs(b - a) # n-ty pierwiastek z rozmiaru wymiaru, n to ilość wymiarów
              for (a, b), n in zip(dims, ns)]
             for ns in [[100.0 for _ in dims] for _ in sclng_coeffs]]
 

@@ -29,7 +29,7 @@ problems = [
     'ZDT3',
     'ZDT4',
     'ZDT6',
-    'kursawe',
+    # 'kursawe',
     'UF1',
     'UF2',
     'UF3',
@@ -40,8 +40,8 @@ problems = [
     'UF8',
     'UF9',
     'UF10',
-    'UF11',
-    'UF12'
+    # 'UF11',
+    # 'UF12'
 ]
 
 metaconfig_populationsize = 100
@@ -75,15 +75,12 @@ algo_base = {
         "lvl_params": {
             'sclng_coeffss': sclng_coeffs,
             'popln_sizes': [50, 12, 4],
-            'muttn_varss': 10,
-            'csovr_varss': 10,
-            'sprtn_varss': 50,
+            'muttn_varss': 1.,
+            'csovr_varss': 1.,
+            'sprtn_varss': 5,
             'brnch_comps': [1, 0.25, 0.05]
         },
         "stop_conditions": [],
-    },
-
-    "SPEA2": {
     },
 
     "IMGA": {
@@ -93,7 +90,7 @@ algo_base = {
     },
 
     "SMSEMOA": {
-        "__metaconfig__var_mult": 0.1  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
+        "__metaconfig__var_mult": 10.0  # "z jakichś powodów dzielimy przez 0.1, wtedy były najlepsze wyniki :<" -- MI
     },
 }
 
@@ -109,24 +106,13 @@ cust_base = {
 def init_alg___IBEA(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
 
+
 def init_alg___SPEA2(algo_config, problem_mod):
-    if problem_mod.name in [ "ZDT1", "ZDT2", "ZDT3", "ZDT4", "ZDT6"]:
-        standard_variance(algo_config, problem_mod, divider=0.1)
-    elif problem_mod.name in ["kursawe"]:
-        algo_config.update({
-            "mutation_variance":  [0.8, 0.4, 0.2],
-            "crossover_variance": [0.8, 0.4, 0.2],
-        })
-    else:
-        standard_variance(algo_config, problem_mod)
+    standard_variance(algo_config, problem_mod)
+
 
 def init_alg___NSGAII(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
-
-    if problem_mod.name in ['ackley', 'kursawe', 'ZDT4']:
-        algo_config.update({
-            "__metaconfig__populationsize": 75
-        })
 
 
 def init_alg___IMGA(algo_config, problem_mod):
@@ -134,13 +120,7 @@ def init_alg___IMGA(algo_config, problem_mod):
 
 
 def init_alg_IMGA___SPEA2(algo_config, problem_mod):
-    if problem_mod.name in ["ackley"]:
-        standard_variance(algo_config, problem_mod)
-    else:
-        standard_variance(algo_config, problem_mod, divider=0.1)
-
-
-
+    standard_variance(algo_config, problem_mod)
 
 
 def init_alg___HGS(algo_config, problem_mod):
@@ -153,6 +133,7 @@ def init_alg___HGS(algo_config, problem_mod):
         "sprouting_variance": multiply_per_dim(algo_config["__metaconfig__sprouting_variance"]),
         "mutation_variance":  multiply_per_dim(algo_config["__metaconfig__mutation_variance"]),
     })
+
 
 def init_alg___SMSEMOA(algo_config, problem_mod):
     var = [abs(maxa - mina) / algo_config["__metaconfig__var_mult"]

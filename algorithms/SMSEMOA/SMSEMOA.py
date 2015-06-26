@@ -19,6 +19,9 @@ class SMSEMOA(DriverGen):
                  epoch_length_multiplier=0.5,
                  mutation_probability=0.05):
         super().__init__()
+
+        # print("SMSEMOA", mutation_variance)
+
         self.fitnesses = fitnesses
         self.dims = dims
         self.mutation_variance = mutation_variance
@@ -28,6 +31,18 @@ class SMSEMOA(DriverGen):
         self.population = population
         self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
         self.reference_point = reference_point
+
+        import constants
+        self.eta_crossover = constants.ETA_CROSSOVER_0
+        self.eta_mutation = constants.ETA_MUTATION_0
+        if self.level == 1:
+            self.eta_crossover = constants.ETA_CROSSOVER_1
+            self.eta_mutation = constants.ETA_MUTATION_1
+        elif self.level == 2:
+            self.eta_crossover = constants.ETA_CROSSOVER_2
+            self.eta_mutation = constants.ETA_MUTATION_2
+        self.crossover_rate = 0.9
+        self.mutation_rate = 1.0 / len(self.dims)
 
     class SMSEMOAProxy(DriverGen.Proxy):
         def __init__(self, cost, population):
@@ -95,9 +110,9 @@ class SMSEMOA(DriverGen):
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]
-        child = crossover(*selected_parents)
+        child = crossover(selected_parents[0], selected_parents[1], self.dims, self.crossover_rate, self.eta_crossover)
 
-        return Individual(mutate(child, self.dims, self.mutation_probability, self.mutation_variance))
+        return Individual(mutate(child, self.dims, self.mutation_rate, self.eta_mutation))
 
 
     def reduce_population(self, pop):

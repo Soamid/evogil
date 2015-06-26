@@ -41,7 +41,7 @@ def show_conf(conf):
     return str(conf)
 
 
-def standard_variance(algo_config, problem_mod, divider=100.0):
+def standard_variance(algo_config, problem_mod, divider=10.0):
     var = [ abs(maxa-mina)/divider
             for (mina, maxa)
             in problem_mod.dims

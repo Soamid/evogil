@@ -41,6 +41,9 @@ class IBEA(DriverGen):
                  mating_population_size, mutation_probability=0.05):
         super().__init__()
 
+        # print("IBEA", mutation_variance)
+
+
         self.individuals = []
         self.population_size = 0
         self.mating_size = 0
@@ -59,6 +62,18 @@ class IBEA(DriverGen):
         self.population = population
 
         self._scale_objectives()
+
+        import constants
+        self.eta_crossover = constants.ETA_CROSSOVER_0
+        self.eta_mutation = constants.ETA_MUTATION_0
+        if self.level == 1:
+            self.eta_crossover = constants.ETA_CROSSOVER_1
+            self.eta_mutation = constants.ETA_MUTATION_1
+        elif self.level == 2:
+            self.eta_crossover = constants.ETA_CROSSOVER_2
+            self.eta_mutation = constants.ETA_MUTATION_2
+        self.crossover_rate = 0.9
+        self.mutation_rate = 1.0 / len(self.dims)
 
     def step(self, steps=1):
         for _ in range(steps):
@@ -135,12 +150,12 @@ class IBEA(DriverGen):
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v) for i in
+            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims, self.crossover_rate, self.eta_crossover) for i in
             range(self.mating_size)]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.eta_mutation)) for x in
             self.mating_individuals]
         for ind in self.mating_individuals:
             ind.known_objectives = False

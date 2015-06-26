@@ -9,7 +9,7 @@ from algorithms.base.drivergen import DriverGen
 EPSILON = numpy.finfo(float).eps
 
 import matplotlib.pyplot as plt
-
+import constants
 
 class NSGAIII(DriverGen):
 
@@ -47,8 +47,8 @@ class NSGAIII(DriverGen):
                  theta=5,
                  mutation_variance=0,
                  crossover_variance=0,
-                 eta_crossover=20.0,
-                 eta_mutation=30.0):
+                 eta_crossover=constants.ETA_CROSSOVER_0,
+                 eta_mutation=constants.ETA_MUTATION_0):
         super().__init__()
 
         self.theta = theta
@@ -56,11 +56,11 @@ class NSGAIII(DriverGen):
         self.eta_mutation = eta_mutation
 
         if self.level is not None and self.level == 1:
-            self.eta_crossover = 80.0
-            self.eta_mutation = 120.0
+            self.eta_crossover = constants.ETA_CROSSOVER_1
+            self.eta_mutation = constants.ETA_MUTATION_1
         elif self.level is not None and self.level == 2:
-            self.eta_crossover = 200.0
-            self.eta_mutation = 300.0
+            self.eta_crossover = constants.ETA_CROSSOVER_2
+            self.eta_mutation = constants.ETA_MUTATION_2
 
         self.dims = dims
         self.dims_no = len(dims)
@@ -374,8 +374,10 @@ def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta
     child_b = Individual([x for x in parent_b.v])
 
     if random.random() > crossover_rate:
-        child_a.objectives = [x for x in parent_a.objectives]
-        child_b.objectives = [x for x in parent_b.objectives]
+        if parent_a.objectives is not None:
+            child_a.objectives = [x for x in parent_a.objectives]
+        if parent_b.objectives is not None:
+            child_b.objectives = [x for x in parent_b.objectives]
         return child_a, child_b
 
     for i, dim in enumerate(dims):

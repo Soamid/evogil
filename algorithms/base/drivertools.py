@@ -3,7 +3,7 @@ import random
 from evotools.ea_utils import paretofront_layers
 
 
-def mutate(xs, dimensions, mutation_probability, mutation_variance):
+def old_mutate(xs, dimensions, mutation_probability, mutation_variance):
     def coin():
         return random.random() < mutation_probability
 
@@ -11,14 +11,30 @@ def mutate(xs, dimensions, mutation_probability, mutation_variance):
             for x, (a, b), sigma in zip(xs, dimensions, mutation_variance)]
 
 
-def crossover(xs, ys):
+from algorithms.NSGAIII.NSGAIII import simulated_binary_crossover, polynomial_mutation, Individual
+
+
+def mutate(xs, dimensions, rate, eta):
+    ind = Individual([x for x in xs])
+    polynomial_mutation(ind, dimensions, rate, eta)
+    return ind.v
+
+
+def crossover(xs, ys, dimensions, rate, eta):
+    ind_a = Individual([x for x in xs])
+    ind_b = Individual([y for y in ys])
+    c_a, c_b = simulated_binary_crossover(ind_a, ind_b, dimensions, rate, eta)
+    return c_a.v
+
+
+def old_crossover(xs, ys):
     return [random.uniform(x, y)
             for x, y
             in zip(xs, ys)
     ]
 
 
-def crossover_triangular(xs, ys):
+def old_crossover_triangular(xs, ys):
     return [random.triangular(low=min(x, y),
                               high=max(x, y))
             for x, y
@@ -26,7 +42,7 @@ def crossover_triangular(xs, ys):
     ]
 
 
-def crossover_beta(xs, ys, dimensions, crossover_variance):
+def old_crossover_beta(xs, ys, dimensions, crossover_variance):
     """ Rozkład beta - https://en.wikipedia.org/wiki/File:Beta_distribution_pdf.svg .
     Wyznacza a na podstawie zadanej wariancji.
     :warning: Wariancja v musi spełniać: v/(b-a) <= 0.25 gdzie [a,b] jest przestrzenią.

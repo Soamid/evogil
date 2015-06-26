@@ -65,6 +65,9 @@ class NSGAII(DriverGen):
                  mutation_probability=0.05):
         super().__init__()
 
+        # print("NSGAII", mutation_variance)
+
+
         self.dims = dims
 
         # print("LEN DIMS DRIVER", self.dims)
@@ -84,6 +87,18 @@ class NSGAII(DriverGen):
         self.population = population
 
         self._calculate_objectives()
+
+        import constants
+        self.eta_crossover = constants.ETA_CROSSOVER_0
+        self.eta_mutation = constants.ETA_MUTATION_0
+        if self.level == 1:
+            self.eta_crossover = constants.ETA_CROSSOVER_1
+            self.eta_mutation = constants.ETA_MUTATION_1
+        elif self.level == 2:
+            self.eta_crossover = constants.ETA_CROSSOVER_2
+            self.eta_mutation = constants.ETA_MUTATION_2
+        self.crossover_rate = 0.9
+        self.mutation_rate = 1.0 / len(self.dims)
 
     @property
     def population(self):
@@ -201,12 +216,12 @@ class NSGAII(DriverGen):
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v) for i in
+            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims, self.crossover_rate, self.eta_crossover) for i in
             range(self.mating_size)]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.eta_mutation)) for x in
             self.mating_individuals]
 
     class Individual:

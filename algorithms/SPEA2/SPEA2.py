@@ -26,6 +26,8 @@ class SPEA2(DriverGen):
         super().__init__()
         self.__population = []
 
+        # print("SPEA2", mutation_variance)
+
         self.fitnesses = fitnesses
         self.dims = dims
         self.mutation_variance = mutation_variance
@@ -36,6 +38,18 @@ class SPEA2(DriverGen):
         self.__archive_size = len(population)
         self.__archive = []
         self.select = SPEA2.Tournament()
+
+        import constants
+        self.eta_crossover = constants.ETA_CROSSOVER_0
+        self.eta_mutation = constants.ETA_MUTATION_0
+        if self.level == 1:
+            self.eta_crossover = constants.ETA_CROSSOVER_1
+            self.eta_mutation = constants.ETA_MUTATION_1
+        elif self.level == 2:
+            self.eta_crossover = constants.ETA_CROSSOVER_2
+            self.eta_mutation = constants.ETA_MUTATION_2
+        self.crossover_rate = 0.9
+        self.mutation_rate = 1.0 / len(self.dims)
 
     class SPEA2Proxy(DriverGen.Proxy):
 
@@ -85,8 +99,13 @@ class SPEA2(DriverGen):
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
             self.population = [mutate(crossover(self.select(self.__archive),
-                                                self.select(self.__archive)), self.dims, self.mutation_probability,
-                                      self.mutation_variance)
+                                                self.select(self.__archive),
+                                                self.dims,
+                                                self.crossover_rate,
+                                                self.eta_crossover),
+                                    self.dims,
+                                    self.mutation_rate,
+                                    self.eta_mutation)
                                for _ in self.__population]
             cost = len(self.__population)
 
