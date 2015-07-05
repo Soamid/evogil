@@ -22,8 +22,8 @@ def take(n, iterator):
         for i in range(n):
             yield next(iterator)
 
+
 def show_partial(x):
-    res = "∅"
     try:
         return str(x.func)
     except AttributeError:
@@ -31,6 +31,7 @@ def show_partial(x):
             return str(type(x))
         else:
             return "∅"
+
 
 def show_conf(conf):
     conf = copy.deepcopy(conf)
@@ -41,17 +42,6 @@ def show_conf(conf):
     return str(conf)
 
 
-def standard_variance(algo_config, problem_mod, divider=100.0):
-    var = [ abs(maxa-mina)/divider
-            for (mina, maxa)
-            in problem_mod.dims
-          ]
-    algo_config.update({
-        "mutation_variance":  var,
-        "crossover_variance": var,
-    })
-
-
 @contextmanager
 def close_and_join(x):
     try:
@@ -59,4 +49,3 @@ def close_and_join(x):
     finally:
         x.close()
         x.join()
-

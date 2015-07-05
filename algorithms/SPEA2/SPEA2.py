@@ -22,15 +22,23 @@ class SPEA2(DriverGen):
             sub_pool = random.sample(pool, self.tournament_size)
             return min(sub_pool, key=lambda x: x['fitness'])['value']
 
-    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, mutation_probability=0.05):
+    def __init__(self,
+                 population,
+                 fitnesses,
+                 dims,
+                 mutation_eta,
+                 mutation_rate,
+                 crossover_eta,
+                 crossover_rate):
         super().__init__()
         self.__population = []
 
         self.fitnesses = fitnesses
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
         self.population = population
 
         self.__archive_size = len(population)
@@ -84,10 +92,16 @@ class SPEA2(DriverGen):
             self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
-            self.population = [mutate(crossover(self.select(self.__archive),
-                                                self.select(self.__archive)), self.dims, self.mutation_probability,
-                                      self.mutation_variance)
-                               for _ in self.__population]
+            self.population = [mutate(
+                crossover(self.select(self.__archive),
+                          self.select(self.__archive),
+                          self.dims,
+                          self.crossover_rate,
+                          self.crossover_eta),
+                self.dims,
+                self.mutation_rate,
+                self.mutation_eta)
+                for _ in self.__population]
             cost = len(self.__population)
 
             yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)

@@ -13,17 +13,19 @@ class SMSEMOA(DriverGen):
                  population,
                  fitnesses,
                  dims,
-                 mutation_variance,
-                 crossover_variance,
+                 mutation_eta,
+                 mutation_rate,
+                 crossover_eta,
+                 crossover_rate,
                  reference_point,
-                 epoch_length_multiplier=0.5,
-                 mutation_probability=0.05):
+                 epoch_length_multiplier=0.5):
         super().__init__()
         self.fitnesses = fitnesses
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
 
         self.population = population
         self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
@@ -86,7 +88,6 @@ class SMSEMOA(DriverGen):
 
         return total_cost
 
-
     def calculate_objectives(self, pop):
         for p in pop:
             p.objectives = [o(p.value)
@@ -95,10 +96,16 @@ class SMSEMOA(DriverGen):
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]
-        child = crossover(*selected_parents)
+        child = crossover(selected_parents[0],
+                          selected_parents[1],
+                          self.dims,
+                          self.crossover_rate,
+                          self.crossover_eta)
 
-        return Individual(mutate(child, self.dims, self.mutation_probability, self.mutation_variance))
-
+        return Individual(mutate(child,
+                                 self.dims,
+                                 self.mutation_rate,
+                                 self.mutation_eta))
 
     def reduce_population(self, pop):
         sorted_pop = self.nd_sort(pop)

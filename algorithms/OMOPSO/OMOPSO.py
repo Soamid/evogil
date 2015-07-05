@@ -8,7 +8,6 @@ from algorithms.base.drivergen import DriverGen
 class OMOPSO(DriverGen):
     ETA = 0.0075
 
-
     class OMOPSOProxy(DriverGen.Proxy):
         def __init__(self, cost, archive, population):
             super().__init__(cost)
@@ -40,10 +39,16 @@ class OMOPSO(DriverGen):
                 e.reset_speed()
                 self.population.append(e)
 
-
-
-    def __init__(self, population, fitnesses, dims, mutation_perturbation=0.5, mutation_probability=0.05,
-                 mutation_variance=0, crossover_variance=0):
+    def __init__(self,
+                 population,
+                 fitnesses,
+                 dims,
+                 mutation_eta,
+                 mutation_rate,
+                 crossover_eta,
+                 crossover_rate,
+                 mutation_perturbation=0.5,
+                 mutation_probability=0.05):
         super().__init__()
         self.fitnesses = fitnesses
         self.dims = dims
@@ -105,7 +110,6 @@ class OMOPSO(DriverGen):
             if self.leader_archive.add(copy.deepcopy(p)):
                 self.archive.add(copy.deepcopy(p))
 
-
     def update_personal_best(self):
         for p in self.population:
             # print("new: {}, best: {}".format(p.objectives, p.best_val.objectives))
@@ -113,20 +117,17 @@ class OMOPSO(DriverGen):
                 # print("new best: {}".format(p.objectives))
                 p.best_val = copy.deepcopy(p)
 
-
     def update_leaders(self):
         for p in self.population:
             new_ind = copy.deepcopy(p)
             if self.leader_archive.add(new_ind):
                 self.archive.add(copy.deepcopy(p))
 
-
     def calculate_objectives(self):
         for p in self.population:
             p.objectives = [o(p.value)
                             for o in self.fitnesses]
         return len(self.population)
-
 
     def move(self):
         for p in self.population:
@@ -139,7 +140,6 @@ class OMOPSO(DriverGen):
                     p.speed[i] *= -1
 
                 p.value[i] = bounded_x
-
 
     def compute_speed(self):
         for p in self.population:
@@ -156,7 +156,6 @@ class OMOPSO(DriverGen):
                 p.speed[j] = W * p.speed[j] \
                              + C1 * r1 * (p.best_val.value[j] - p.value[j]) \
                              + C2 * r2 * (best_global.value[j] - p.value[j])
-
 
     def mopso_mutation(self, evolution_progress):
         pop_len = len(self.population)

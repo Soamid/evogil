@@ -8,7 +8,6 @@ import sys
 
 
 class IBEA(DriverGen):
-
     class IBEAProxy(DriverGen.Proxy):
         def __init__(self, cost, individuals, driver):
             super().__init__(cost)
@@ -37,8 +36,16 @@ class IBEA(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)
 
-    def __init__(self, population, dims, fitnesses, mutation_variance, crossover_variance, kappa,
-                 mating_population_size, mutation_probability=0.05):
+    def __init__(self,
+                 population,
+                 dims,
+                 fitnesses,
+                 kappa,
+                 mating_population_size,
+                 mutation_eta,
+                 crossover_eta,
+                 mutation_rate,
+                 crossover_rate):
         super().__init__()
 
         self.individuals = []
@@ -46,9 +53,10 @@ class IBEA(DriverGen):
         self.mating_size = 0
 
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
 
         self.cost = 0
         self.objectives = fitnesses
@@ -128,19 +136,20 @@ class IBEA(DriverGen):
 
     def _mating_selection(self, p):
         coin = lambda: random.random() < p
-        better = lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin()\
+        better = lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin() \
             else self.fitness[x1] > self.fitness[x2] and x1 or x2
         self.mating_individuals = [better(random.choice(self.individuals), random.choice(self.individuals)) for _ in
                                    range(2 * self.mating_size)]
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v) for i in
+            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims,
+                      self.crossover_rate, self.crossover_eta) for i in
             range(self.mating_size)]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
             self.mating_individuals]
         for ind in self.mating_individuals:
             ind.known_objectives = False
@@ -178,7 +187,7 @@ if __name__ == "__main__":
     # import pylab
     # # objectives = [lambda x : (x[0]+5)*(x[0]+5), lambda x : (x[1]-5)*(x[1]-5)]
     # objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
-    #               lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3) + math.pow(abs(x[1]),
+    # lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3) + math.pow(abs(x[1]),
     #                                                                                               0.8) + 5 * math.pow(
     #                   math.sin(x[1]), 3)
     # ]

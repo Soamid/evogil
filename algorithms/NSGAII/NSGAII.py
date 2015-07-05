@@ -26,7 +26,6 @@ def dominates(x, y):
 
 
 class NSGAII(DriverGen):
-
     class NSGAIIProxy(DriverGen.Proxy):
         def __init__(self, cost, individuals, driver):
             super().__init__(cost)
@@ -59,19 +58,19 @@ class NSGAII(DriverGen):
                  population,
                  dims,
                  fitnesses,
-                 mutation_variance,
-                 crossover_variance,
                  mating_population_size,
-                 mutation_probability=0.05):
+                 mutation_eta,
+                 crossover_eta,
+                 mutation_rate,
+                 crossover_rate):
         super().__init__()
 
         self.dims = dims
 
-        # print("LEN DIMS DRIVER", self.dims)
-
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
 
         self.cost = 0
         self.objectives = fitnesses
@@ -201,12 +200,13 @@ class NSGAII(DriverGen):
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v) for i in
+            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims,
+                      self.crossover_rate, self.crossover_eta) for i in
             range(self.mating_size)]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
             self.mating_individuals]
 
     class Individual:

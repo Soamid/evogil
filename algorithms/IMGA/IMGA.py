@@ -12,20 +12,22 @@ class IMGA(DriverGen):
                  population,
                  dims,
                  fitnesses,
-                 mutation_variance,
-                 crossover_variance,
                  islands_number,
                  migrants_number,
                  epoch_length,
                  driver,
-                 topology=TorusTopology(4),
-                 mutation_probability=0.05):
+                 mutation_eta,
+                 crossover_eta,
+                 mutation_rate,
+                 crossover_rate,
+                 topology=TorusTopology(4)):
         super().__init__()
         self.fitnesses = fitnesses
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
 
         self.islands_number = islands_number
         self.migrants_number = migrants_number
@@ -123,8 +125,10 @@ class IMGA(DriverGen):
             self.driver = outer.driver(population=population,
                                        dims=outer.dims,
                                        fitnesses=outer.fitnesses,
-                                       mutation_variance=outer.mutation_variance,
-                                       crossover_variance=outer.crossover_variance)
+                                       mutation_rate=outer.mutation_rate,
+                                       mutation_eta=outer.mutation_eta,
+                                       crossover_rate=outer.crossover_rate,
+                                       crossover_eta=outer.crossover_eta)
             if isinstance(self.driver, DriverGen):
                 self.driver_gen = self.driver.population_generator()
                 self.last_proxy = None
