@@ -1,5 +1,4 @@
 from itertools import product
-from operator import itemgetter
 
 _drivers = [
     'SPEA2',

@@ -51,20 +51,16 @@ class NSGAIII(DriverGen):
         super().__init__()
 
         self.theta = theta
-        self.eta_crossover = crossover_eta
-        self.eta_mutation = mutation_eta
-
-        if self.level is not None and self.level == 1:
-            self.eta_crossover = 80.0
-            self.eta_mutation = 120.0
-        elif self.level is not None and self.level == 2:
-            self.eta_crossover = 200.0
-            self.eta_mutation = 300.0
 
         self.dims = dims
         self.dims_no = len(dims)
         self.objectives = fitnesses
         self.objective_no = len(self.objectives)
+
+        self.eta_crossover = crossover_eta
+        self.eta_mutation = mutation_eta
+        self.crossover_rate = crossover_rate
+        self.mutation_rate = 1.0 / len(self.dims) if mutation_rate is 'default' else mutation_rate
 
         self.population_size = len(population)
         self.reference_points = self.generate_reference_points()
@@ -87,9 +83,6 @@ class NSGAIII(DriverGen):
         # plt.show()
 
         self.clusters = [[] for _ in self.reference_points]
-
-        self.crossover_rate = crossover_rate
-        self.mutation_rate = 1.0 / len(self.dims) if mutation_rate is 'default' else mutation_rate
 
     def generate_reference_points(self):
         return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
