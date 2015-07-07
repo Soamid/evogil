@@ -11,13 +11,14 @@ _drivers = [
 
 _metaalgorithms = [
     'IMGA',
+    'RHGS'
 ]
 
 algorithms = [
-    "{}+{}".format(meta, algo)
-    for meta, algo
-    in product(_metaalgorithms, _drivers)
-] + _drivers
+                 "{}+{}".format(meta, algo)
+                 for meta, algo
+                 in product(_metaalgorithms, _drivers)
+             ] + _drivers
 
 problems = [
     'ZDT1',
@@ -50,10 +51,9 @@ class NotViableConfiguration(Exception):
 
 sclng_coeffs = [10, 2.5, 1]
 
-
 algo_base = {
     "IBEA": {
-        "kappa":                  0.05,
+        "kappa": 0.05,
         "mating_population_size": 0.5,
     },
 
@@ -66,6 +66,16 @@ algo_base = {
         "migrants_number": 5,
         "epoch_length": 5,
     },
+
+    "RHGS": {
+        "mutation_etas": (15.0, 30.0, 60.0),
+        "crossover_etas": (20.0, 40.0, 80.0),
+        "delegates_no": (6, 2, 1),
+        "population_sizes": (64, 16, 4),
+        "max_sprouts_no": 20,
+        "sproutiveness": 1,
+        "comparison_multiplier": 2.0,
+    },
 }
 
 prob_base = {
@@ -75,6 +85,13 @@ prob_base = {
 cust_base = {
 
 }
+
+
+def init_alg___RHGS(algo_config, problem_mod):
+    algo_config.update({
+        "mutation_rates": [1.0 / len(problem_mod.dims) for _ in range(3)],
+        "crossover_rates": [0.9 for _ in range(3)],
+    })
 
 
 def init_alg___IBEA(algo_config, problem_mod):
@@ -113,7 +130,7 @@ def init_alg___IMGA(algo_config, problem_mod):
 
 def standard_variance(algo_config, problem_mod):
     algo_config.update({
-        "mutation_eta":  20.0,
+        "mutation_eta": 20.0,
         "crossover_eta": 30.0,
         "mutation_rate": 1.0 / len(problem_mod.dims),
         "crossover_rate": 0.9,

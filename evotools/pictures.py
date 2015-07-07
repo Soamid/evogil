@@ -38,7 +38,7 @@ SMSEMOA_M = '<'
 
 BARE_CL = 'b'  # '0.8'
 IMGA_CL = 'r'  # 0.4'
-HGS_CL = '0.0'
+RHGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAII': ('NSGAII', NSGAII_LS, NSGAII_M, BARE_CL),
@@ -54,39 +54,39 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IMGA+NSGAIII': ( 'IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
          'IMGA+SMSEMOA': ( 'IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
 
-         'HGS+SPEA2': ( 'HGS+SPEA2', SPEA_LS, SPEA_M, HGS_CL),
-         'HGS+NSGAII': ( 'HGS+NSGAII', NSGAII_LS, NSGAII_M, HGS_CL),
-         'HGS+IBEA': ( 'HGS+IBEA', IBEA_LS, IBEA_M, HGS_CL),
-         'HGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, HGS_CL),
-         'HGS+NSGAIII': ( 'HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, HGS_CL),
-         'HGS+SMSEMOA': ( 'HGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, HGS_CL),
+         'RHGS+SPEA2': ( 'RHGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
+         'RHGS+NSGAII': ( 'RHGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
+         'RHGS+IBEA': ( 'RHGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
+         'RHGS+OMOPSO': ('RHGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
+         'RHGS+NSGAIII': ( 'RHGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
+         'RHGS+SMSEMOA': ( 'RHGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
          }
 
 algos_order = [
     'SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
-    'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA',
+    'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA',
 ]
 
 algos_groups_configuration_all_together = {
     ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
      'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
-     'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA'): ('',)
+     'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA'): ('',)
 }
 
 algos_groups_configuration_splitted = {
     ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA'): (0, 1),
     ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA'): (0, 2),
-    ('HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA'): (1, 2)
+    ('RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA'): (1, 2)
 }
 
 algos_groups_configuration_tres_caballeros = {
-    ('SPEA2', 'IMGA+SPEA2', 'HGS+SPEA2'): ('_spea2',),
-    ('NSGAII', 'IMGA+NSGAII', 'HGS+NSGAII'): ('_nsgaii',),
-    ('IBEA', 'IMGA+IBEA', 'HGS+IBEA'): ('_ibea',),
-    ('NSGAIII', 'IMGA+NSGAIII', 'HGS+NSGAIII'): ('_nsgaiii',),
-    ('SMSEMOA', 'IMGA+SMSEMOA', 'HGS+SMSEMOA'): ('_smsemoa',),
-    ('OMOPSO', 'IMGA+OMOPSO', 'HGS+OMOPSO'): ('_omopso',),
+    ('SPEA2', 'IMGA+SPEA2', 'RHGS+SPEA2'): ('_spea2',),
+    ('NSGAII', 'IMGA+NSGAII', 'RHGS+NSGAII'): ('_nsgaii',),
+    ('IBEA', 'IMGA+IBEA', 'RHGS+IBEA'): ('_ibea',),
+    ('NSGAIII', 'IMGA+NSGAIII', 'RHGS+NSGAIII'): ('_nsgaiii',),
+    ('SMSEMOA', 'IMGA+SMSEMOA', 'RHGS+SMSEMOA'): ('_smsemoa',),
+    ('OMOPSO', 'IMGA+OMOPSO', 'RHGS+OMOPSO'): ('_omopso',),
 }
 
 algos_groups_configuration = algos_groups_configuration_tres_caballeros
@@ -181,9 +181,9 @@ def gen_table(results):
             get_algo_results(results, "IMGA+NSGA-II", "imga_nsga2", metric),
             get_algo_results(results, "IMGA+IBEA", "imga_ibea", metric),
 
-            get_algo_results(results, "MO-HGS+SPEA2", "hgs_spea2", metric),
-            get_algo_results(results, "MO-HGS+NSGA-II", "hgs_nsga2", metric),
-            get_algo_results(results, "MO-HGS+IBEA", "hgs_ibea", metric)
+            get_algo_results(results, "MO-RHGS+SPEA2", "hgs_spea2", metric),
+            get_algo_results(results, "MO-RHGS+NSGA-II", "hgs_nsga2", metric),
+            get_algo_results(results, "MO-RHGS+IBEA", "hgs_ibea", metric)
         ]
         mark_winner(printable_results, metrics[metric][1])
 

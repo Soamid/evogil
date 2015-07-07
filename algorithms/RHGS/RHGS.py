@@ -7,7 +7,7 @@ from sklearn import lda
 from algorithms.base.drivergen import DriverGen
 from algorithms.base import drivertools
 
-LDA = lda.LDA(n_components=1)
+np.seterr(all='raise')
 
 
 class RHGS(DriverGen):
@@ -20,11 +20,11 @@ class RHGS(DriverGen):
                  crossover_etas,
                  mutation_rates,
                  crossover_rates,
+                 delegates_no,
                  metaepoch_len=5,
                  max_level=2,
                  max_sprouts_no=20,
                  sproutiveness=1,
-                 delegatess_no=5,
                  comparison_multiplier=2.0,
                  population_sizes=(64, 16, 4)):
         super().__init__()
@@ -39,13 +39,13 @@ class RHGS(DriverGen):
         self.max_sprouts_no = max_sprouts_no
         self.comparison_multiplier = comparison_multiplier
         self.sproutiveness = sproutiveness
-        self.delegates_no = delegatess_no
 
         self.mutation_etas = mutation_etas
         self.mutation_rates = mutation_rates
         self.crossover_etas = crossover_etas
         self.crossover_rates = crossover_rates
         self.population_sizes = population_sizes
+        self.delegates_no = delegates_no
 
         self.root = RHGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
@@ -81,8 +81,8 @@ class RHGS(DriverGen):
 
     def population_generator(self):
         while True:
-            self._next_step()
-            yield RHGS.RHGSProxy(self.cost)
+            self.next_step()
+            yield RHGS.RHGSProxy(self.cost, self)
             self.cost = 0
         return self.cost
 
@@ -112,9 +112,9 @@ class RHGS(DriverGen):
             self.driver = owner.driver(population=population,
                                        dims=owner.dims,
                                        fitnesses=owner.fitnesses,
-                                       mutation_etas=owner.mutation_etas[self.level],
+                                       mutation_eta=owner.mutation_etas[self.level],
                                        mutation_rate=owner.mutation_rates[self.level],
-                                       crossover_etas=owner.crossover_etas[self.level],
+                                       crossover_eta=owner.crossover_etas[self.level],
                                        crossover_rate=owner.crossover_rates[self.level])
             self.population = []
             self.sprouts = []
@@ -134,7 +134,8 @@ class RHGS(DriverGen):
                     if not iterations < self.owner.metaepoch_len:
                         break
                 self.population = final_proxy.finalized_population()
-                self.delegates = random.shuffle(final_proxy.nominate_delegates(self.owner.delegates_no))
+                self.delegates = final_proxy.nominate_delegates(self.owner.delegates_no[self.level])
+                random.shuffle(self.delegates)
                 self.update_average_fitnesses()
 
         def trim_sprouts(self):
@@ -164,20 +165,20 @@ class RHGS(DriverGen):
         def release_new_sprouts(self):
             for sprout in self.sprouts:
                 sprout.release_new_sprouts()
-            #TODO: limit na wszystkich sproutach, czy tylko na tych żywych?
+            # TODO: limit na wszystkich sproutach, czy tylko na tych żywych?
             if self.alive and self.level < self.owner.max_level and len(self.sprouts) < self.owner.max_sprouts_no:
                 released_sprouts = 0
                 for delegate in self.delegates:
                     if released_sprouts >= self.owner.sproutiveness or len(self.sprouts) >= self.owner.max_sprouts_no:
                         break
                     candidate_population = population_from_delegate(delegate,
-                                                                    self.owner.population_sizes[self.level+1],
+                                                                    self.owner.population_sizes[self.level + 1],
                                                                     self.owner.dims,
-                                                                    self.owner.mutation_rates[self.level+1],
-                                                                    self.owner.mutation_etas[self.level+1])
+                                                                    self.owner.mutation_rates[self.level + 1],
+                                                                    self.owner.mutation_etas[self.level + 1])
                     if not any([redundant(candidate_population, sprout.population, self.owner.comparison_multiplier)
                                 for sprout in self.sprouts]):
-                        new_sprout = RHGS.Node(self.owner, self.level+1, candidate_population)
+                        new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population)
                         self.sprouts.append(new_sprout)
                         self.owner.nodes.append(new_sprout)
                         released_sprouts += 1
@@ -185,19 +186,29 @@ class RHGS(DriverGen):
 
 def population_from_delegate(delegate, size, dims, rate, eta):
     population = [[x for x in delegate]]
-    for _ in range(size-1):
+    for _ in range(size - 1):
         population.append(drivertools.mutate(delegate, dims, rate, eta))
     return population
 
 
 def redundant(pop_a, pop_b, variances_multiplier=2.0):
+    if pop_a is pop_b:
+        return False
+
     combined = [x for x in pop_a]
     combined_class = [0 for _ in pop_a]
     for x in pop_b:
         combined.append(x)
         combined_class.append(1)
 
-    lda_projection = LDA.fit_transform(combined, combined_class)
+    lda_instance = lda.LDA(n_components=1)
+    lda_projection = None
+    while lda_projection is None:
+        try:
+            lda_projection = [x[0] for x in lda_instance.fit_transform(combined, combined_class)]
+        except ValueError:
+            print("intelowy error")
+
     projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
     projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]
 

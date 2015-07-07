@@ -25,11 +25,17 @@ def mutate(xs, dims, mutation_rate, eta):
 
         if rnd <= 0.5:
             xy = 1.0 - delta1
-            val = 2.0 * rnd + (1.0 - 2.0 * rnd) * (pow(xy, (eta + 1.0)))
+            try:
+                val = 2.0 * rnd + (1.0 - 2.0 * rnd) * (pow(xy, (eta + 1.0)))
+            except FloatingPointError:
+                val = 2.0 * rnd
             delta_q = pow(val, mut_pow) - 1.0
         else:
             xy = 1.0 - delta2
-            val = 2.0 * (1.0 - rnd) + 2.0 * (rnd - 0.5) * (pow(xy, (eta + 1.0)))
+            try:
+                val = 2.0 * (1.0 - rnd) + 2.0 * (rnd - 0.5) * (pow(xy, (eta + 1.0)))
+            except FloatingPointError:
+                val = 2.0 * rnd
             delta_q = 1.0 - (pow(val, mut_pow))
 
         y += delta_q * (ub - lb)
@@ -70,14 +76,20 @@ def crossover(xs, ys, dims, crossover_rate, eta):
 
         # child a
         beta = 1.0 + (2.0 * (y1 - lb) / (y2 - y1 + EPSILON))
-        alpha = 2.0 - pow(beta, -(eta + 1.0))
+        try:
+            alpha = 2.0 - pow(beta, -(eta + 1.0))
+        except FloatingPointError:
+            alpha = 2.0
         beta_q = get_beta_q(rand, alpha, eta)
 
         new_xs[i] = 0.5 * ((y1 + y2) - beta_q * (y2 - y1))
 
         # child b
         beta = 1.0 + (2.0 * (ub - y2) / (y2 - y1 + EPSILON))
-        alpha = 2.0 - pow(beta, -(eta + 1.0))
+        try:
+            alpha = 2.0 - pow(beta, -(eta + 1.0))
+        except FloatingPointError:
+            alpha = 2.0
         beta_q = get_beta_q(rand, alpha, eta)
 
         new_ys[i] = 0.5 * ((y1 + y2) + beta_q * (y2 - y1))

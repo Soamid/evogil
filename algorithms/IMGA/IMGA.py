@@ -62,7 +62,7 @@ class IMGA(DriverGen):
 
         def assimilate_immigrants(self, emigrants):
             raise Exception("IMGA does not support migrations")
-        
+
         def nominate_delegates(self, delegates_no):
             raise Exception("RHGS does not support sprouting")
 
