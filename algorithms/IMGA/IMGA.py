@@ -58,10 +58,13 @@ class IMGA(DriverGen):
             return self.finalized_population()
 
         def deport_emigrants(self, immigrants):
-            raise Exception("HGS does not support migrations")
+            raise Exception("IMGA does not support migrations")
 
         def assimilate_immigrants(self, emigrants):
-            raise Exception("HGS does not support migrations")
+            raise Exception("IMGA does not support migrations")
+        
+        def nominate_delegates(self, delegates_no):
+            raise Exception("RHGS does not support sprouting")
 
     def spread_budget_info(self):
         if self.max_budget:

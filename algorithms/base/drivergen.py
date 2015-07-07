@@ -13,8 +13,9 @@ class DriverGen:
             proxy.cost
             proxy.finalized_population()
             proxy.current_population()
-            proxy.deport_emigrants()
-            proxy.assimilate_immigrants()
+            proxy.deport_emigrants(immigrants)
+            proxy.assimilate_immigrants(emigrants)
+            proxy.nominate_delegates(delegates_no)
         """
         raise NotImplementedError
 
@@ -46,5 +47,14 @@ class DriverGen:
             """
             :param emigrants: Individuals that shall be assimilated into the population, expressed in driver-specific model form.
             :return: Does not return. This Proxy object shall be passed back to the generator.
+            """
+            raise NotImplementedError
+
+        def nominate_delegates(self, delegates_no):
+            """
+            :param delegates_no: number of delegates
+            :return: returns a given number of delegates - best individuals that the population is able to provide.
+            It is extremely important to randomly sample smaller subset when the number of equally good potential delegates
+             is greater than the required number.
             """
             raise NotImplementedError

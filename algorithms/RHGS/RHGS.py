@@ -1,8 +1,13 @@
+import math
 import random
 
 import numpy as np
+from sklearn import lda
 
 from algorithms.base.drivergen import DriverGen
+from algorithms.base import drivertools
+
+LDA = lda.LDA(n_components=1)
 
 
 class RHGS(DriverGen):
@@ -18,8 +23,10 @@ class RHGS(DriverGen):
                  metaepoch_len=5,
                  max_level=2,
                  max_sprouts_no=20,
-                 population_sizes=(64, 16, 4),
-                 scaling_coefficients=(4096.0, 128.0, 1.0)):
+                 sproutiveness=1,
+                 delegatess_no=5,
+                 comparison_multiplier=2.0,
+                 population_sizes=(64, 16, 4)):
         super().__init__()
 
         self.driver = driver
@@ -30,18 +37,54 @@ class RHGS(DriverGen):
         self.metaepoch_len = metaepoch_len
         self.max_level = max_level
         self.max_sprouts_no = max_sprouts_no
+        self.comparison_multiplier = comparison_multiplier
+        self.sproutiveness = sproutiveness
+        self.delegates_no = delegatess_no
 
         self.mutation_etas = mutation_etas
         self.mutation_rates = mutation_rates
         self.crossover_etas = crossover_etas
         self.crossover_rates = crossover_rates
         self.population_sizes = population_sizes
-        self.scaling_ceofficients = scaling_coefficients
 
         self.root = RHGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
 
         self.cost = 0
+
+    class RHGSProxy(DriverGen.Proxy):
+        def __init__(self, cost, driver):
+            super().__init__(cost)
+            self.cost = cost
+            self.driver = driver
+
+        def finalized_population(self):
+            return self.merge_node_populations()
+
+        def current_population(self):
+            return self.merge_node_populations()
+
+        def deport_emigrants(self, immigrants):
+            raise Exception("RHGS does not support migrations")
+
+        def assimilate_immigrants(self, emigrants):
+            raise Exception("RHGS does not support migrations")
+
+        def nominate_delegates(self, delegates_no):
+            raise Exception("RHGS does not support sprouting")
+
+        def merge_node_populations(self):
+            merged_population = []
+            for node in self.driver.nodes:
+                merged_population.extend(node.population)
+            return merged_population
+
+    def population_generator(self):
+        while True:
+            self._next_step()
+            yield RHGS.RHGSProxy(self.cost)
+            self.cost = 0
+        return self.cost
 
     def next_step(self):
         self.run_metaepoch()
@@ -53,17 +96,17 @@ class RHGS(DriverGen):
             node.run_metaepoch()
 
     def trim_sprouts(self):
-        for node in self.nodes:
-            node.run_metaepoch()
+        self.root.trim_sprouts()
 
     def release_new_sprouts(self):
-        pass
+        self.root.release_new_sprouts()
 
     class Node():
         def __init__(self,
                      owner,
                      level,
                      population):
+            self.alive = True
             self.owner = owner
             self.level = level
             self.driver = owner.driver(population=population,
@@ -75,160 +118,93 @@ class RHGS(DriverGen):
                                        crossover_rate=owner.crossover_rates[self.level])
             self.population = []
             self.sprouts = []
+            self.delegates = []
+
+            self.old_average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
+            self.average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
 
         def run_metaepoch(self):
-            iterations = 0
-            final_proxy = None
-            for proxy in self.driver.population_generator():
-                if not iterations < self.owner.metaepoch_len:
-                    break
-                self.owner.cost += proxy.cost
-                final_proxy = proxy
-                iterations += 1
-            self.population = final_proxy.finalized_population()
+            if self.alive:
+                iterations = 0
+                final_proxy = None
+                for proxy in self.driver.population_generator():
+                    self.owner.cost += proxy.cost
+                    final_proxy = proxy
+                    iterations += 1
+                    if not iterations < self.owner.metaepoch_len:
+                        break
+                self.population = final_proxy.finalized_population()
+                self.delegates = random.shuffle(final_proxy.nominate_delegates(self.owner.delegates_no))
+                self.update_average_fitnesses()
+
+        def trim_sprouts(self):
+            for sprout in self.sprouts:
+                sprout.trim_sprouts()
+            self.trim_not_progressing()
+            self.trim_redundant()
+
+        def trim_not_progressing(self):
+            for sprout in [x for x in self.sprouts if x.alive]:
+                if not any(new > old for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
+                    sprout.alive = False
+
+        def update_average_fitnesses(self):
+            self.old_average_fitnesses = self.average_fitnesses
+            fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
+            self.average_fitnesses = np.mean(fitness_values, axis=0)
+
+        def trim_redundant(self):
+            for sprout in [x for x in self.sprouts if x.alive]:
+                for another_sprout in self.sprouts:
+                    if not sprout.alive:
+                        break
+                    if redundant(another_sprout.population, sprout.population, self.owner.comparison_multiplier):
+                        sprout.alive = False
+
+        def release_new_sprouts(self):
+            for sprout in self.sprouts:
+                sprout.release_new_sprouts()
+            #TODO: limit na wszystkich sproutach, czy tylko na tych żywych?
+            if self.alive and self.level < self.owner.max_level and len(self.sprouts) < self.owner.max_sprouts_no:
+                released_sprouts = 0
+                for delegate in self.delegates:
+                    if released_sprouts >= self.owner.sproutiveness or len(self.sprouts) >= self.owner.max_sprouts_no:
+                        break
+                    candidate_population = population_from_delegate(delegate,
+                                                                    self.owner.population_sizes[self.level+1],
+                                                                    self.owner.dims,
+                                                                    self.owner.mutation_rates[self.level+1],
+                                                                    self.owner.mutation_etas[self.level+1])
+                    if not any([redundant(candidate_population, sprout.population, self.owner.comparison_multiplier)
+                                for sprout in self.sprouts]):
+                        new_sprout = RHGS.Node(self.owner, self.level+1, candidate_population)
+                        self.sprouts.append(new_sprout)
+                        self.owner.nodes.append(new_sprout)
+                        released_sprouts += 1
 
 
-def scaled_domain(dims, eta):
-    return [(0, (b - a) / eta) for a, b in dims]
+def population_from_delegate(delegate, size, dims, rate, eta):
+    population = [[x for x in delegate]]
+    for _ in range(size-1):
+        population.append(drivertools.mutate(delegate, dims, rate, eta))
+    return population
 
 
-def code(xs, eta, dims):
-    return [eta * x + a for x, (a, b) in zip(xs, dims)]
+def redundant(pop_a, pop_b, variances_multiplier=2.0):
+    combined = [x for x in pop_a]
+    combined_class = [0 for _ in pop_a]
+    for x in pop_b:
+        combined.append(x)
+        combined_class.append(1)
 
+    lda_projection = LDA.fit_transform(combined, combined_class)
+    projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
+    projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]
 
-def code_all(vectors, eta, dims):
-    return [code(xs, eta, dims) for xs in vectors]
+    mean_a = np.mean(projection_a)
+    mean_b = np.mean(projection_b)
 
+    std_a = np.std(projection_a)
+    std_b = np.std(projection_b)
 
-def decode(xs, eta, dims):
-    return [(x - a) / eta for x, (a, b) in zip(xs, dims)]
-
-
-def decode_all(vectors, eta, dims):
-    return [decode(xs, eta, dims) for xs in vectors]
-
-
-def scale(xs, eta_from, eta_to):
-    return [(eta_from / eta_to) * x for x in xs]
-
-
-def scale_all(vectors, eta_from, eta_to):
-    return [scale(xs, eta_from, eta_to) for xs in vectors]
-
-
-def compare(pop_a, pop_b, variances_multiplier=2.0):
-    mean_pop_a = np.mean(pop_a, axis=0)
-    mean_pop_b = np.mean(pop_b, axis=0)
-
-    diff_vector = mean_pop_b - mean_pop_a
-    len_diff_vector = np.linalg.norm(diff_vector)
-    diff_vector /= len_diff_vector
-
-    projections_a = [np.dot((x - mean_pop_a), diff_vector) for x in pop_a]
-    projections_std_a = np.std(projections_a)
-    projections_b = [np.dot((x - mean_pop_b), diff_vector) for x in pop_b]
-    projections_std_b = np.std(projections_b)
-
-    return (variances_multiplier * projections_std_a + variances_multiplier * projections_std_b) > len_diff_vector
-
-
-def __compare_test():
-    sample_pop_a = [[random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)]
-                    for _ in range(1000)]
-    import matplotlib.pyplot as plt
-    # plt.scatter([x[0] for x in sample_pop_a], [x[1] for x in sample_pop_a], c='b')
-
-    mean_pop_a = np.mean(sample_pop_a, axis=0)
-    plt.scatter([mean_pop_a[0]], [mean_pop_a[1]], c='g')
-    plt.scatter([mean_pop_a[0] + 2 * 0.015], [mean_pop_a[1]], c='g')
-    plt.scatter([mean_pop_a[0] - 2 * 0.015], [mean_pop_a[1]], c='g')
-    plt.scatter([mean_pop_a[0]], [mean_pop_a[1] + 2 * 0.05], c='g')
-    plt.scatter([mean_pop_a[0]], [mean_pop_a[1] - 2 * 0.05], c='g')
-
-    sample_pop_b = [[random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)]
-                    for _ in range(1000)]
-    # plt.scatter([x[0] for x in sample_pop_b], [x[1] for x in sample_pop_b], c='r')
-
-    mean_pop_b = np.mean(sample_pop_b, axis=0)
-    plt.scatter([mean_pop_b[0]], [mean_pop_b[1]], c='g')
-    plt.scatter([mean_pop_b[0] + 2 * 0.04], [mean_pop_b[1]], c='g')
-    plt.scatter([mean_pop_b[0] - 2 * 0.04], [mean_pop_b[1]], c='g')
-    plt.scatter([mean_pop_b[0]], [mean_pop_b[1] + 2 * 0.025], c='g')
-    plt.scatter([mean_pop_b[0]], [mean_pop_b[1] - 2 * 0.025], c='g')
-
-    diff_vector = mean_pop_b - mean_pop_a
-    print(diff_vector)
-    ax = plt.axes()
-    # ax.arrow(mean_pop_a[0], mean_pop_a[1], diff_vector[0],diff_vector[1], head_width=0.0, head_length=0.0, fc='r', ec='r')
-
-    len_diff_vector = np.linalg.norm(diff_vector)
-    diff_vector /= len_diff_vector
-    print(diff_vector)
-    print(diff_vector[0] ** 2 + diff_vector[1] ** 2)
-
-    dots_a = [np.dot((x - mean_pop_a), diff_vector) for x in sample_pop_a]
-    flatted_a = [d * diff_vector + mean_pop_a for d in dots_a]
-    # print(dots_a)
-    # plt.scatter([x[0] for x in flatted_a], [x[1] for x in flatted_a], c='k')
-
-    # for i, x in enumerate(sample_pop_a):
-    # arr = flatted_a[i] - x
-    # ax.arrow(x[0], x[1], arr[0], arr[1], head_width=0.0, head_length=0.0, fc='y', ec='y')
-
-    dots_std_a = np.std(dots_a)
-    print(dots_std_a)
-
-    var_a = mean_pop_a + (2 * dots_std_a * diff_vector)
-    plt.scatter([var_a[0]], [var_a[1]], c='c')
-
-    dots_b = [np.dot((x - mean_pop_b), diff_vector) for x in sample_pop_b]
-    flatted_b = [d * diff_vector + mean_pop_b for d in dots_b]
-    # print(dots_b)
-    # plt.scatter([x[0] for x in flatted_b], [x[1] for x in flatted_b], c='k')
-
-    dots_std_b = np.std(dots_b)
-    print(dots_std_b)
-
-    var_b = mean_pop_b + (-2 * dots_std_b * diff_vector)
-    plt.scatter([var_b[0]], [var_b[1]], c='m')
-
-    print(len_diff_vector)
-    print(2 * dots_std_a + 2 * dots_std_b)
-    effect = (2 * dots_std_a + 2 * dots_std_b) > len_diff_vector
-    print(effect)
-
-    # plt.xlim([0.0, 1.0])
-    # plt.ylim([0.0, 1.0])
-    plt.grid(True)
-    plt.axes().set_aspect('equal', 'datalim')
-    plt.show()
-
-
-def __coding_test():
-    sample_dims = [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)]
-    eta_0 = 4096.0
-    eta_1 = 128.0
-    eta_2 = 1.0
-    print(scaled_domain(sample_dims, eta_0))
-    print(scaled_domain(sample_dims, eta_1))
-    print(scaled_domain(sample_dims, eta_2))
-
-    points = [
-        [random.uniform(a, b) for a, b in sample_dims]
-        for _ in range(1)
-    ]
-    print(points)
-    decoded = decode_all(points, eta_0, sample_dims)
-    print(decoded)
-    coded = code_all(decoded, eta_0, sample_dims)
-    print(coded)
-    a = 13.45123412341234123412341234
-    print(a)
-    a /= 10 ** 25
-    print(a)
-    a *= 10 ** 25
-    print(a)
-
-
-if __name__ == '__main__':
-    __compare_test()
+    return (variances_multiplier * (std_a + std_b)) > math.fabs(mean_a - mean_b)
