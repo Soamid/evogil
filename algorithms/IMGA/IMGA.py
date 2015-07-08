@@ -88,7 +88,7 @@ class IMGA(DriverGen):
         return self.total_cost
 
     def epoch(self):
-        epoch_cost = max([island.epoch(self.epoch_length) for island in self.islands])
+        epoch_cost = sum([island.epoch(self.epoch_length) for island in self.islands])
 
         for i in range(len(self.islands)):
             island = self.islands[i]

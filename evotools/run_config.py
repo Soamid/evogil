@@ -68,13 +68,14 @@ algo_base = {
     },
 
     "RHGS": {
-        "mutation_etas": (15.0, 30.0, 60.0),
-        "crossover_etas": (20.0, 40.0, 80.0),
-        "delegates_no": (6, 2, 1),
+        "mutation_etas": (15.0, 60.0, 150.0),
+        "crossover_etas": (20.0, 80.0, 200.0),
+        "delegates_no": (3, 1, 0),
         "population_sizes": (64, 16, 4),
-        "max_sprouts_no": 20,
+        "max_sprouts_no": 30,
         "sproutiveness": 1,
         "comparison_multiplier": 2.0,
+        "metaepoch_len": 5,
     },
 }
 

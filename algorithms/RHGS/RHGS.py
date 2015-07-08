@@ -87,6 +87,7 @@ class RHGS(DriverGen):
         return self.cost
 
     def next_step(self):
+        print("nodes_no", len(self.nodes), "alive_no", len([x for x in self.nodes if x.alive]))
         self.run_metaepoch()
         self.trim_sprouts()
         self.release_new_sprouts()
@@ -141,12 +142,16 @@ class RHGS(DriverGen):
         def trim_sprouts(self):
             for sprout in self.sprouts:
                 sprout.trim_sprouts()
+            # print("node level", self.level, "sprouts_no", len(self.sprouts), "alive", len([x for x in self.sprouts if x.alive]))
             self.trim_not_progressing()
             self.trim_redundant()
 
         def trim_not_progressing(self):
             for sprout in [x for x in self.sprouts if x.alive]:
-                if not any(new > old for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
+                if not any(old/new > 1.01 for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
+                    print(self.old_average_fitnesses)
+                    print(self.average_fitnesses)
+                    print("!!! zabijam bo brak progessu")
                     sprout.alive = False
 
         def update_average_fitnesses(self):
@@ -156,10 +161,11 @@ class RHGS(DriverGen):
 
         def trim_redundant(self):
             for sprout in [x for x in self.sprouts if x.alive]:
-                for another_sprout in self.sprouts:
+                for another_sprout in self.owner.nodes:
                     if not sprout.alive:
                         break
                     if redundant(another_sprout.population, sprout.population, self.owner.comparison_multiplier):
+                        print("!!! zabijam bo redundantny")
                         sprout.alive = False
 
         def release_new_sprouts(self):
@@ -177,12 +183,14 @@ class RHGS(DriverGen):
                                                                     self.owner.mutation_rates[self.level + 1],
                                                                     self.owner.mutation_etas[self.level + 1])
                     if not any([redundant(candidate_population, sprout.population, self.owner.comparison_multiplier)
-                                for sprout in self.sprouts]):
+                                for sprout in self.owner.nodes]):
                         new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population)
                         self.sprouts.append(new_sprout)
                         self.owner.nodes.append(new_sprout)
                         released_sprouts += 1
-
+                    else:
+                        print("### nie udalo sie sproutowac, bo redundantny")
+                        pass
 
 def population_from_delegate(delegate, size, dims, rate, eta):
     population = [[x for x in delegate]]
@@ -206,8 +214,12 @@ def redundant(pop_a, pop_b, variances_multiplier=2.0):
     while lda_projection is None:
         try:
             lda_projection = [x[0] for x in lda_instance.fit_transform(combined, combined_class)]
-        except ValueError:
-            print("intelowy error")
+        except:
+            print("??? intelowy error!")
+            print(pop_a)
+            print(pop_b)
+            print("intelowy error! ???")
+            return True
 
     projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
     projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]
