@@ -6,6 +6,7 @@ Usage:
   evogil.py list
   evogil.py run <budget> [options]
   evogil.py (stats | statistics) [options]
+  evogil.py rank
   evogil.py summary
   evogil.py pictures [options]
   evogil.py best_fronts
@@ -18,6 +19,8 @@ Commands:
     Returns number of results for each tuple: algorithm, problem, budget.
   stats
     Generates statistics from benchmarks' results.
+  rank
+    Generates report with algorithms ranking.
   pictures
     Some pictures?
   violin
@@ -74,6 +77,7 @@ import evotools.run_parallel
 import evotools.benchmark_results
 import evotools.pictures
 import evotools.best_fronts
+import evotools.ranking
 
 
 # noinspection PyUnusedLocal
@@ -99,6 +103,7 @@ def main_worker(queue, configurer):
         'run':         evotools.run_parallel.run_parallel,
         'statistics':  evotools.stats.statistics,
         'stats':       evotools.stats.statistics,
+        'rank':        evotools.ranking.rank,
         'pictures':    evotools.pictures.pictures_from_stats,
         'best_fronts': evotools.best_fronts.main,
         'violin':      evotools.violin.violin,
