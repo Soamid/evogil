@@ -10,7 +10,7 @@ def rank(args, queue):
     # plot_pareto_fronts()
 
     logger = logging.getLogger(__name__)
-    logger.debug("pictures from stats")
+    logger.debug("ranking")
 
     boot_size = int(args['--bootstrap'])
 

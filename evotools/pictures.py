@@ -4,9 +4,10 @@ from contextlib import suppress
 from pathlib import Path
 
 from evotools import ea_utils
-from evotools.serialization import RunResult
+from evotools.serialization import RunResult, evotools
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
+from evotools import ranking
 import problems.ackley.problem as ackley
 import problems.ZDT1.problem as zdt1
 import problems.ZDT2.problem as zdt2
@@ -36,8 +37,8 @@ OMOPSO_M = '>'
 NSGAIII_M = 'v'
 SMSEMOA_M = '<'
 
-BARE_CL = 'b'  # '0.8'
-IMGA_CL = 'r'  # 0.4'
+BARE_CL = '0.8'
+IMGA_CL = '0.4'
 HGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
@@ -88,6 +89,9 @@ algos_groups_configuration_tres_caballeros = {
     ('SMSEMOA', 'IMGA+SMSEMOA', 'HGS+SMSEMOA'): ('_smsemoa',),
     ('OMOPSO', 'IMGA+OMOPSO', 'HGS+OMOPSO'): ('_omopso',),
 }
+
+problems_order = ['ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6', 'UF7', 'UF8', 'UF9',
+                  'UF10', 'UF11', 'UF12']
 
 algos_groups_configuration = algos_groups_configuration_tres_caballeros
 
@@ -400,3 +404,76 @@ def pictures_from_stats(args, queue):
                             results[key].append(value)
 
     plot_results(results)
+
+
+def plot_results_summary(problems, scoring, selected):
+    for metric_name in scoring:
+        metric_score = scoring[metric_name]
+
+        plt.figure()
+        x_axis = range(len(problems))
+        problem_labels = [p for p in problems_order if p in problems]
+        plt.xticks(x_axis, problem_labels)
+
+        for algo in metric_score:
+            name, lines, marker, color = algos[algo]
+            x_algo = []
+            y_algo = []
+            for x in x_axis:
+                problem = problem_labels[x]
+                if problem in metric_score[algo]:
+                    x_algo.append(x)
+                    y_algo.append(metric_score[algo][problem])
+
+            print(x_algo, metric_score[algo])
+
+            plt.scatter(x_algo, y_algo, c=color, s=60, marker=marker, label=name)
+            if algo in selected:
+                ax = plt.plot(x_algo, y_algo, color=color, label=name)
+                ax[0].set_dashes(lines)
+
+        path = PLOTS_DIR / 'plots_summary' / '{}.pdf'.format(metric_name)
+
+        with suppress(FileExistsError):
+            path.parent.mkdir(parents=True)
+        plt.savefig(str(path))
+        plt.close()
+
+
+def pictures_summary(args, queue):
+    logger = logging.getLogger(__name__)
+    logger.debug("pictures_summary")
+
+    selected = set(args['--selected'].upper().split(','))
+    boot_size = int(args['--bootstrap'])
+
+    logger.debug('Plotting summary with selected algos: ' + ','.join(selected))
+
+    scoring = collections.defaultdict(lambda: collections.defaultdict(dict))
+    problems = set()
+
+    with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
+        for problem_name, problem_mod, algorithms in RunResult.each_result():
+            problems.add(problem_name)
+            problem_score = collections.defaultdict(list)
+            algos = list(algorithms)
+            for algo_name, budgets in algos:
+                max_budget = list(budgets)[-1]
+                for metric_name, metric_name_long, data_process in max_budget["analysis"]:
+                    if metric_name in ranking.best_func:
+                        data_process = list(x() for x in data_process)
+                        data_analysis = yield_analysis(data_process, boot_size)
+
+                        score = data_analysis["btstrpd"]["metrics"]
+
+                        scoring[metric_name][algo_name][problem_name] = score
+                        problem_score[metric_name].append(score)
+
+            for metric_name in scoring:
+                max_score = max(problem_score[metric_name]) + 1
+                for algo_name, _ in algos:
+                    if algo_name in scoring[metric_name]:
+                        scoring[metric_name][algo_name][problem_name] /= max_score
+
+    plot_results_summary(problems, scoring, selected)
+

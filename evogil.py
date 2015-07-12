@@ -9,6 +9,7 @@ Usage:
   evogil.py rank
   evogil.py summary
   evogil.py pictures [options]
+  evogil.py pictures_summary [--selected <algo_name>]
   evogil.py best_fronts
   evogil.py violin [options]
 
@@ -61,6 +62,11 @@ Options:
         [default: 1]
   --renice <increment>
         Renice workers. Works on UNIX & derivatives.
+
+Pictures Summary Options:
+  --selected <algo_name>
+        Select and highlight specified algorithms on plots.
+        [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA]
 """
 
 import logging
@@ -105,6 +111,7 @@ def main_worker(queue, configurer):
         'stats':       evotools.stats.statistics,
         'rank':        evotools.ranking.rank,
         'pictures':    evotools.pictures.pictures_from_stats,
+        'pictures_summary':    evotools.pictures.pictures_summary,
         'best_fronts': evotools.best_fronts.main,
         'violin':      evotools.violin.violin,
         'summary':     evotools.benchmark_results.analyse_results,
