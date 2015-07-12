@@ -7,7 +7,7 @@ from sklearn import lda
 from algorithms.base.drivergen import DriverGen
 from algorithms.base import drivertools
 
-np.seterr(all='raise')
+# np.seterr(all='raise')
 
 
 class RHGS(DriverGen):
@@ -49,6 +49,11 @@ class RHGS(DriverGen):
 
         self.root = RHGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
+        self.level_nodes = {
+            0: [self.root],
+            1: [],
+            2: [],
+        }
 
         self.cost = 0
 
@@ -87,7 +92,7 @@ class RHGS(DriverGen):
         return self.cost
 
     def next_step(self):
-        print("nodes_no", len(self.nodes), "alive_no", len([x for x in self.nodes if x.alive]))
+        # print("nodes_no", len(self.nodes), "alive_no", len([x for x in self.nodes if x.alive]))
         self.run_metaepoch()
         self.trim_sprouts()
         self.release_new_sprouts()
@@ -148,10 +153,10 @@ class RHGS(DriverGen):
 
         def trim_not_progressing(self):
             for sprout in [x for x in self.sprouts if x.alive]:
-                if not any(old/new > 1.01 for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
-                    print(self.old_average_fitnesses)
-                    print(self.average_fitnesses)
-                    print("!!! zabijam bo brak progessu")
+                if not any(new < old for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
+                    # print(self.old_average_fitnesses)
+                    # print(self.average_fitnesses)
+                    # print("!!! zabijam bo brak progessu")
                     sprout.alive = False
 
         def update_average_fitnesses(self):
@@ -161,11 +166,11 @@ class RHGS(DriverGen):
 
         def trim_redundant(self):
             for sprout in [x for x in self.sprouts if x.alive]:
-                for another_sprout in self.owner.nodes:
+                for another_sprout in [x for x in self.owner.level_nodes[sprout.level] if len(x.population) > 0]:
                     if not sprout.alive:
                         break
                     if redundant(another_sprout.population, sprout.population, self.owner.comparison_multiplier):
-                        print("!!! zabijam bo redundantny")
+                        # print("!!! zabijam bo redundantny")
                         sprout.alive = False
 
         def release_new_sprouts(self):
@@ -176,6 +181,7 @@ class RHGS(DriverGen):
                 released_sprouts = 0
                 for delegate in self.delegates:
                     if released_sprouts >= self.owner.sproutiveness or len(self.sprouts) >= self.owner.max_sprouts_no:
+                        # print("przeglem z iloscia zywych", len(self.sprouts), self.owner.max_sprouts_no)
                         break
                     candidate_population = population_from_delegate(delegate,
                                                                     self.owner.population_sizes[self.level + 1],
@@ -183,14 +189,16 @@ class RHGS(DriverGen):
                                                                     self.owner.mutation_rates[self.level + 1],
                                                                     self.owner.mutation_etas[self.level + 1])
                     if not any([redundant(candidate_population, sprout.population, self.owner.comparison_multiplier)
-                                for sprout in self.owner.nodes]):
+                                for sprout in [x for x in self.owner.level_nodes[self.level+1] if len(x.population) > 0]]):
                         new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population)
                         self.sprouts.append(new_sprout)
                         self.owner.nodes.append(new_sprout)
+                        self.owner.level_nodes[self.level + 1].append(new_sprout)
                         released_sprouts += 1
                     else:
-                        print("### nie udalo sie sproutowac, bo redundantny")
+                        # print("### nie udalo sie sproutowac, bo redundantny")
                         pass
+
 
 def population_from_delegate(delegate, size, dims, rate, eta):
     population = [[x for x in delegate]]
@@ -199,7 +207,26 @@ def population_from_delegate(delegate, size, dims, rate, eta):
     return population
 
 
-def redundant(pop_a, pop_b, variances_multiplier=2.0):
+def redundant(pop_a, pop_b, variances_multiplier):
+    if pop_a is pop_b:
+        return False
+
+    mean_pop_a = np.mean(pop_a, axis=0)
+    mean_pop_b = np.mean(pop_b, axis=0)
+
+    diff_vector = mean_pop_b - mean_pop_a
+    len_diff_vector = np.linalg.norm(diff_vector)
+    diff_vector /= len_diff_vector
+
+    projections_a = [np.dot((x - mean_pop_a), diff_vector) for x in pop_a]
+    projections_std_a = np.std(projections_a)
+    projections_b = [np.dot((x - mean_pop_b), diff_vector) for x in pop_b]
+    projections_std_b = np.std(projections_b)
+
+    return (variances_multiplier * projections_std_a + variances_multiplier * projections_std_b) > len_diff_vector
+
+
+def old_redundant(pop_a, pop_b, variances_multiplier=2.0):
     if pop_a is pop_b:
         return False
 
@@ -214,12 +241,12 @@ def redundant(pop_a, pop_b, variances_multiplier=2.0):
     while lda_projection is None:
         try:
             lda_projection = [x[0] for x in lda_instance.fit_transform(combined, combined_class)]
-        except:
-            print("??? intelowy error!")
-            print(pop_a)
-            print(pop_b)
-            print("intelowy error! ???")
-            return True
+        except ValueError:
+            # print("??? intelowy error!")
+            # print(pop_a)
+            # print(pop_b)
+            # print("intelowy error! ???")
+            return False
 
     projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
     projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]

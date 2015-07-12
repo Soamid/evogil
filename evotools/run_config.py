@@ -26,7 +26,6 @@ problems = [
     'ZDT3',
     'ZDT4',
     'ZDT6',
-    'kursawe',
     'UF1',
     'UF2',
     'UF3',
@@ -35,10 +34,7 @@ problems = [
     'UF6',
     'UF7',
     'UF8',
-    'UF9',
-    'UF10',
-    'UF11',
-    'UF12'
+    'UF9'
 ]
 
 metaconfig_populationsize = 100
@@ -68,13 +64,13 @@ algo_base = {
     },
 
     "RHGS": {
-        "mutation_etas": (15.0, 60.0, 150.0),
-        "crossover_etas": (20.0, 80.0, 200.0),
-        "delegates_no": (3, 1, 0),
-        "population_sizes": (64, 16, 4),
+        "mutation_etas": (15.0, 75.0, 375.0),
+        "crossover_etas": (20.0, 100.0, 500.0),
+        "delegates_no": (10, 2, 0),
+        "population_sizes": (60, 12, 4),
         "max_sprouts_no": 30,
-        "sproutiveness": 1,
-        "comparison_multiplier": 2.0,
+        "sproutiveness": 2,
+        "comparison_multiplier": 100.0,
         "metaepoch_len": 5,
     },
 }
