@@ -51,7 +51,7 @@ def hc(f1, g):
     return 1 - math.sqrt(abs(f1_g)) - f1_g * math.sin(10 * math.pi * f1)
 
 
-def is_dominated(y, front):
+def is_non_dominated(y, front):
     for y1 in front:
         if ea_utils.dominates(y1, y):
             return False
@@ -59,7 +59,7 @@ def is_dominated(y, front):
 
 
 def trim_dominated(front):
-    return [Y for Y in front if is_dominated(Y, front)]
+    return [Y for Y in front if is_non_dominated(Y, front)]
 
 
 pareto_set = []
