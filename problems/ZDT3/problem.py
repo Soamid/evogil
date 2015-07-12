@@ -1,5 +1,6 @@
 import functools
 import math
+from evotools import ea_utils
 
 p_no = 150
 emoa_points = [i/(p_no-1) for i in range(p_no)]
@@ -50,6 +51,17 @@ def hc(f1, g):
     return 1 - math.sqrt(abs(f1_g)) - f1_g * math.sin(10 * math.pi * f1)
 
 
+def is_dominated(y, front):
+    for y1 in front:
+        if ea_utils.dominates(y1, y):
+            return False
+    return True
+
+
+def trim_dominated(front):
+    return [Y for Y in front if is_dominated(Y, front)]
+
+
 pareto_set = []
 
 c_pre = [[x for x in emoa_points2],
@@ -65,4 +77,5 @@ emoa_c_analytical = [[c_pre[0][i]
                       if not to_remove[i]]]
 fitnesses, dims, name, pareto_front = emoa_fitnesses(f1c, gc, hc, 30, 'c', emoa_c_analytical)
 
-pareto_front = [[x, y] for x, y in zip(pareto_front[0], pareto_front[1])]
+pareto_front = trim_dominated([[x, y] for x, y in zip(pareto_front[0], pareto_front[1])])
+
