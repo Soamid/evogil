@@ -66,11 +66,11 @@ algo_base = {
     "RHGS": {
         "mutation_etas": (15.0, 75.0, 375.0),
         "crossover_etas": (20.0, 100.0, 500.0),
-        "delegates_no": (10, 2, 0),
-        "population_sizes": (60, 12, 4),
-        "max_sprouts_no": 30,
-        "sproutiveness": 2,
-        "comparison_multiplier": 100.0,
+        "population_sizes": (48, 12, 4),
+        "max_sprouts_no": 10,
+        "sproutiveness": 3,
+        "comparison_multipliers": (1.0, 0.05, 0.01),
+        "sprouting_multiplier": 0.33,
         "metaepoch_len": 5,
     },
 }
@@ -85,7 +85,11 @@ cust_base = {
 
 
 def init_alg___RHGS(algo_config, problem_mod):
+    reference_point = tuple(50.0
+                            for _
+                            in range(len(problem_mod.pareto_front[0])))
     algo_config.update({
+        "reference_point": reference_point,
         "mutation_rates": [1.0 / len(problem_mod.dims) for _ in range(3)],
         "crossover_rates": [0.9 for _ in range(3)],
     })
@@ -113,7 +117,7 @@ def init_alg___OMOPSO(algo_config, problem_mod):
 
 def init_alg___SMSEMOA(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
-    reference_point = tuple(100.0
+    reference_point = tuple(50.0
                             for _
                             in range(len(problem_mod.pareto_front[0])))
     algo_config.update({

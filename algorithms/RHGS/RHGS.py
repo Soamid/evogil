@@ -1,11 +1,10 @@
-import math
 import random
 
 import numpy as np
-from sklearn import lda
 
 from algorithms.base.drivergen import DriverGen
 from algorithms.base import drivertools
+from algorithms.base.hv import HyperVolume
 
 # np.seterr(all='raise')
 
@@ -20,24 +19,31 @@ class RHGS(DriverGen):
                  crossover_etas,
                  mutation_rates,
                  crossover_rates,
-                 delegates_no,
+                 reference_point,
                  metaepoch_len=5,
                  max_level=2,
                  max_sprouts_no=20,
                  sproutiveness=1,
-                 comparison_multiplier=2.0,
+                 comparison_multipliers=(1.0, 0.1, 0.01),
+                 sprouting_multiplier=0.33,
                  population_sizes=(64, 16, 4)):
         super().__init__()
 
         self.driver = driver
 
         self.dims = dims
+        self.reference_point = reference_point
         self.fitnesses = fitnesses
+
+        corner_a = np.array([x for x, _ in dims])
+        corner_b = np.array([x for _, x in dims])
+        corner_dist = np.linalg.norm(corner_a - corner_b)
+        self.min_dists = [x*corner_dist for x in comparison_multipliers]
+        self.sprouting_multiplier = sprouting_multiplier
 
         self.metaepoch_len = metaepoch_len
         self.max_level = max_level
         self.max_sprouts_no = max_sprouts_no
-        self.comparison_multiplier = comparison_multiplier
         self.sproutiveness = sproutiveness
 
         self.mutation_etas = mutation_etas
@@ -45,7 +51,6 @@ class RHGS(DriverGen):
         self.crossover_etas = crossover_etas
         self.crossover_rates = crossover_rates
         self.population_sizes = population_sizes
-        self.delegates_no = delegates_no
 
         self.root = RHGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
@@ -75,7 +80,7 @@ class RHGS(DriverGen):
         def assimilate_immigrants(self, emigrants):
             raise Exception("RHGS does not support migrations")
 
-        def nominate_delegates(self, delegates_no):
+        def nominate_delegates(self):
             raise Exception("RHGS does not support sprouting")
 
         def merge_node_populations(self):
@@ -85,6 +90,8 @@ class RHGS(DriverGen):
             return merged_population
 
     def population_generator(self):
+        for _ in range(20):
+            self.root.run_metaepoch()
         while True:
             self.next_step()
             yield RHGS.RHGSProxy(self.cost, self)
@@ -93,6 +100,9 @@ class RHGS(DriverGen):
 
     def next_step(self):
         # print("nodes_no", len(self.nodes), "alive_no", len([x for x in self.nodes if x.alive]))
+        print("nodes:", len(self.nodes), len([x for x in self.nodes if x.alive]),
+              "   one:", len(self.level_nodes[1]), len([x for x in self.level_nodes[1] if x.alive]),
+              "   two:", len(self.level_nodes[2]), len([x for x in self.level_nodes[2] if x.alive]))
         self.run_metaepoch()
         self.trim_sprouts()
         self.release_new_sprouts()
@@ -102,7 +112,36 @@ class RHGS(DriverGen):
             node.run_metaepoch()
 
     def trim_sprouts(self):
-        self.root.trim_sprouts()
+        self.trim_all(self.level_nodes[2])
+        self.trim_all(self.level_nodes[1])
+
+    def trim_all(self, nodes):
+        self.trim_not_progressing(nodes)
+        self.trim_redundant(nodes)
+
+    def trim_not_progressing(self, nodes):
+        for sprout in [x for x in nodes if x.alive]:
+            if not sprout.hypervolume > sprout.old_hypervolume:
+            # if not any(new < old for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
+            #     # print(self.old_average_fitnesses)
+            #     # print(self.average_fitnesses)
+                print("!!! zabijam bo brak progressu")
+                sprout.alive = False
+
+    def trim_redundant(self, nodes):
+        alive = [x for x in nodes if x.alive]
+        processed = []
+        dead = [x for x in nodes if not x.alive]
+        for sprout in alive:
+            to_compare = [x for x in dead]
+            to_compare.extend(processed)
+            for another_sprout in to_compare:
+                if not sprout.alive:
+                    break
+                if redundant(another_sprout.population, sprout.population, self.min_dists[sprout.level]):
+                    print("!!! zabijam bo redundantny")
+                    sprout.alive = False
+            processed.append(sprout)
 
     def release_new_sprouts(self):
         self.root.release_new_sprouts()
@@ -129,6 +168,9 @@ class RHGS(DriverGen):
             self.old_average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
             self.average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
 
+            self.old_hypervolume = float('-inf')
+            self.hypervolume = float('-inf')
+
         def run_metaepoch(self):
             if self.alive:
                 iterations = 0
@@ -140,55 +182,38 @@ class RHGS(DriverGen):
                     if not iterations < self.owner.metaepoch_len:
                         break
                 self.population = final_proxy.finalized_population()
-                self.delegates = final_proxy.nominate_delegates(self.owner.delegates_no[self.level])
+                self.delegates = final_proxy.nominate_delegates()
                 random.shuffle(self.delegates)
-                self.update_average_fitnesses()
-
-        def trim_sprouts(self):
-            for sprout in self.sprouts:
-                sprout.trim_sprouts()
-            # print("node level", self.level, "sprouts_no", len(self.sprouts), "alive", len([x for x in self.sprouts if x.alive]))
-            self.trim_not_progressing()
-            self.trim_redundant()
-
-        def trim_not_progressing(self):
-            for sprout in [x for x in self.sprouts if x.alive]:
-                if not any(new < old for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
-                    # print(self.old_average_fitnesses)
-                    # print(self.average_fitnesses)
-                    # print("!!! zabijam bo brak progessu")
-                    sprout.alive = False
+                # self.update_average_fitnesses()
+                self.update_dominated_hypervolume()
 
         def update_average_fitnesses(self):
             self.old_average_fitnesses = self.average_fitnesses
             fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
             self.average_fitnesses = np.mean(fitness_values, axis=0)
 
-        def trim_redundant(self):
-            for sprout in [x for x in self.sprouts if x.alive]:
-                for another_sprout in [x for x in self.owner.level_nodes[sprout.level] if len(x.population) > 0]:
-                    if not sprout.alive:
-                        break
-                    if redundant(another_sprout.population, sprout.population, self.owner.comparison_multiplier):
-                        # print("!!! zabijam bo redundantny")
-                        sprout.alive = False
+        def update_dominated_hypervolume(self):
+            self.old_hypervolume = self.hypervolume
+            fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
+            hv = HyperVolume(self.owner.reference_point)
+            self.hypervolume = hv.compute(fitness_values)
 
         def release_new_sprouts(self):
             for sprout in self.sprouts:
                 sprout.release_new_sprouts()
             # TODO: limit na wszystkich sproutach, czy tylko na tych żywych?
-            if self.alive and self.level < self.owner.max_level and len(self.sprouts) < self.owner.max_sprouts_no:
+            if self.alive and self.level < self.owner.max_level and len([x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
                 released_sprouts = 0
                 for delegate in self.delegates:
-                    if released_sprouts >= self.owner.sproutiveness or len(self.sprouts) >= self.owner.max_sprouts_no:
-                        # print("przeglem z iloscia zywych", len(self.sprouts), self.owner.max_sprouts_no)
+                    if released_sprouts >= self.owner.sproutiveness or len([x for x in self.sprouts if x.alive]) >= self.owner.max_sprouts_no:
+                        # print("przeglem z iloscia zywych")
                         break
                     candidate_population = population_from_delegate(delegate,
                                                                     self.owner.population_sizes[self.level + 1],
                                                                     self.owner.dims,
                                                                     self.owner.mutation_rates[self.level + 1],
                                                                     self.owner.mutation_etas[self.level + 1])
-                    if not any([redundant(candidate_population, sprout.population, self.owner.comparison_multiplier)
+                    if not any([redundant(candidate_population, sprout.population, self.owner.min_dists[self.level + 1])
                                 for sprout in [x for x in self.owner.level_nodes[self.level+1] if len(x.population) > 0]]):
                         new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population)
                         self.sprouts.append(new_sprout)
@@ -207,54 +232,9 @@ def population_from_delegate(delegate, size, dims, rate, eta):
     return population
 
 
-def redundant(pop_a, pop_b, variances_multiplier):
-    if pop_a is pop_b:
-        return False
-
+def redundant(pop_a, pop_b, min_dist):
     mean_pop_a = np.mean(pop_a, axis=0)
     mean_pop_b = np.mean(pop_b, axis=0)
 
-    diff_vector = mean_pop_b - mean_pop_a
-    len_diff_vector = np.linalg.norm(diff_vector)
-    diff_vector /= len_diff_vector
-
-    projections_a = [np.dot((x - mean_pop_a), diff_vector) for x in pop_a]
-    projections_std_a = np.std(projections_a)
-    projections_b = [np.dot((x - mean_pop_b), diff_vector) for x in pop_b]
-    projections_std_b = np.std(projections_b)
-
-    return (variances_multiplier * projections_std_a + variances_multiplier * projections_std_b) > len_diff_vector
-
-
-def old_redundant(pop_a, pop_b, variances_multiplier=2.0):
-    if pop_a is pop_b:
-        return False
-
-    combined = [x for x in pop_a]
-    combined_class = [0 for _ in pop_a]
-    for x in pop_b:
-        combined.append(x)
-        combined_class.append(1)
-
-    lda_instance = lda.LDA(n_components=1)
-    lda_projection = None
-    while lda_projection is None:
-        try:
-            lda_projection = [x[0] for x in lda_instance.fit_transform(combined, combined_class)]
-        except ValueError:
-            # print("??? intelowy error!")
-            # print(pop_a)
-            # print(pop_b)
-            # print("intelowy error! ???")
-            return False
-
-    projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
-    projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]
-
-    mean_a = np.mean(projection_a)
-    mean_b = np.mean(projection_b)
-
-    std_a = np.std(projection_a)
-    std_b = np.std(projection_b)
-
-    return (variances_multiplier * (std_a + std_b)) > math.fabs(mean_a - mean_b)
+    dist = np.linalg.norm(mean_pop_a - mean_pop_b)
+    return dist < min_dist

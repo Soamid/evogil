@@ -50,11 +50,8 @@ class DriverGen:
             """
             raise NotImplementedError
 
-        def nominate_delegates(self, delegates_no):
+        def nominate_delegates(self):
             """
-            :param delegates_no: number of delegates
-            :return: returns a given number of delegates - best individuals that the population is able to provide.
-            It is extremely important to randomly sample smaller subset when the number of equally good potential delegates
-             is greater than the required number.
+            :return: returns a reasonable number of delegates - best individuals that the population is able to provide.
             """
             raise NotImplementedError

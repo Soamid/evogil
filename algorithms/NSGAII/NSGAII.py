@@ -54,11 +54,9 @@ class NSGAII(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)
 
-        def nominate_delegates(self, delegates_no):
+        def nominate_delegates(self):
             self.driver.finish()
-            return [x.v for x in
-                    sorted(self.driver.individuals,
-                           key=lambda ind: self.driver.fitness[ind])[:delegates_no]]
+            return [x.v for x in self.driver.front[1]]
 
     def __init__(self,
                  population,

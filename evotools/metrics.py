@@ -48,7 +48,7 @@ def non_domination_ratio(solution, not_dominated_solution, pareto):
 #im wiekszy tym lepszy, jak duzy hipervolume zdominowany, zbieznosc i pokrycie
 def hypervolume(solution, not_dominated_solution, pareto):
     dims = len(pareto[0])
-    reference_point = [100.0 for _ in range(dims)]
+    reference_point = [50.0 for _ in range(dims)]
     #TODO kij wie jaki powinien byc -.-
     hv_instance = hv.HyperVolume(reference_point)
     return hv_instance.compute(not_dominated_solution)
