@@ -38,7 +38,7 @@ class NSGAII(DriverGen):
         def current_population(self):
             return [x.v for x in self.individuals]
 
-        def deport_emigrants(self, immigrants):
+        def deport_emigrants(self, immigrants, remove=True):
             immigrants_cp = list(immigrants)
             to_remove = []
 
@@ -47,9 +47,12 @@ class NSGAII(DriverGen):
                     to_remove.append(p)
                     immigrants_cp.remove(p.v)
 
-            for p in to_remove:
-                self.individuals.remove(p)
-            return to_remove
+            if remove:
+                for p in to_remove:
+                    self.individuals.remove(p)
+                return to_remove
+            else:
+                return [NSGAII.Individual([vec for vec in x.v]) for x in to_remove]
 
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)

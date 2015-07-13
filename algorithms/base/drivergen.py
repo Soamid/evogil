@@ -35,7 +35,7 @@ class DriverGen:
             """
             raise NotImplementedError
 
-        def deport_emigrants(self, immigrants):
+        def deport_emigrants(self, immigrants, remove=True):
             """
             :param immigrants: Individuals that shall be removed from the population.
             :return: Immigrants objects removed from the population. Objects should be equal to immigrants,

@@ -67,10 +67,10 @@ algo_base = {
         "mutation_etas": (15.0, 75.0, 375.0),
         "crossover_etas": (20.0, 100.0, 500.0),
         "population_sizes": (48, 12, 4),
-        "max_sprouts_no": 10,
+        "max_sprouts_no": 30,
         "sproutiveness": 3,
-        "comparison_multipliers": (1.0, 0.05, 0.01),
-        "sprouting_multiplier": 0.33,
+        "max_sprouts_trials": 30,
+        "comparison_multipliers": (1.0, 0.04, 0.01),
         "metaepoch_len": 5,
     },
 }
