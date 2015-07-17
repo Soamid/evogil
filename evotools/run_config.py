@@ -34,10 +34,12 @@ problems = [
     'UF6',
     'UF7',
     'UF8',
-    'UF9'
+    'UF9',
+    'EWA1',
+    'EWA2'
 ]
 
-metaconfig_populationsize = 100
+metaconfig_populationsize = 50
 metaconfig_budgets = list(range(500, 9500, 1000))
 
 
@@ -64,13 +66,13 @@ algo_base = {
     },
 
     "RHGS": {
-        "mutation_etas": (15.0, 75.0, 375.0),
-        "crossover_etas": (20.0, 100.0, 500.0),
-        "population_sizes": (48, 12, 4),
+        "mutation_etas": (10.0, 30.0, 90.0),
+        "crossover_etas": (15.0, 45.0, 135.0),
+        "population_sizes": (50, 16, 4),
         "max_sprouts_no": 30,
         "sproutiveness": 3,
         "max_sprouts_trials": 30,
-        "comparison_multipliers": (1.0, 0.04, 0.01),
+        "comparison_multipliers": (1.0, 0.30, 0.04),
         "metaepoch_len": 5,
     },
 }

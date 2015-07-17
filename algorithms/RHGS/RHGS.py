@@ -46,7 +46,6 @@ class RHGS(DriverGen):
         self.max_level = max_level
         self.max_sprouts_no = max_sprouts_no
         self.sproutiveness = sproutiveness
-        self.max_sprouts_trials = max_sprouts_trials
 
         self.mutation_etas = mutation_etas
         self.mutation_rates = mutation_rates
@@ -63,6 +62,7 @@ class RHGS(DriverGen):
         }
 
         self.cost = 0
+        self.acc_cost = 0
 
     class RHGSProxy(DriverGen.Proxy):
         def __init__(self, cost, driver):
@@ -94,18 +94,21 @@ class RHGS(DriverGen):
     def population_generator(self):
         # for _ in range(20):
         #     self.root.run_metaepoch()
+        self.acc_cost = 0
         while True:
+            print("cost", self.acc_cost)
             self.next_step()
             yield RHGS.RHGSProxy(self.cost, self)
+            self.acc_cost += self.cost
             self.cost = 0
-        return self.cost
+        return self.acc_cost
 
     def next_step(self):
         # print("nodes_no", len(self.nodes), "alive_no", len([x for x in self.nodes if x.alive]))
         print("nodes:", len(self.nodes), len([x for x in self.nodes if x.alive]),
-              "   zer:", len(self.level_nodes[0]), len([x for x in self.level_nodes[0] if x.alive]), len([x for x in self.level_nodes[0] if x.ripe]),
-              "   one:", len(self.level_nodes[1]), len([x for x in self.level_nodes[1] if x.alive]), len([x for x in self.level_nodes[1] if x.ripe]),
-              "   two:", len(self.level_nodes[2]), len([x for x in self.level_nodes[2] if x.alive]), len([x for x in self.level_nodes[2] if x.ripe]))
+              "   zer:", len(self.level_nodes[0]), len([x for x in self.level_nodes[0] if x.alive]),# len([x for x in self.level_nodes[0] if x.ripe]),
+              "   one:", len(self.level_nodes[1]), len([x for x in self.level_nodes[1] if x.alive]),# len([x for x in self.level_nodes[1] if x.ripe]),
+              "   two:", len(self.level_nodes[2]), len([x for x in self.level_nodes[2] if x.alive]))#, len([x for x in self.level_nodes[2] if x.ripe]))
 
         self.run_metaepoch()
 
@@ -114,9 +117,16 @@ class RHGS(DriverGen):
         # _plot_node(self.root, 'r', self.dims)
         # _plot_node(self.root, 'b', self.dims, delegates=True)
         # plt.show()
-
+        #
         # i = 0
         # for node in self.level_nodes[1]:
+        #     _plot_node(node, colors[i], self.dims)
+        #     i += 1
+        #     i %= len(colors)
+        # plt.show()
+        #
+        # i = 0
+        # for node in self.level_nodes[2]:
         #     _plot_node(node, colors[i], self.dims)
         #     i += 1
         #     i %= len(colors)
@@ -126,6 +136,13 @@ class RHGS(DriverGen):
 
         # i = 0
         # for node in self.level_nodes[1]:
+        #     _plot_node(node, colors[i], self.dims)
+        #     i += 1
+        #     i %= len(colors)
+        # plt.show()
+        #
+        # i = 0
+        # for node in self.level_nodes[2]:
         #     _plot_node(node, colors[i], self.dims)
         #     i += 1
         #     i %= len(colors)
@@ -144,7 +161,7 @@ class RHGS(DriverGen):
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
         self.trim_all(self.level_nodes[1])
-        self.trim_all(self.level_nodes[0])
+        # self.trim_all(self.level_nodes[0])
 
     def trim_all(self, nodes):
         self.trim_not_progressing(nodes)
@@ -152,23 +169,10 @@ class RHGS(DriverGen):
 
     def trim_not_progressing(self, nodes):
         for sprout in [x for x in nodes if x.alive]:
-            if sprout.old_hypervolume is not None and ((sprout.hypervolume/(sprout.old_hypervolume + EPSILON)) - 1.0) < 0.001:
-            # if not sprout.hypervolume > sprout.old_hypervolume:
-            # if not any(new < old for new, old in zip(self.average_fitnesses, self.old_average_fitnesses)):
-            #     # print(self.old_average_fitnesses)
-            #     # print(self.average_fitnesses)
-            #     print("!!! zabijam bo brak progressu") TODO print
+            # if sprout.old_hypervolume is not None and ((sprout.hypervolume/(sprout.old_hypervolume + EPSILON)) - 1.0) < 0.0001:
+            if not sprout.hypervolume > sprout.old_hypervolume:
                 sprout.alive = False
-                sprout.ripe = True
-                sprout.sprouts_trials = 0
                 sprout.center = np.mean(sprout.population, axis=0)
-                if not (sprout.parent is None):
-                    delegates = sprout.delegates
-                    emmigrants = sprout.final_proxy.deport_emigrants(delegates)
-                    sprout.parent.final_proxy.assimilate_immigrants(emmigrants)
-                    sprout.parent.alive = True
-                    sprout.parent.ripe = False
-                    # print("ozywiony", sprout.parent.level)  TODO print
 
     def trim_redundant(self, nodes):
         alive = [x for x in nodes if x.alive]
@@ -181,17 +185,16 @@ class RHGS(DriverGen):
             for another_sprout in to_compare:
                 if not sprout.alive:
                     break
-                if another_sprout.alive or ((not another_sprout.alive) and another_sprout.ripe):
-                    if redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
-                            # print("!!! zabijam bo redundantny")  TODO print
-                            # if sprout.level == 1:
-                            #     _plot_node(sprout, 'r', self.dims)
-                            #     _plot_node(another_sprout, 'b', self.dims)
-                        sprout.alive = False
-                        # else:
-                            # if sprout.level == 1:
-                            #     _plot_node(sprout, 'g', self.dims)
-                            #     _plot_node(another_sprout, 'b', self.dims)
+                if redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
+                        # print("!!! zabijam bo redundantny")  TODO print
+                        # if sprout.level == 1:
+                        #     _plot_node(sprout, 'r', self.dims)
+                        #     _plot_node(another_sprout, 'b', self.dims)
+                    sprout.alive = False
+                    # else:
+                        # if sprout.level == 1:
+                        #     _plot_node(sprout, 'g', self.dims)
+                        #     _plot_node(another_sprout, 'b', self.dims)
                     # plt.show()
             processed.append(sprout)
 
@@ -221,19 +224,13 @@ class RHGS(DriverGen):
             self.old_average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
             self.average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
 
-            self.relative_hypervolume = None
             self.old_hypervolume = None
             self.hypervolume = float('-inf')
 
-            self.ripe = False
             self.parent = parent
             self.final_proxy = None
-            self.sprout_trials = 0
 
         def run_metaepoch(self):
-            if (self.sprout_trials == self.owner.max_sprouts_trials) and (not self.level == 2) and ((not self.alive) and self.ripe) and len([x for x in self.sprouts if x.alive]) == 0:
-                self.alive = True
-                self.ripe = False
             if self.alive:
                 iterations = 0
                 self.final_proxy = None
@@ -258,12 +255,11 @@ class RHGS(DriverGen):
             self.old_hypervolume = self.hypervolume
             fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
             hv = HyperVolume(self.owner.reference_point)
-            if self.relative_hypervolume is None:
-                self.relative_hypervolume = hv.compute(fitness_values)
-            self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
+            self.hypervolume = hv.compute(fitness_values)
 
             if self.level == 0:
                 if self.old_hypervolume is not None:
+                    pass
                     print((self.hypervolume/(self.old_hypervolume + EPSILON)) - 1.0)
                 # print(self.hypervolume)
 
@@ -271,23 +267,20 @@ class RHGS(DriverGen):
             for sprout in self.sprouts:
                 sprout.release_new_sprouts()
             # TODO: limit na wszystkich sproutach, czy tylko na tych żywych?
-            if self.ripe and self.sprout_trials < self.owner.max_sprouts_trials and self.level < self.owner.max_level and len([x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
+            if self.level < self.owner.max_level and len([x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
                 released_sprouts = 0
                 for delegate in self.delegates:
-                    self.sprout_trials += 1
                     if released_sprouts >= self.owner.sproutiveness or len([x for x in self.sprouts if x.alive]) >= self.owner.max_sprouts_no:
-                        # print("przeglem z iloscia zywych")
                         break
 
                     if not any([redundant([delegate], [sprout.center], self.owner.min_dists[self.level + 1])
-                                for sprout in [x for x in self.owner.level_nodes[self.level+1]
-                                               if len(x.population) > 0] if sprout.alive or ((not sprout.alive) and sprout.ripe)]):
+                                for sprout in [x for x in self.owner.level_nodes[self.level+1] if len(x.population) > 0]]):
 
                         candidate_population = population_from_delegate(delegate,
                                                 self.owner.population_sizes[self.level + 1],
                                                 self.owner.dims,
                                                 self.owner.mutation_rates[self.level + 1],
-                                                self.owner.mutation_etas[self.level + 1]/2.0)
+                                                self.owner.mutation_etas[self.level + 1]) #TODO: more mutation
 
                         new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population, self)
                         self.sprouts.append(new_sprout)
