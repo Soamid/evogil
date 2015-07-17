@@ -66,13 +66,13 @@ algo_base = {
     },
 
     "RHGS": {
-        "mutation_etas": (10.0, 30.0, 90.0),
-        "crossover_etas": (15.0, 45.0, 135.0),
+        "mutation_etas": (10.0, 2*30.0, 2*90.0),
+        "crossover_etas": (15.0, 2*45.0, 2*135.0),
         "population_sizes": (50, 16, 4),
-        "max_sprouts_no": 30,
+        "comparison_multipliers": (1.0, 0.10, 0.02),
+        "mantissa_bits": (4, 8, 16),
+        "max_sprouts_no": 4,
         "sproutiveness": 3,
-        "max_sprouts_trials": 30,
-        "comparison_multipliers": (1.0, 0.30, 0.04),
         "metaepoch_len": 5,
     },
 }
@@ -133,8 +133,8 @@ def init_alg___IMGA(algo_config, problem_mod):
 
 def standard_variance(algo_config, problem_mod):
     algo_config.update({
-        "mutation_eta": 20.0,
-        "crossover_eta": 30.0,
+        "mutation_eta": 10.0,
+        "crossover_eta": 15.0,
         "mutation_rate": 1.0 / len(problem_mod.dims),
         "crossover_rate": 0.9,
     })

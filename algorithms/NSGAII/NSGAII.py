@@ -1,5 +1,5 @@
 from algorithms.base.drivergen import DriverGen
-from algorithms.base.drivertools import rank, mutate, crossover
+from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'
 
@@ -69,7 +69,9 @@ class NSGAII(DriverGen):
                  mutation_eta,
                  crossover_eta,
                  mutation_rate,
-                 crossover_rate):
+                 crossover_rate,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
 
         self.dims = dims
@@ -84,10 +86,15 @@ class NSGAII(DriverGen):
         self.mating_size_c = mating_population_size
         self.generation_counter = 0
 
+        self.trim_function = trim_function
+        self.fitness_archive = fitness_archive
+
         self.population_size = 0
         self.individuals = []
         self.mating_size = 0
-        self.population = population
+        self.population = [self.trim_function(x) for x in population]
+
+        # self.archive_hits = 0 #TODO: REMOVE
 
         self._calculate_objectives()
 
@@ -116,9 +123,6 @@ class NSGAII(DriverGen):
         self._environmental_selection()
         return self.cost
 
-    def get_indivs_inorder(self):
-        return rank(self.population, self.calculate_objectives)
-
     def finish(self):
         self._calculate_objectives()
         self._nd_sort()
@@ -140,12 +144,16 @@ class NSGAII(DriverGen):
     def _calculate_objectives(self):
         for ind in self.individuals:
             if ind.objectives is None:
-                self.cost += 1
-                ind.objectives = {objective: objective(ind.v) for objective in self.objectives}
-
-    def calculate_objectives(self, ind):
-        self.cost += 1
-        return [objective(ind) for objective in self.objectives]
+                if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+                    # self.archive_hits += 1 #TODO: REMOVE
+                    # print("trafione: ", self.archive_hits) #TODO: REMOVE
+                    fitnesses = self.fitness_archive[ind.v]
+                else:
+                    self.cost += 1
+                    fitnesses = [objective(ind.v) for objective in self.objectives]
+                    if self.fitness_archive is not None:
+                        self.fitness_archive[ind.v] = fitnesses
+                ind.objectives = {objective: fitness for objective, fitness in zip(self.objectives, fitnesses)}
 
     def _nd_sort(self):
         self.dominated_by = collections.defaultdict(set)

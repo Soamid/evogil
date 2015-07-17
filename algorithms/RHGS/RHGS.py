@@ -1,13 +1,13 @@
+import collections
 import random
 
-import matplotlib.pyplot as plt
+import floatextras
 import numpy as np
 
 from algorithms.base.drivergen import DriverGen
 from algorithms.base import drivertools
 from algorithms.base.hv import HyperVolume
 
-# np.seterr(all='raise')
 EPSILON = np.finfo(float).eps
 
 
@@ -22,7 +22,7 @@ class RHGS(DriverGen):
                  mutation_rates,
                  crossover_rates,
                  reference_point,
-                 max_sprouts_trials,
+                 mantissa_bits,
                  metaepoch_len=5,
                  max_level=2,
                  max_sprouts_no=20,
@@ -52,6 +52,9 @@ class RHGS(DriverGen):
         self.crossover_etas = crossover_etas
         self.crossover_rates = crossover_rates
         self.population_sizes = population_sizes
+
+        self.mantissa_bits = mantissa_bits
+        self.global_fitness_archive = ResultArchive()
 
         self.root = RHGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
@@ -92,8 +95,6 @@ class RHGS(DriverGen):
             return merged_population
 
     def population_generator(self):
-        # for _ in range(20):
-        #     self.root.run_metaepoch()
         self.acc_cost = 0
         while True:
             print("cost", self.acc_cost)
@@ -216,7 +217,9 @@ class RHGS(DriverGen):
                                        mutation_eta=owner.mutation_etas[self.level],
                                        mutation_rate=owner.mutation_rates[self.level],
                                        crossover_eta=owner.crossover_etas[self.level],
-                                       crossover_rate=owner.crossover_rates[self.level])
+                                       crossover_rate=owner.crossover_rates[self.level],
+                                       fitness_archive=self.owner.global_fitness_archive,
+                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[self.level]))
             self.population = []
             self.sprouts = []
             self.delegates = []
@@ -305,6 +308,48 @@ def redundant(pop_a, pop_b, min_dist):
 
     dist = np.linalg.norm(mean_pop_a - mean_pop_b)
     return dist < min_dist
+
+
+def trim_vector(vector, bits_no):
+    return [trim_mantissa(x, bits_no) for x in vector]
+
+
+def trim_mantissa(value, bits_no):
+    sign, digits, exponent = floatextras.as_tuple(value)
+    digits = tuple([(d if i < bits_no else 0) for i, d in enumerate(digits)])
+    return floatextras.from_tuple((sign, digits, exponent))
+
+
+class TransformedDict(collections.MutableMapping):
+    """A dictionary that applies an arbitrary key-altering
+       function before accessing the keys"""
+
+    def __init__(self, *args, **kwargs):
+        self.store = dict()
+        self.update(dict(*args, **kwargs))  # use the free update to set keys
+
+    def __getitem__(self, key):
+        return self.store[self.__keytransform__(key)]
+
+    def __setitem__(self, key, value):
+        self.store[self.__keytransform__(key)] = value
+
+    def __delitem__(self, key):
+        del self.store[self.__keytransform__(key)]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+
+
+class ResultArchive(TransformedDict):
+    def __keytransform__(self, key):
+        return tuple(key)
 
 
 import matplotlib.pyplot as plt
