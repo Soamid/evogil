@@ -118,6 +118,7 @@ class RHGS(DriverGen):
         self.run_metaepoch()
         self.trim_sprouts()
         self.release_new_sprouts()
+        self.stop_sprouting()
 
     def run_metaepoch(self):
         for node in self.level_nodes[2]:
@@ -135,6 +136,10 @@ class RHGS(DriverGen):
         self.trim_not_progressing(nodes)
         self.trim_redundant(nodes)
 
+    def stop_sprouting(self):
+        self.stop_dead_sprouting(self.level_nodes[2])
+        self.stop_dead_sprouting(self.level_nodes[1])
+
     def trim_not_progressing(self, nodes):
         for sprout in [x for x in nodes if x.alive]:
             if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) \
@@ -151,6 +156,7 @@ class RHGS(DriverGen):
         alive = [x for x in nodes if x.alive]
         processed = []
         dead = [x for x in nodes if not x.alive]
+
         for sprout in alive:
             to_compare = [x for x in dead]
             to_compare.extend(processed)
@@ -165,6 +171,10 @@ class RHGS(DriverGen):
                     print("   KILL REDUNDANT")
             processed.append(sprout)
 
+    def stop_dead_sprouting(self, nodes):
+        for dead_sprout in [x for x in nodes if not x.alive]:
+            dead_sprout.able_to_sprout = False
+
     def release_new_sprouts(self):
         self.root.release_new_sprouts()
 
@@ -175,6 +185,7 @@ class RHGS(DriverGen):
                      population):
             self.alive = True
             self.ripe = False
+            self.able_to_sprout = True
             self.owner = owner
             self.level = level
             self.driver = owner.driver(population=population,
@@ -225,7 +236,7 @@ class RHGS(DriverGen):
                 self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
 
         def release_new_sprouts(self):
-            if True:
+            if self.able_to_sprout:
                 for sprout in self.sprouts:
                     sprout.release_new_sprouts()
                 if self.level < self.owner.max_level and len(
