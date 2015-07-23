@@ -23,6 +23,7 @@ class RHGS(DriverGen):
                  crossover_rates,
                  reference_point,
                  mantissa_bits,
+                 min_progress_ratio,
                  metaepoch_len=5,
                  max_level=2,
                  max_sprouts_no=20,
@@ -40,12 +41,13 @@ class RHGS(DriverGen):
         corner_a = np.array([x for x, _ in dims])
         corner_b = np.array([x for _, x in dims])
         corner_dist = np.linalg.norm(corner_a - corner_b)
-        self.min_dists = [x*corner_dist for x in comparison_multipliers]
+        self.min_dists = [x * corner_dist for x in comparison_multipliers]
 
         self.metaepoch_len = metaepoch_len
         self.max_level = max_level
         self.max_sprouts_no = max_sprouts_no
         self.sproutiveness = sproutiveness
+        self.min_progress_ratio = min_progress_ratio
 
         self.mutation_etas = mutation_etas
         self.mutation_rates = mutation_rates
@@ -97,7 +99,9 @@ class RHGS(DriverGen):
     def population_generator(self):
         self.acc_cost = 0
         while True:
+            # TODO: current cost debug print
             print("cost", self.acc_cost)
+
             self.next_step()
             yield RHGS.RHGSProxy(self.cost, self)
             self.acc_cost += self.cost
@@ -105,53 +109,14 @@ class RHGS(DriverGen):
         return self.acc_cost
 
     def next_step(self):
-        # print("nodes_no", len(self.nodes), "alive_no", len([x for x in self.nodes if x.alive]))
-
-        # self.revive_sprouts()
-
+        # TODO: status debug print
         print("nodes:", len(self.nodes), len([x for x in self.nodes if x.alive]),
-              "   zer:", len(self.level_nodes[0]), len([x for x in self.level_nodes[0] if x.alive]),# len([x for x in self.level_nodes[0] if x.ripe]),
-              "   one:", len(self.level_nodes[1]), len([x for x in self.level_nodes[1] if x.alive]),# len([x for x in self.level_nodes[1] if x.ripe]),
-              "   two:", len(self.level_nodes[2]), len([x for x in self.level_nodes[2] if x.alive]))#, len([x for x in self.level_nodes[2] if x.ripe]))
+              "   zer:", len(self.level_nodes[0]), len([x for x in self.level_nodes[0] if x.alive]),
+              "   one:", len(self.level_nodes[1]), len([x for x in self.level_nodes[1] if x.alive]),
+              "   two:", len(self.level_nodes[2]), len([x for x in self.level_nodes[2] if x.alive]))
 
         self.run_metaepoch()
-
-        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-
-        # _plot_node(self.root, 'r', self.dims)
-        # _plot_node(self.root, 'b', self.dims, delegates=True)
-        # plt.show()
-        #
-        # i = 0
-        # for node in self.level_nodes[1]:
-        #     _plot_node(node, colors[i], self.dims)
-        #     i += 1
-        #     i %= len(colors)
-        # plt.show()
-        #
-        # i = 0
-        # for node in self.level_nodes[2]:
-        #     _plot_node(node, colors[i], self.dims)
-        #     i += 1
-        #     i %= len(colors)
-        # plt.show()
-
         self.trim_sprouts()
-
-        # i = 0
-        # for node in self.level_nodes[1]:
-        #     _plot_node(node, colors[i], self.dims)
-        #     i += 1
-        #     i %= len(colors)
-        # plt.show()
-        #
-        # i = 0
-        # for node in self.level_nodes[2]:
-        #     _plot_node(node, colors[i], self.dims)
-        #     i += 1
-        #     i %= len(colors)
-        # plt.show()
-
         self.release_new_sprouts()
 
     def run_metaepoch(self):
@@ -162,35 +127,25 @@ class RHGS(DriverGen):
         for node in self.level_nodes[0]:
             node.run_metaepoch()
 
-    def revive_sprouts(self):
-        self.revive_dead(self.level_nodes[0])
-        self.revive_dead(self.level_nodes[1])
-        self.revive_dead(self.level_nodes[2])
-
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
         self.trim_all(self.level_nodes[1])
-        # self.trim_all(self.level_nodes[0])
 
     def trim_all(self, nodes):
         self.trim_not_progressing(nodes)
         self.trim_redundant(nodes)
 
-    def revive_dead(self, nodes):
-        for sprout in [x for x in nodes if not x.alive]:
-            if sprout.ripe and all([(not x.alive) for x in sprout.sprouts]):
-                # print("revival")
-                sprout.alive = True
-                sprout.ripe = False
-
     def trim_not_progressing(self, nodes):
         for sprout in [x for x in nodes if x.alive]:
-            if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) and ((sprout.hypervolume/(sprout.old_hypervolume + EPSILON)) - 1.0) < (0.005):
-            # if not sprout.hypervolume > sprout.old_hypervolume:
-
+            if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) \
+                    and ((sprout.hypervolume / (sprout.old_hypervolume + EPSILON)) - 1.0) \
+                    < self.min_progress_ratio / 2**sprout.level:
+                    #TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
                 sprout.alive = False
                 sprout.center = np.mean(sprout.population, axis=0)
                 sprout.ripe = True
+                #TODO: logging killing not progressing sprouts
+                print("   KILL NOT PROGRESSING")
 
     def trim_redundant(self, nodes):
         alive = [x for x in nodes if x.alive]
@@ -203,18 +158,11 @@ class RHGS(DriverGen):
             for another_sprout in to_compare:
                 if not sprout.alive:
                     break
-                if another_sprout.ripe and redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
-                        # print("!!! zabijam bo redundantny")  TODO print
-                        # if sprout.level == 1:
-                        #     _plot_node(sprout, 'r', self.dims)
-                        #     _plot_node(another_sprout, 'b', self.dims)
+                if (another_sprout.ripe or another_sprout in processed) \
+                        and redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
                     sprout.alive = False
-                    # else:
-                        # if sprout.level == 1:
-                        #     _plot_node(sprout, 'g', self.dims)
-                        #     _plot_node(another_sprout, 'b', self.dims)
-                    # plt.show()
-                    pass
+                    #TODO: logging killing redundant sprouts
+                    print("   KILL REDUNDANT")
             processed.append(sprout)
 
     def release_new_sprouts(self):
@@ -224,9 +172,9 @@ class RHGS(DriverGen):
         def __init__(self,
                      owner,
                      level,
-                     population,
-                     parent=None):
+                     population):
             self.alive = True
+            self.ripe = False
             self.owner = owner
             self.level = level
             self.driver = owner.driver(population=population,
@@ -249,9 +197,7 @@ class RHGS(DriverGen):
             self.old_hypervolume = float('-inf')
             self.hypervolume = float('-inf')
 
-            self.parent = parent
             self.final_proxy = None
-            self.ripe = False
 
         def run_metaepoch(self):
             if self.alive:
@@ -266,13 +212,7 @@ class RHGS(DriverGen):
                 self.population = self.final_proxy.finalized_population()
                 self.delegates = self.final_proxy.nominate_delegates()
                 random.shuffle(self.delegates)
-                # self.update_average_fitnesses()
                 self.update_dominated_hypervolume()
-
-        def update_average_fitnesses(self):
-            self.old_average_fitnesses = self.average_fitnesses
-            fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
-            self.average_fitnesses = np.mean(fitness_values, axis=0)
 
         def update_dominated_hypervolume(self):
             self.old_hypervolume = self.hypervolume
@@ -284,39 +224,36 @@ class RHGS(DriverGen):
             else:
                 self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
 
-            # if self.level == 0:
-            #     if self.old_hypervolume is not None:
-            #         pass
-            #         print((self.hypervolume/(self.old_hypervolume + EPSILON)) - 1.0)
-                # print(self.hypervolume)
-
         def release_new_sprouts(self):
             if True:
                 for sprout in self.sprouts:
                     sprout.release_new_sprouts()
-                # TODO: limit na wszystkich sproutach, czy tylko na tych żywych?
-                if self.level < self.owner.max_level and len([x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
+                if self.level < self.owner.max_level and len(
+                        [x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
                     released_sprouts = 0
                     for delegate in self.delegates:
-                        if released_sprouts >= self.owner.sproutiveness or len([x for x in self.sprouts if x.alive]) >= self.owner.max_sprouts_no:
+                        if released_sprouts >= self.owner.sproutiveness or len(
+                                [x for x in self.sprouts if x.alive]) >= self.owner.max_sprouts_no:
                             break
 
                         if not any([redundant([delegate], [sprout.center], self.owner.min_dists[self.level + 1])
-                                    for sprout in [x for x in self.owner.level_nodes[self.level+1] if len(x.population) > 0]]):
-
+                                    for sprout in
+                                    [x for x in self.owner.level_nodes[self.level + 1] if len(x.population) > 0]]):
                             candidate_population = population_from_delegate(delegate,
-                                                    self.owner.population_sizes[self.level + 1],
-                                                    self.owner.dims,
-                                                    self.owner.mutation_rates[self.level + 1],
-                                                    self.owner.mutation_etas[self.level + 1]) #TODO: more mutation
+                                                                            self.owner.population_sizes[self.level + 1],
+                                                                            self.owner.dims,
+                                                                            self.owner.mutation_rates[self.level + 1],
+                                                                            self.owner.mutation_etas[
+                                                                                self.level + 1])
 
-                            new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population, self)
+                            new_sprout = RHGS.Node(self.owner, self.level + 1, candidate_population)
                             self.sprouts.append(new_sprout)
                             self.owner.nodes.append(new_sprout)
                             self.owner.level_nodes[self.level + 1].append(new_sprout)
                             released_sprouts += 1
                         else:
-                            # print("### nie udalo sie sproutowac, bo redundantny")
+                            #TODO: logging redundant candidates
+                            # print("   CANDIDATE REDUNDANT")
                             pass
 
 

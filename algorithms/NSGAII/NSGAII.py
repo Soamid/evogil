@@ -94,8 +94,6 @@ class NSGAII(DriverGen):
         self.mating_size = 0
         self.population = [self.trim_function(x) for x in population]
 
-        # self.archive_hits = 0 #TODO: REMOVE
-
         self._calculate_objectives()
 
     @property
@@ -136,7 +134,7 @@ class NSGAII(DriverGen):
         self._environmental_selection()
         self._mating_selection(0.9)
         self._crossover()
-        self._mutation()  # (0.05)
+        self._mutation()
         self.individuals += self.mating_individuals
         self._calculate_objectives()
         self.generation_counter += 1
@@ -145,8 +143,6 @@ class NSGAII(DriverGen):
         for ind in self.individuals:
             if ind.objectives is None:
                 if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
-                    # self.archive_hits += 1 #TODO: REMOVE
-                    # print("trafione: ", self.archive_hits) #TODO: REMOVE
                     fitnesses = self.fitness_archive[ind.v]
                 else:
                     self.cost += 1
