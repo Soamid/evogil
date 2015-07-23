@@ -11,7 +11,8 @@ _drivers = [
 
 _metaalgorithms = [
     'IMGA',
-    'RHGS'
+    'RHGS',
+    'HNS'
 ]
 
 algorithms = [
@@ -21,6 +22,7 @@ algorithms = [
              ] + _drivers
 
 problems = [
+    'kursawe',
     'ZDT1',
     'ZDT2',
     'ZDT3',
@@ -36,7 +38,10 @@ problems = [
     'UF8',
     'UF9',
     'EWA1',
-    'EWA2'
+    'EWA2',
+    'UF10',
+    'UF11',
+    'UF12',
 ]
 
 metaconfig_populationsize = 100
@@ -75,6 +80,10 @@ algo_base = {
         "sproutiveness": 10,
         "metaepoch_len": 3,
     },
+
+    "HNS": {
+        "metaepoch_len": 5,
+    },
 }
 
 prob_base = {
@@ -94,6 +103,19 @@ def init_alg___RHGS(algo_config, problem_mod):
         "reference_point": reference_point,
         "mutation_rates": [1.0 / len(problem_mod.dims) for _ in range(3)],
         "crossover_rates": [0.9 for _ in range(3)],
+    })
+
+
+def init_alg___HNS(algo_config, problem_mod):
+    reference_point = tuple(50.0
+                            for _
+                            in range(len(problem_mod.pareto_front[0])))
+    algo_config.update({
+        "reference_point": reference_point,
+        "mutation_eta": 10.0,
+        "crossover_eta": 15.0,
+        "mutation_rate": 1.0 / len(problem_mod.dims),
+        "crossover_rate": 0.9,
     })
 
 

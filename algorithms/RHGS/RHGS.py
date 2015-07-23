@@ -97,7 +97,6 @@ class RHGS(DriverGen):
     def population_generator(self):
         self.acc_cost = 0
         while True:
-            print("cost", self.acc_cost)
             self.next_step()
             yield RHGS.RHGSProxy(self.cost, self)
             self.acc_cost += self.cost
@@ -163,59 +162,15 @@ class RHGS(DriverGen):
             node.run_metaepoch()
 
     def revive_sprouts(self):
-        self.revive_dead(self.level_nodes[0])
-        self.revive_dead(self.level_nodes[1])
-        self.revive_dead(self.level_nodes[2])
+        revive_dead(self.level_nodes[0])
+        revive_dead(self.level_nodes[1])
+        revive_dead(self.level_nodes[2])
 
     def trim_sprouts(self):
-        self.trim_all(self.level_nodes[2])
-        self.trim_all(self.level_nodes[1])
-        # self.trim_all(self.level_nodes[0])
-
-    def trim_all(self, nodes):
-        self.trim_not_progressing(nodes)
-        self.trim_redundant(nodes)
-
-    def revive_dead(self, nodes):
-        for sprout in [x for x in nodes if not x.alive]:
-            if sprout.ripe and all([(not x.alive) for x in sprout.sprouts]):
-                # print("revival")
-                sprout.alive = True
-                sprout.ripe = False
-
-    def trim_not_progressing(self, nodes):
-        for sprout in [x for x in nodes if x.alive]:
-            if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) and ((sprout.hypervolume/(sprout.old_hypervolume + EPSILON)) - 1.0) < (0.005):
-            # if not sprout.hypervolume > sprout.old_hypervolume:
-
-                sprout.alive = False
-                sprout.center = np.mean(sprout.population, axis=0)
-                sprout.ripe = True
-
-    def trim_redundant(self, nodes):
-        alive = [x for x in nodes if x.alive]
-        processed = []
-        dead = [x for x in nodes if not x.alive]
-        for sprout in alive:
-            to_compare = [x for x in dead]
-            to_compare.extend(processed)
-            sprout.center = np.mean(sprout.population, axis=0)
-            for another_sprout in to_compare:
-                if not sprout.alive:
-                    break
-                if another_sprout.ripe and redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
-                        # print("!!! zabijam bo redundantny")  TODO print
-                        # if sprout.level == 1:
-                        #     _plot_node(sprout, 'r', self.dims)
-                        #     _plot_node(another_sprout, 'b', self.dims)
-                    sprout.alive = False
-                    # else:
-                        # if sprout.level == 1:
-                        #     _plot_node(sprout, 'g', self.dims)
-                        #     _plot_node(another_sprout, 'b', self.dims)
-                    # plt.show()
-                    pass
-            processed.append(sprout)
+        self.root.trim_sprouts()
+        # trim_all(self.level_nodes[2])
+        # trim_all(self.level_nodes[1])
+        # trim_all(self.level_nodes[0])
 
     def release_new_sprouts(self):
         self.root.release_new_sprouts()
@@ -252,6 +207,11 @@ class RHGS(DriverGen):
             self.parent = parent
             self.final_proxy = None
             self.ripe = False
+
+        def trim_sprouts(self):
+            for sprout in self.sprouts:
+                sprout.trim_sprouts()
+            trim_all(self.sprouts, self.owner.min_dists)
 
         def run_metaepoch(self):
             if self.alive:
@@ -302,7 +262,7 @@ class RHGS(DriverGen):
                             break
 
                         if not any([redundant([delegate], [sprout.center], self.owner.min_dists[self.level + 1])
-                                    for sprout in [x for x in self.owner.level_nodes[self.level+1] if len(x.population) > 0]]):
+                                    for sprout in [x for x in self.sprouts if len(x.population) > 0]]):
 
                             candidate_population = population_from_delegate(delegate,
                                                     self.owner.population_sizes[self.level + 1],
@@ -333,6 +293,55 @@ def redundant(pop_a, pop_b, min_dist):
 
     dist = np.linalg.norm(mean_pop_a - mean_pop_b)
     return dist < min_dist
+
+
+def revive_dead(nodes):
+    for sprout in [x for x in nodes if not x.alive]:
+        if sprout.ripe and all([(not x.alive) for x in sprout.sprouts]):
+            # print("revival")
+            sprout.alive = True
+            sprout.ripe = False
+
+
+def trim_all(nodes, min_dists):
+    trim_not_progressing(nodes)
+    trim_redundant(nodes, min_dists)
+
+
+def trim_not_progressing(nodes):
+    for sprout in [x for x in nodes if x.alive]:
+        if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) and ((sprout.hypervolume/(sprout.old_hypervolume + EPSILON)) - 1.0) < (0.005):
+        # if not sprout.hypervolume > sprout.old_hypervolume:
+
+            sprout.alive = False
+            sprout.center = np.mean(sprout.population, axis=0)
+            sprout.ripe = True
+
+
+def trim_redundant(nodes, min_dists):
+    alive = [x for x in nodes if x.alive]
+    processed = []
+    dead = [x for x in nodes if not x.alive]
+    for sprout in alive:
+        to_compare = [x for x in dead]
+        to_compare.extend(processed)
+        sprout.center = np.mean(sprout.population, axis=0)
+        for another_sprout in to_compare:
+            if not sprout.alive:
+                break
+            if another_sprout.ripe and redundant([another_sprout.center], [sprout.center], min_dists[sprout.level]):
+                    # print("!!! zabijam bo redundantny")  TODO print
+                    # if sprout.level == 1:
+                    #     _plot_node(sprout, 'r', self.dims)
+                    #     _plot_node(another_sprout, 'b', self.dims)
+                sprout.alive = False
+                # else:
+                    # if sprout.level == 1:
+                    #     _plot_node(sprout, 'g', self.dims)
+                    #     _plot_node(another_sprout, 'b', self.dims)
+                # plt.show()
+                pass
+        processed.append(sprout)
 
 
 def trim_vector(vector, bits_no):

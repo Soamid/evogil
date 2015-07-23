@@ -38,7 +38,7 @@ SMSEMOA_M = '<'
 
 BARE_CL = 'b'  # '0.8'
 IMGA_CL = 'r'  # 0.4'
-RHGS_CL = '0.0'
+HNS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAII': ('NSGAII', NSGAII_LS, NSGAII_M, BARE_CL),
@@ -54,39 +54,39 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IMGA+NSGAIII': ( 'IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
          'IMGA+SMSEMOA': ( 'IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
 
-         'RHGS+SPEA2': ( 'RHGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
-         'RHGS+NSGAII': ( 'RHGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
-         'RHGS+IBEA': ( 'RHGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
-         'RHGS+OMOPSO': ('RHGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
-         'RHGS+NSGAIII': ( 'RHGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
-         'RHGS+SMSEMOA': ( 'RHGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
+         'HNS+SPEA2': ( 'HNS+SPEA2', SPEA_LS, SPEA_M, HNS_CL),
+         'HNS+NSGAII': ( 'HNS+NSGAII', NSGAII_LS, NSGAII_M, HNS_CL),
+         'HNS+IBEA': ( 'HNS+IBEA', IBEA_LS, IBEA_M, HNS_CL),
+         'HNS+OMOPSO': ('HNS+OMOPSO', OMOPSO_LS, OMOPSO_M, HNS_CL),
+         'HNS+NSGAIII': ( 'HNS+NSGAIII', NSGAIII_LS, NSGAIII_M, HNS_CL),
+         'HNS+SMSEMOA': ( 'HNS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, HNS_CL),
          }
 
 algos_order = [
     'SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
-    'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA',
+    'HNS+SPEA2', 'HNS+NSGAII', 'HNS+IBEA', 'HNS+OMOPSO', 'HNS+NSGAIII', 'HNS+SMSEMOA',
 ]
 
 algos_groups_configuration_all_together = {
     ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
      'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
-     'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA'): ('',)
+     'HNS+SPEA2', 'HNS+NSGAII', 'HNS+IBEA', 'HNS+OMOPSO', 'HNS+NSGAIII', 'HNS+SMSEMOA'): ('',)
 }
 
 algos_groups_configuration_splitted = {
     ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA'): (0, 1),
     ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA'): (0, 2),
-    ('RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA'): (1, 2)
+    ('HNS+SPEA2', 'HNS+NSGAII', 'HNS+IBEA', 'HNS+OMOPSO', 'HNS+NSGAIII', 'HNS+SMSEMOA'): (1, 2)
 }
 
 algos_groups_configuration_tres_caballeros = {
-    ('SPEA2', 'IMGA+SPEA2', 'RHGS+SPEA2'): ('_spea2',),
-    ('NSGAII', 'IMGA+NSGAII', 'RHGS+NSGAII'): ('_nsgaii',),
-    ('IBEA', 'IMGA+IBEA', 'RHGS+IBEA'): ('_ibea',),
-    ('NSGAIII', 'IMGA+NSGAIII', 'RHGS+NSGAIII'): ('_nsgaiii',),
-    ('SMSEMOA', 'IMGA+SMSEMOA', 'RHGS+SMSEMOA'): ('_smsemoa',),
-    ('OMOPSO', 'IMGA+OMOPSO', 'RHGS+OMOPSO'): ('_omopso',),
+    ('SPEA2', 'IMGA+SPEA2', 'HNS+SPEA2'): ('_spea2',),
+    ('NSGAII', 'IMGA+NSGAII', 'HNS+NSGAII'): ('_nsgaii',),
+    ('IBEA', 'IMGA+IBEA', 'HNS+IBEA'): ('_ibea',),
+    ('NSGAIII', 'IMGA+NSGAIII', 'HNS+NSGAIII'): ('_nsgaiii',),
+    ('SMSEMOA', 'IMGA+SMSEMOA', 'HNS+SMSEMOA'): ('_smsemoa',),
+    ('OMOPSO', 'IMGA+OMOPSO', 'HNS+OMOPSO'): ('_omopso',),
 }
 
 algos_groups_configuration = algos_groups_configuration_all_together
@@ -181,9 +181,9 @@ def gen_table(results):
             get_algo_results(results, "IMGA+NSGA-II", "imga_nsga2", metric),
             get_algo_results(results, "IMGA+IBEA", "imga_ibea", metric),
 
-            get_algo_results(results, "MO-RHGS+SPEA2", "hgs_spea2", metric),
-            get_algo_results(results, "MO-RHGS+NSGA-II", "hgs_nsga2", metric),
-            get_algo_results(results, "MO-RHGS+IBEA", "hgs_ibea", metric)
+            get_algo_results(results, "MO-HNS+SPEA2", "hgs_spea2", metric),
+            get_algo_results(results, "MO-HNS+NSGA-II", "hgs_nsga2", metric),
+            get_algo_results(results, "MO-HNS+IBEA", "hgs_ibea", metric)
         ]
         mark_winner(printable_results, metrics[metric][1])
 
