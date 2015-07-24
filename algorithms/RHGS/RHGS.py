@@ -110,14 +110,23 @@ class RHGS(DriverGen):
 
     def next_step(self):
         # TODO: status debug print
-        print("nodes:", len(self.nodes), len([x for x in self.nodes if x.alive]),
-              "   zer:", len(self.level_nodes[0]), len([x for x in self.level_nodes[0] if x.alive]),
-              "   one:", len(self.level_nodes[1]), len([x for x in self.level_nodes[1] if x.alive]),
-              "   two:", len(self.level_nodes[2]), len([x for x in self.level_nodes[2] if x.alive]))
+        print("nodes:", len(self.nodes),
+              len([x for x in self.nodes if x.alive]),
+              len([x for x in self.nodes if x.ripe]),
+              "   zer:", len(self.level_nodes[0]),
+              len([x for x in self.level_nodes[0] if x.alive]),
+              len([x for x in self.level_nodes[0] if x.ripe]),
+              "   one:", len(self.level_nodes[1]),
+              len([x for x in self.level_nodes[1] if x.alive]),
+              len([x for x in self.level_nodes[1] if x.ripe]),
+              "   two:", len(self.level_nodes[2]),
+              len([x for x in self.level_nodes[2] if x.alive]),
+              len([x for x in self.level_nodes[2] if x.ripe]),)
 
         self.run_metaepoch()
         self.trim_sprouts()
         self.release_new_sprouts()
+        self.revive_root()
 
     def run_metaepoch(self):
         for node in self.level_nodes[2]:
@@ -130,6 +139,7 @@ class RHGS(DriverGen):
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
         self.trim_all(self.level_nodes[1])
+        self.trim_all(self.level_nodes[0])
 
     def trim_all(self, nodes):
         self.trim_not_progressing(nodes)
@@ -167,6 +177,16 @@ class RHGS(DriverGen):
 
     def release_new_sprouts(self):
         self.root.release_new_sprouts()
+
+    def revive_root(self):
+        if len([x for x in self.nodes if x.alive]) == 0:
+            for ripe_node in [x for x in self.nodes if x.ripe]:
+                ripe_node.alive = True
+                ripe_node.ripe = False
+                self.min_progress_ratio /= 2
+
+            #TODO: logging root revival
+            print("!!!   RESURRECTION")
 
     class Node():
         def __init__(self,
@@ -225,7 +245,7 @@ class RHGS(DriverGen):
                 self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
 
         def release_new_sprouts(self):
-            if True:
+            if self.ripe:
                 for sprout in self.sprouts:
                     sprout.release_new_sprouts()
                 if self.level < self.owner.max_level and len(
