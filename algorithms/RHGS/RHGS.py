@@ -5,31 +5,37 @@ import floatextras
 import numpy as np
 
 from algorithms.base.drivergen import DriverGen
+from evotools import random_tools
+
+
+
 from algorithms.base import drivertools
 from algorithms.base.hv import HyperVolume
 
+
 EPSILON = np.finfo(float).eps
-
-
 class RHGS(DriverGen):
+
     def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 driver,
-                 mutation_etas,
-                 crossover_etas,
-                 mutation_rates,
-                 crossover_rates,
-                 reference_point,
-                 mantissa_bits,
-                 min_progress_ratio,
-                 metaepoch_len=5,
-                 max_level=2,
-                 max_sprouts_no=20,
-                 sproutiveness=1,
-                 comparison_multipliers=(1.0, 0.1, 0.01),
-                 population_sizes=(64, 16, 4)):
+             population,
+             dims,
+             fitnesses,
+             fitness_errors,
+             cost_modifiers,
+             driver,
+             mutation_etas,
+             crossover_etas,
+             mutation_rates,
+             crossover_rates,
+             reference_point,
+             mantissa_bits,
+             min_progress_ratio,
+             metaepoch_len=5,
+             max_level=2,
+             max_sprouts_no=20,
+             sproutiveness=1,
+             comparison_multipliers=(1.0, 0.1, 0.01),
+             population_sizes=(64, 16, 4)):
         super().__init__()
 
         self.driver = driver
@@ -37,6 +43,9 @@ class RHGS(DriverGen):
         self.dims = dims
         self.reference_point = reference_point
         self.fitnesses = fitnesses
+
+        self.fitness_errors = fitness_errors
+        self.cost_modifiers = cost_modifiers
 
         corner_a = np.array([x for x, _ in dims])
         corner_b = np.array([x for _, x in dims])
@@ -56,7 +65,7 @@ class RHGS(DriverGen):
         self.population_sizes = population_sizes
 
         self.mantissa_bits = mantissa_bits
-        self.global_fitness_archive = ResultArchive()
+        self.global_fitness_archive = [ResultArchive() for _ in range(3)]
 
         self.root = RHGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
@@ -188,6 +197,16 @@ class RHGS(DriverGen):
             #TODO: logging root revival
             print("!!!   RESURRECTION")
 
+    def blurred_fitnesses(self, level):
+        def blurred(f):
+            def blurred_f(*args, **kwargs):
+                x = random.gauss(f(*args, **kwargs), self.fitness_errors[level])
+                print("normal: {} blurred: {}".format(f(*args, **kwargs), x))
+                return x
+            return blurred_f
+
+        return [blurred(f) for f in self.fitnesses]
+
     class Node():
         def __init__(self,
                      owner,
@@ -199,12 +218,12 @@ class RHGS(DriverGen):
             self.level = level
             self.driver = owner.driver(population=population,
                                        dims=owner.dims,
-                                       fitnesses=owner.fitnesses,
+                                       fitnesses=owner.blurred_fitnesses(self.level),
                                        mutation_eta=owner.mutation_etas[self.level],
                                        mutation_rate=owner.mutation_rates[self.level],
                                        crossover_eta=owner.crossover_etas[self.level],
                                        crossover_rate=owner.crossover_rates[self.level],
-                                       fitness_archive=self.owner.global_fitness_archive,
+                                       fitness_archive=self.owner.global_fitness_archive[self.level],
                                        trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[self.level]))
             self.population = []
             self.sprouts = []
@@ -224,7 +243,8 @@ class RHGS(DriverGen):
                 iterations = 0
                 self.final_proxy = None
                 for proxy in self.driver.population_generator():
-                    self.owner.cost += proxy.cost
+                    print("Level: {}, Original cost: {}, modified cost: {}".format(self.level, proxy.cost, self.owner.cost_modifiers[self.level] * proxy.cost))
+                    self.owner.cost += self.owner.cost_modifiers[self.level] * proxy.cost
                     self.final_proxy = proxy
                     iterations += 1
                     if not iterations < self.owner.metaepoch_len:
@@ -275,6 +295,7 @@ class RHGS(DriverGen):
                             #TODO: logging redundant candidates
                             # print("   CANDIDATE REDUNDANT")
                             pass
+
 
 
 def population_from_delegate(delegate, size, dims, rate, eta):

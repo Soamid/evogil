@@ -66,6 +66,8 @@ algo_base = {
     },
 
     "RHGS": {
+        "fitness_errors": (0.1, 0.01, 0.0),#(0.5, 0.2, 0.0),
+        "cost_modifiers": (0.1, 0.5, 1.0),#(0.1, 0.5, 1.0)
         "mutation_etas": (10.0, 20.0, 30.0),
         "crossover_etas": (15.0, 30.0, 40.0),
         "population_sizes": (64, 16, 4),
