@@ -2,7 +2,9 @@ import collections
 import random
 
 import floatextras
+import math
 import numpy as np
+import time
 
 from algorithms.base.drivergen import DriverGen
 from evotools import random_tools
@@ -144,6 +146,9 @@ class RHGS(DriverGen):
             node.run_metaepoch()
         for node in self.level_nodes[0]:
             node.run_metaepoch()
+            # _plot_node(node, 'r', [[0, 1], [0, 3]])
+
+
 
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
@@ -200,8 +205,9 @@ class RHGS(DriverGen):
     def blurred_fitnesses(self, level):
         def blurred(f):
             def blurred_f(*args, **kwargs):
-                x = random.gauss(f(*args, **kwargs), self.fitness_errors[level])
-                print("normal: {} blurred: {}".format(f(*args, **kwargs), x))
+                f_val = f(*args, **kwargs)
+                x = random.gauss(f_val, self.fitness_errors[level]*f_val/3.0)
+                # print("level: {}, normal: {} blurred: {}, diff: {}".format(level, f_val, x, math.fabs(f_val - x)/f_val))
                 return x
             return blurred_f
 
@@ -243,7 +249,7 @@ class RHGS(DriverGen):
                 iterations = 0
                 self.final_proxy = None
                 for proxy in self.driver.population_generator():
-                    print("Level: {}, Original cost: {}, modified cost: {}".format(self.level, proxy.cost, self.owner.cost_modifiers[self.level] * proxy.cost))
+                    # print("Level: {}, Original cost: {}, modified cost: {}".format(self.level, proxy.cost, self.owner.cost_modifiers[self.level] * proxy.cost))
                     self.owner.cost += self.owner.cost_modifiers[self.level] * proxy.cost
                     self.final_proxy = proxy
                     iterations += 1
@@ -376,3 +382,5 @@ def _plot_node(node, color, dims, delegates=False):
     )
     plt.xlim(dims[0][0], dims[0][1])
     plt.ylim(dims[1][0], dims[1][1])
+    plt.savefig('plots/debug/{}.png'.format(time.time()))
+    plt.close()
