@@ -66,9 +66,9 @@ algo_base = {
     },
 
     "RHGS": {
-        "fitness_errors": (0.0, 0.0, 0.0),#(0.5, 0.2, 0.0),
+        "fitness_errors": (0.1, 0.01, 0.0),#(0.5, 0.2, 0.0),
         "cost_modifiers": (0.1, 0.5, 1.0),#(0.1, 0.5, 1.0)
-        "mutation_etas": (10.0, 15.0, 20.0),
+        "mutation_etas": (10.0, 12.0, 15.0),
         "crossover_etas": (15.0, 20.0, 25.0),
         "population_sizes": (64, 20, 10),
         "comparison_multipliers": (1.0, 0.08, 0.020),
@@ -76,7 +76,7 @@ algo_base = {
         "max_sprouts_no": 16,
         "sproutiveness": 3,
         "metaepoch_len": 5,
-        "min_progress_ratio": 0.0001,
+        "min_progress_ratio": [0.0, 0.00001, 0.0001]
     },
 }
 
@@ -110,6 +110,7 @@ def init_alg___SPEA2(algo_config, problem_mod):
 
 def init_alg___NSGAII(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
+
 
 
 def init_alg___NSGAIII(algo_config, problem_mod):

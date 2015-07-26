@@ -39,6 +39,9 @@ class OMOPSO(DriverGen):
                 e.reset_speed()
                 self.population.append(e)
 
+        def nominate_delegates(self):
+            return self.finalized_population()
+
     def __init__(self,
                  population,
                  fitnesses,

@@ -138,6 +138,9 @@ class RHGS(DriverGen):
         self.trim_sprouts()
         self.release_new_sprouts()
         self.revive_root()
+        print("Nodes:")
+        for i in range(3):
+            print("level {} : {} / {}".format(i+1, len([n for n in self.level_nodes[i] if n.ripe]), len(self.level_nodes[i])))
 
     def run_metaepoch(self):
         for node in self.level_nodes[2]:
@@ -163,7 +166,7 @@ class RHGS(DriverGen):
         for sprout in [x for x in nodes if x.alive]:
             if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) \
                     and ((sprout.hypervolume / (sprout.old_hypervolume + EPSILON)) - 1.0) \
-                    < self.min_progress_ratio / 2**sprout.level:
+                    < self.min_progress_ratio[sprout.level] / 2**sprout.level:
                     #TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
                 sprout.alive = False
                 sprout.center = np.mean(sprout.population, axis=0)
@@ -197,7 +200,8 @@ class RHGS(DriverGen):
             for ripe_node in [x for x in self.nodes if x.ripe]:
                 ripe_node.alive = True
                 ripe_node.ripe = False
-                self.min_progress_ratio /= 2
+                for i in range(3):
+                    self.min_progress_ratio[i] /= 2
 
             #TODO: logging root revival
             print("!!!   RESURRECTION")
@@ -206,7 +210,8 @@ class RHGS(DriverGen):
         def blurred(f):
             def blurred_f(*args, **kwargs):
                 f_val = f(*args, **kwargs)
-                x = random.gauss(f_val, self.fitness_errors[level]*f_val/3.0)
+                x = math.fabs(random.gauss(f_val, self.fitness_errors[level]*f_val/3.0))
+
                 # print("level: {}, normal: {} blurred: {}, diff: {}".format(level, f_val, x, math.fabs(f_val - x)/f_val))
                 return x
             return blurred_f

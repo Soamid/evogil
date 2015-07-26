@@ -74,6 +74,9 @@ class SPEA2(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self._population.extend(emigrants)
 
+        def nominate_delegates(self):
+            return self.finalized_population()
+
     @property
     def population(self):
         return [x['value'] for x in self.__population]

@@ -13,9 +13,10 @@ import matplotlib.pyplot as plt
 
 class NSGAIII(DriverGen):
     class NSGAIIIProxy(DriverGen.Proxy):
-        def __init__(self, cost, individuals):
+        def __init__(self, cost, fronts, individuals):
             super().__init__(cost)
             self.individuals = individuals
+            self.fronts = fronts
 
         def finalized_population(self):
             return [x.v for x in self.individuals]
@@ -39,6 +40,9 @@ class NSGAIII(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)
 
+        def nominate_delegates(self):
+            return [x.v for x in self.fronts[1]]
+
     def __init__(self,
                  population,
                  dims,
@@ -47,9 +51,12 @@ class NSGAIII(DriverGen):
                  crossover_eta,
                  mutation_rate='default',
                  crossover_rate=0.9,
-                 theta=5):
+                 theta=5,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
 
+        self.fitness_archive = fitness_archive
         self.theta = theta
 
         self.dims = dims
@@ -67,7 +74,7 @@ class NSGAIII(DriverGen):
         self.reference_point_lengths = [numpy.linalg.norm(point) for point in self.reference_points]
 
         self.individuals = []
-        self.population = population
+        self.population = [trim_function(x) for x in population]
 
         self.cost = 0
         self.primary_cost_included = False
@@ -83,6 +90,7 @@ class NSGAIII(DriverGen):
         # plt.show()
 
         self.clusters = [[] for _ in self.reference_points]
+
 
     def generate_reference_points(self):
         return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
@@ -104,8 +112,14 @@ class NSGAIII(DriverGen):
     def _calculate_objectives(self, individuals):
         for ind in individuals:
             if ind.objectives is None:
-                self.cost += 1
-                ind.objectives = [objective(ind.v) for objective in self.objectives]
+                if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+                    ind.objectives = self.fitness_archive[ind.v]
+                else:
+                    self.cost += 1
+                    ind.objectives = [objective(ind.v) for objective in self.objectives]
+                    if self.fitness_archive is not None:
+                        self.fitness_archive[ind.v] = ind.objectives
+
 
     def update_ideal_point(self, individuals):
         self._calculate_objectives(individuals)
@@ -116,8 +130,8 @@ class NSGAIII(DriverGen):
 
     def population_generator(self):
         while True:
-            self.next_step()
-            yield NSGAIII.NSGAIIIProxy(self.cost, self.individuals)
+            fronts = self.next_step()
+            yield NSGAIII.NSGAIIIProxy(self.cost, fronts, self.individuals)
             self.cost = 0
         return self.cost
 
@@ -208,6 +222,7 @@ class NSGAIII(DriverGen):
         # plt.show()
 
         self.create_final_population(fronts)
+        return fronts
 
     def make_offspring_individuals(self):
         offspring_inds = []
