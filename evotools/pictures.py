@@ -90,7 +90,7 @@ algos_groups_configuration_tres_caballeros = {
     ('OMOPSO', 'IMGA+OMOPSO', 'RHGS+OMOPSO'): ('_omopso',),
 }
 
-problems_order = ['ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6', 'UF7', 'UF8', 'UF9',
+problems_order = ['EWA1', 'EWA2', 'ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6', 'UF7', 'UF8', 'UF9',
                   'UF10', 'UF11', 'UF12']
 
 algos_groups_configuration = algos_groups_configuration_tres_caballeros
@@ -425,7 +425,7 @@ def plot_results_summary(problems, scoring, selected):
                     x_algo.append(x)
                     y_algo.append(metric_score[algo][problem])
 
-            print(x_algo, metric_score[algo])
+            # print(x_algo, metric_score[algo])
 
             plt.scatter(x_algo, y_algo, c=color, s=60, marker=marker, label=name)
             if algo in selected:

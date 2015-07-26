@@ -38,5 +38,5 @@ def rank(args, queue):
 
     print("\nGlobal ranking\n##############")
     for metric_name in global_scoring:
-        print("{} : {} ({})".format(metric_name, *(global_scoring[metric_name].most_common(1)[0])))
+        print("{} : ".format(metric_name) + ", ".join("{} ({})".format(score[0], score[1]) for score in global_scoring[metric_name].most_common()))
 
