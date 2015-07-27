@@ -104,7 +104,7 @@ class SMSEMOA(DriverGen):
                 p.objectives = [o(p.value)
                                 for o in self.fitnesses]
                 cost = len(self.population)
-            return cost
+        return cost
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]

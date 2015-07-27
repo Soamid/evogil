@@ -540,7 +540,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         ################################################################################
         descr = "GENERATING POPULATION"
         if "population" not in config:
-            initial_population = gen_population(config["__metaconfig__populationsize"], problem_mod.dims)
+            initial_population = gen_population(64, problem_mod.dims)
             update = {"population": initial_population}
             logger.debug("%s (size: %s, dims: %s): %s",
                          descr,
