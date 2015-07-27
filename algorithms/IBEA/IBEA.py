@@ -1,11 +1,12 @@
-from algorithms.base.drivergen import DriverGen
-from algorithms.base.drivertools import rank, mutate, crossover
-
+import collections
 import itertools
 import math
 import random
 import sys
 
+from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivertools import rank, mutate, crossover
+from evotools.ea_utils import paretofront_layers
 
 class IBEA(DriverGen):
     class IBEAProxy(DriverGen.Proxy):
@@ -37,8 +38,9 @@ class IBEA(DriverGen):
             self.individuals.extend(emigrants)
 
         def nominate_delegates(self):
-            return self.driver.finish()
-
+            return [x.v for x in
+                list(paretofront_layers(self.individuals, lambda indv: self.driver.calculate_objectives(indv)))[
+                0]]
 
     def __init__(self,
                  population,
@@ -177,7 +179,7 @@ class IBEA(DriverGen):
             return self.fitness_archive[ind.v]
         if not ind.known_objectives:
             self.cost += 1
-        return [objective(ind) for objective in self.objectives]
+        return [objective(ind.v) for objective in self.objectives]
 
     class EPlusIndicator:
         def __init__(self, population):
