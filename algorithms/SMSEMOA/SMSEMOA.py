@@ -18,7 +18,9 @@ class SMSEMOA(DriverGen):
                  crossover_eta,
                  crossover_rate,
                  reference_point,
-                 epoch_length_multiplier=0.5):
+                 epoch_length_multiplier=0.5,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
         self.fitnesses = fitnesses
         self.dims = dims
@@ -27,9 +29,11 @@ class SMSEMOA(DriverGen):
         self.crossover_eta = crossover_eta
         self.crossover_rate = crossover_rate
 
-        self.population = population
+        self.population = [trim_function(x) for x in population]
         self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
         self.reference_point = reference_point
+
+        self.fitness_archive = fitness_archive
 
     class SMSEMOAProxy(DriverGen.Proxy):
         def __init__(self, cost, population):
@@ -93,9 +97,14 @@ class SMSEMOA(DriverGen):
 
     def calculate_objectives(self, pop):
         for p in pop:
-            p.objectives = [o(p.value)
-                            for o in self.fitnesses]
-        return len(pop)
+            if (self.fitness_archive is not None) and (p.value in self.fitness_archive):
+                p.objectives = self.fitness_archive[p.value]
+                cost = 0
+            else:
+                p.objectives = [o(p.value)
+                                for o in self.fitnesses]
+                cost = len(self.population)
+            return cost
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]

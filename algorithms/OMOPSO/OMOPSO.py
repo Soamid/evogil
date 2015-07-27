@@ -51,11 +51,13 @@ class OMOPSO(DriverGen):
                  crossover_eta,
                  crossover_rate,
                  mutation_perturbation=0.5,
-                 mutation_probability=0.05):
+                 mutation_probability=0.05,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
         self.fitnesses = fitnesses
         self.dims = dims
-        self.population = [Individual(p) for p in population]
+        self.population = [Individual(trim_function(x)) for x in population]
         self.mutation_probability = mutation_probability
 
         self.leaders_size = len(population)  # parameter?
@@ -63,6 +65,7 @@ class OMOPSO(DriverGen):
         self.crowding_selector = CrowdingTournament()
         self.archive = Archive(self.ETA)
         self.leader_archive = LeaderArchive(self.leaders_size)
+        self.fitness_archive = fitness_archive
 
     def init_personal_best(self):
         for p in self.population:
@@ -128,9 +131,14 @@ class OMOPSO(DriverGen):
 
     def calculate_objectives(self):
         for p in self.population:
-            p.objectives = [o(p.value)
-                            for o in self.fitnesses]
-        return len(self.population)
+            if (self.fitness_archive is not None) and (p.value in self.fitness_archive):
+                p.objectives = self.fitness_archive[p.value]
+                cost = 0
+            else:
+                p.objectives = [o(p.value)
+                                for o in self.fitnesses]
+                cost = len(self.population)
+        return cost
 
     def move(self):
         for p in self.population:

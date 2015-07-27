@@ -29,9 +29,10 @@ class SPEA2(DriverGen):
                  mutation_eta,
                  mutation_rate,
                  crossover_eta,
-                 crossover_rate):
+                 crossover_rate,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
-        self.__population = []
 
         self.fitnesses = fitnesses
         self.dims = dims
@@ -39,11 +40,13 @@ class SPEA2(DriverGen):
         self.mutation_rate = mutation_rate
         self.crossover_eta = crossover_eta
         self.crossover_rate = crossover_rate
-        self.population = population
+        self.population = [trim_function(x) for x in population]
 
         self.__archive_size = len(population)
         self.__archive = []
         self.select = SPEA2.Tournament()
+
+        self.fitness_archive = fitness_archive
 
     class SPEA2Proxy(DriverGen.Proxy):
 
@@ -92,7 +95,7 @@ class SPEA2(DriverGen):
         cost = 0
 
         while True:
-            self.calculate_fitnesses(self.__population, self.__archive)
+            cost = self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
             self.population = [mutate(
@@ -105,14 +108,13 @@ class SPEA2(DriverGen):
                 self.mutation_rate,
                 self.mutation_eta)
                 for _ in self.__population]
-            cost = len(self.__population)
 
             yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)
 
         return cost
 
     def calculate_fitnesses(self, population, archive):
-        self.calculate_objectives(population)
+        cost = self.calculate_objectives(population)
         union = archive + population
         self.calculate_dominated(union)
 
@@ -120,6 +122,7 @@ class SPEA2(DriverGen):
             raw_fitness = self.calculate_raw_fitness(p, union)
             density = self.calculate_density(p, union)
             p['fitness'] = raw_fitness + density
+        return cost
 
     def calculate_raw_fitness(self, p1, pop):
         return 0. + sum(y['dominates']
@@ -134,8 +137,15 @@ class SPEA2(DriverGen):
 
     def calculate_objectives(self, pop):
         for p in pop:
-            p['objectives'] = [o(p['value'])
+            if (self.fitness_archive is not None) and (p['value'] in self.fitness_archive):
+                p['objectives'] = self.fitness_archive[p['value']]
+                cost = 0
+            else:
+                p['objectives'] = [o(p['value'])
                                for o in self.fitnesses]
+                cost = len(self.population)
+        return cost
+
 
     def calculate_dominated(self, pop):
         for p in pop:

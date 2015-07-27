@@ -36,6 +36,10 @@ class IBEA(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)
 
+        def nominate_delegates(self):
+            return self.driver.finish()
+
+
     def __init__(self,
                  population,
                  dims,
@@ -45,7 +49,9 @@ class IBEA(DriverGen):
                  mutation_eta,
                  crossover_eta,
                  mutation_rate,
-                 crossover_rate):
+                 crossover_rate,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
 
         self.individuals = []
@@ -64,9 +70,11 @@ class IBEA(DriverGen):
         self.generation_counter = 0
         self.k = kappa
         self.mating_size_c = mating_population_size
-        self.population = population
+        self.population = [trim_function(x) for x in population]
 
         self._scale_objectives()
+
+        self.fitness_archive = fitness_archive
 
     def step(self, steps=1):
         for _ in range(steps):
@@ -104,7 +112,7 @@ class IBEA(DriverGen):
     def _scale_objectives(self):
         min_max = lambda x: (min(x), max(x))
         for ind in self.individuals:
-            if not ind.known_objectives:
+            if not ind.known_objectives or not ((self.fitness_archive is not None) and (ind.v in self.fitness_archive)):
                 self.cost += 1
             ind.known_objectives = True
         measured = [(objective, min_max([objective(ind.v) for ind in self.individuals])) for objective in
@@ -165,6 +173,8 @@ class IBEA(DriverGen):
         self.mating_size = int(self.mating_size_c * self.population_size)
 
     def calculate_objectives(self, ind):
+        if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+            return self.fitness_archive[ind.v]
         if not ind.known_objectives:
             self.cost += 1
         return [objective(ind) for objective in self.objectives]
