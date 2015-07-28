@@ -65,7 +65,7 @@ class SMSEMOA(DriverGen):
                 self.population.append(e)
 
         def nominate_delegates(self):
-            return nd_sort(self.population)[1]
+            return [i.value for i in nd_sort(self.population)[1]]
 
 
     @property
