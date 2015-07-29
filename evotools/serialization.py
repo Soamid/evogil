@@ -4,7 +4,7 @@ from datetime import datetime
 from functools import partial
 from importlib import import_module
 from itertools import chain
-import json
+import pickle
 import logging
 from pathlib import Path
 import random
@@ -110,12 +110,12 @@ class RunResult:
         with suppress(FileExistsError):
             self.path.mkdir(parents=True)
 
-        store_path = self.path / "{budget}.json".format(**locals())
-        with store_path.open(mode='w') as fh:
-            json_store = {"population": population,
+        store_path = self.path / "{budget}.pickle".format(**locals())
+        with store_path.open(mode='wb') as fh:
+            pickle_store = {"population": population,
                           "fitnesses": population_fitnesses,
                           "cost": cost}
-            json.dump(json_store, fh)
+            pickle.dump(pickle_store, fh)
 
         self.budgets[budget] = RunResultBudget(budget,
                                                cost,
@@ -127,35 +127,35 @@ class RunResult:
         if budget in self.budgets:
             return self.budgets[budget]
 
-        store_path = self.path / "{budget}.json".format(**locals())
-        population_json = self._load_file(store_path)
+        store_path = self.path / "{budget}.pickle".format(**locals())
+        population_pickle = self._load_file(store_path)
         res = RunResultBudget(budget,
-                              population_json["cost"],
-                              population_json["population"],
-                              population_json["fitnesses"],
+                              population_pickle["cost"],
+                              population_pickle["population"],
+                              population_pickle["fitnesses"],
                               store_path)
         return self.budgets.setdefault(budget, res)
 
     @staticmethod
     def _load_file(path):
-        with path.open(mode='r') as fh:
-            return json.load(fh)
+        with path.open(mode='rb') as fh:
+            return pickle.load(fh)
 
     def preload_all_budgets(self):
         self.budgets = {}
         with suppress(FileNotFoundError):
             for candidate in sorted(self.path.iterdir()):
                 try:
-                    match = re.fullmatch("(?P<budget>[0-9]+)\.json",
+                    match = re.fullmatch("(?P<budget>[0-9]+)\.pickle",
                                          candidate.name)
 
                     budget = int(match.groupdict()["budget"])
-                    population_json = self._load_file(candidate)
+                    population_pickle = self._load_file(candidate)
 
                     res = RunResultBudget(budget,
-                                          population_json["cost"],
-                                          population_json["population"],
-                                          population_json["fitnesses"],
+                                          population_pickle["cost"],
+                                          population_pickle["population"],
+                                          population_pickle["fitnesses"],
                                           candidate)
 
                     self.budgets[budget] = res
@@ -188,11 +188,11 @@ class RunResultBudget:
             if metric_name in self.metrics:
                 return self.metrics[metric_name]
 
-            metric_path = self.path.parent / "{self.budget}.{metric_name}.json".format(**locals())
+            metric_path = self.path.parent / "{self.budget}.{metric_name}.pickle".format(**locals())
 
             with suppress(FileNotFoundError):
-                with metric_path.open(mode='r') as fh:
-                    res = json.load(fh)
+                with metric_path.open(mode='rb') as fh:
+                    res = pickle.load(fh)
                     metric_val = res["value"]
                     if res["metric"]["params"] != metric_params:
                         e = Exception("You have changed params of the metric. "
@@ -208,14 +208,14 @@ class RunResultBudget:
             metric_fun = getattr(metric_mod, metric_name)
             metric_val = metric_fun(self.fitnesses, self.non_dominated_fitnesses, **metric_params)
 
-            with metric_path.open(mode='w') as fh:
-                json_store = {"value": metric_val,
+            with metric_path.open(mode='wb') as fh:
+                pickle_store = {"value": metric_val,
                               "metric": {
                                   "name": metric_name,
                                   "module": metric_mod_name,
                                   "params": metric_params}
                 }
-                json.dump(json_store, fh)
+                pickle.dump(pickle_store, fh)
 
             return self.metrics.setdefault(metric_name, metric_val)
         except Exception as e:
