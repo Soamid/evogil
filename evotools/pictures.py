@@ -61,7 +61,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'RHGS+OMOPSO': ('RHGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
          'RHGS+NSGAIII': ('RHGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
          'RHGS+SMSEMOA': ('RHGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
-         }
+}
 
 algos_order = [
     'SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
@@ -412,6 +412,8 @@ def plot_results_summary(problems, scoring, selected):
         metric_score = scoring[metric_name]
 
         plt.figure()
+        plt.title(
+            u'{} ({})'.format(metric_name, 'v' if ranking.best_func[metric_name] == min else '^'))
         x_axis = range(len(problems))
         problem_labels = [p for p in problems_order if p in problems]
         plt.xticks(x_axis, problem_labels)
