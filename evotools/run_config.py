@@ -34,9 +34,7 @@ problems = [
     'UF6',
     'UF7',
     'UF8',
-    'UF9',
-    'EWA1',
-    'EWA2'
+    'UF9'
 ]
 
 metaconfig_populationsize = 100
@@ -66,8 +64,8 @@ algo_base = {
     },
 
     "RHGS": {
-        "fitness_errors": (0.0, 0.0, 0.0),#(0.5, 0.2, 0.0),
-        "cost_modifiers": (1.0, 1.0, 1.0),#(0.1, 0.5, 1.0)
+        "fitness_errors": (0.0, 0.0, 0.0),
+        "cost_modifiers": (1.0, 1.0, 1.0),
         "mutation_etas": (10.0, 12.0, 15.0),
         "crossover_etas": (15.0, 20.0, 25.0),
         "population_sizes": (64, 20, 10),

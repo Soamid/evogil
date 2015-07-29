@@ -27,8 +27,8 @@ class RunResult:
             print(problem_name, res)
 
     @staticmethod
-    def each_run(algo, problem):
-        rootpath = Path('results',
+    def each_run(algo, problem, results_path='results'):
+        rootpath = Path(results_path,
                         problem,
                         algo)
         for candidate in sorted(rootpath.iterdir()):
@@ -37,6 +37,7 @@ class RunResult:
                                      candidate.name)
                 matchdict = match.groupdict()
                 res = RunResult(algo, problem,
+                                results_path=results_path,
                                 rundate=matchdict["rundate"],
                                 runid=matchdict["runid"])
                 res.preload_all_budgets()
@@ -45,7 +46,7 @@ class RunResult:
                 pass
 
     @staticmethod
-    def each_result():
+    def each_result(results_path='results'):
         def f_metrics(result_list, problem_mod):
             """ Pierwszy *zawsze* będzie cost. To ważne.
             Nazwa `igd` nie może się zmieniać, to ważne dla `best_fronts`.
@@ -70,7 +71,7 @@ class RunResult:
 
         def f_algo(problem_path, algo_path, problem_mod):
             by_budget = defaultdict(list)
-            for run in RunResult.each_run(algo_path.name, problem_path.name):
+            for run in RunResult.each_run(algo_path.name, problem_path.name, results_path):
                 for runbudget in run.each_budget():
                     by_budget[runbudget.budget].append(runbudget)
             for budget in sorted(by_budget):
@@ -87,19 +88,19 @@ class RunResult:
                 yield algo_path.name, f_algo(problem_path, algo_path, problem_mod)
 
         with suppress(FileNotFoundError):
-            for problem in Path('results').iterdir():
+            for problem in Path(results_path).iterdir():
                 problem_mod = '.'.join(['problems', problem.name, 'problem'])
                 problem_mod = import_module(problem_mod)
                 yield problem.name, problem_mod, f_problem(problem, problem_mod)
 
-    def __init__(self, algo, problem, rundate=None, runid=None):
+    def __init__(self, algo, problem, results_path='results', rundate=None, runid=None):
         if not rundate:
             rundate = datetime.today().strftime("%Y-%m-%d.%H%M%S.%f")
         if not runid:
             runid = random.randint(1000000, 9999999)
         self.rundate = rundate
         self.runid = runid
-        self.path = Path('results',
+        self.path = Path(results_path,
                          problem,
                          algo,
                          "{rundate}__{runid:0>7}".format(**locals()))

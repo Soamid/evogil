@@ -2,9 +2,10 @@ import collections
 import logging
 from contextlib import suppress
 from pathlib import Path
+import math
 
 from evotools import ea_utils
-from evotools.serialization import RunResult, evotools
+from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
 from evotools import ranking
@@ -14,7 +15,6 @@ import problems.ZDT2.problem as zdt2
 import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
-
 
 PLOTS_DIR = Path('plots')
 
@@ -43,24 +43,24 @@ RHGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAII': ('NSGAII', NSGAII_LS, NSGAII_M, BARE_CL),
-         'IBEA': ( 'IBEA', IBEA_LS, IBEA_M, BARE_CL),
+         'IBEA': ('IBEA', IBEA_LS, IBEA_M, BARE_CL),
          'OMOPSO': ('OMOPSO', OMOPSO_LS, OMOPSO_M, BARE_CL),
          'NSGAIII': ('NSGAIII', NSGAIII_LS, NSGAIII_M, BARE_CL),
          'SMSEMOA': ('SMSEMOA', SMSEMOA_LS, SMSEMOA_M, BARE_CL),
 
          'IMGA+SPEA2': ('IMGA+SPEA2', SPEA_LS, SPEA_M, IMGA_CL),
-         'IMGA+NSGAII': ( 'IMGA+NSGAII', NSGAII_LS, NSGAII_M, IMGA_CL),
+         'IMGA+NSGAII': ('IMGA+NSGAII', NSGAII_LS, NSGAII_M, IMGA_CL),
          'IMGA+OMOPSO': ('IMGA+OMOPSO', OMOPSO_LS, OMOPSO_M, IMGA_CL),
          'IMGA+IBEA': ('IMGA+IBEA', IBEA_LS, IBEA_M, IMGA_CL),
-         'IMGA+NSGAIII': ( 'IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
-         'IMGA+SMSEMOA': ( 'IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
+         'IMGA+NSGAIII': ('IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
+         'IMGA+SMSEMOA': ('IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
 
-         'RHGS+SPEA2': ( 'RHGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
-         'RHGS+NSGAII': ( 'RHGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
-         'RHGS+IBEA': ( 'RHGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
+         'RHGS+SPEA2': ('RHGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
+         'RHGS+NSGAII': ('RHGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
+         'RHGS+IBEA': ('RHGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
          'RHGS+OMOPSO': ('RHGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
-         'RHGS+NSGAIII': ( 'RHGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
-         'RHGS+SMSEMOA': ( 'RHGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
+         'RHGS+NSGAIII': ('RHGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
+         'RHGS+SMSEMOA': ('RHGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
          }
 
 algos_order = [
@@ -90,7 +90,8 @@ algos_groups_configuration_tres_caballeros = {
     ('OMOPSO', 'IMGA+OMOPSO', 'RHGS+OMOPSO'): ('_omopso',),
 }
 
-problems_order = ['EWA1', 'EWA2', 'ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6', 'UF7', 'UF8', 'UF9',
+problems_order = ['EWA1', 'EWA2', 'ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6',
+                  'UF7', 'UF8', 'UF9',
                   'UF10', 'UF11', 'UF12']
 
 algos_groups_configuration = algos_groups_configuration_tres_caballeros
@@ -415,6 +416,11 @@ def plot_results_summary(problems, scoring, selected):
         problem_labels = [p for p in problems_order if p in problems]
         plt.xticks(x_axis, problem_labels)
 
+        if metric_name == 'hypervolume':
+            plt.ylim([0.8, 1.1])
+        else:
+            plt.ylim([-0.1, 1.1])
+
         for algo in metric_score:
             name, lines, marker, color = algos[algo]
             x_algo = []
@@ -464,16 +470,22 @@ def pictures_summary(args, queue):
                         data_process = list(x() for x in data_process)
                         data_analysis = yield_analysis(data_process, boot_size)
 
-                        score = data_analysis["btstrpd"]["metrics"]
+                        score = math.log(math.fabs(data_analysis["btstrpd"]["metrics"]) + 1.0)
 
                         scoring[metric_name][algo_name][problem_name] = score
-                        problem_score[metric_name].append(score)
+                        problem_score[metric_name].append((algo_name, score))
 
             for metric_name in scoring:
-                max_score = max(problem_score[metric_name]) + 1
+
+                # metric_rank = sorted(problem_score[metric_name], key=lambda x : x[1])
+
+                # for i in range(len(metric_rank)):
+                #     algo_name = metric_rank[i][0]
+                #     scoring[metric_name][algo_name][problem_name] = i
+
+                max_score = max(x for algo, x in problem_score[metric_name]) + 0.0001
                 for algo_name, _ in algos:
                     if algo_name in scoring[metric_name]:
                         scoring[metric_name][algo_name][problem_name] /= max_score
 
     plot_results_summary(problems, scoring, selected)
-
