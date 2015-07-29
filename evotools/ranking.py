@@ -4,7 +4,7 @@ from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
 
-best_func = { 'hypervolume' : max, 'igd' : min, 'ndr' : max, 'spacing' : min, 'extent' : max, 'gd' : min, 'epsilon' : max}
+best_func = { 'hypervolume' : max, 'igd' : min, 'spacing' : min,  'epsilon' : max}
 
 
 def table_rank(args, queue):
@@ -14,6 +14,7 @@ def table_rank(args, queue):
     boot_size = int(args['--bootstrap'])
 
     result_dirs = ['results0', 'results1', 'results2']
+
 
     results = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
 
@@ -40,20 +41,32 @@ def table_rank(args, queue):
   \\centering
     \\caption{Final results}
     \\label{tab:results"}
-    \\begin{tabular}{  c | r@{.}l : r@{.}l : r@{.}l }
-        & results0
-        & results1
-        & results3
+    \\resizebox{\\textwidth}{!}{%
+    \\begin{tabular}{  r@{ }l | c | c | c | }
+          \multicolumn{2}{c}{}
+        & $K_0$
+        & $K_1$
+        & $K_2$
       \\\\ \\hline""")
 
-    for budget, metric_name in sorted(results.keys(), key=lambda x : x[0]):
+    prevous_budget = None
+    for budget, metric_name in sorted(sorted(results.keys(), key=lambda x : x[1]), key=lambda x : x[0]):
+        budget_label = str(budget) + ' '
+        if prevous_budget and prevous_budget != budget:
+            print("\\hdashline")
+        elif prevous_budget:
+            budget_label = ''
+
         score_str = ''
         for result_set in result_dirs:
-            algo_name, score = results[(budget, metric_name)][result_set].most_common(1)[0]
-            score_str += '& {} ({}) '.format(algo_name, score)
-        print("{} {} {}\\\\".format(budget, metric_name, score_str))
+            algo_ranking = results[(budget, metric_name)][result_set].most_common(2)
+            algo_name1, score1 = algo_ranking[0]
+            algo_name2, score2 = algo_ranking[1]
+            score_str += '& {} ({})'.format(algo_name1, score1)
+        print("{}& {} {}\\\\".format(budget_label, metric_name, score_str))
+        prevous_budget = budget
 
-    print("""    \\end{tabular}\n\\end{table}""")
+    print("""    \\end{tabular}}\n\\end{table}""")
 
 
 
