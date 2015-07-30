@@ -3,11 +3,15 @@ import os
 from contextlib import contextmanager
 
 # numpy + matplotlib
+import collections
 import matplotlib.pyplot as plt
 from numpy.linalg import LinAlgError
 
 # self
-from evotools.config import algos, algos_order, PLOTS_DIR, metric_names
+from evotools.pictures import algos, algos_order, PLOTS_DIR
+from evotools.ranking import best_func
+from evotools.serialization import RunResult
+from evotools.stats_bootstrap import yield_analysis
 
 
 @contextmanager
@@ -27,20 +31,20 @@ def prepare_data(data):
     return l
 
 
-def violin(*args, **kwargs):
-    global_data = {}
+def violin(args, queue):
+    global_data = collections.defaultdict(dict)
 
-    for loop in []:
-        d_problem    = loop['d_problem']
-        d_algorithm  = loop['d_algorithm']
-        data         = loop['data']
-        metrics_name_long = loop['metrics_name_long']
+    boot_size = int(args['--bootstrap'])
 
-        key = (d_problem.name, metrics_name_long)
-        if key not in global_data:
-            global_data[(d_problem.name, metrics_name_long)] = {}
+    for problem_name, problem_mod, algorithms in RunResult.each_result('results'):
+        for algo_name, budgets in algorithms:
+            for metric_name, metric_name_long, data_process in list(budgets)[-1]["analysis"]:
+                if metric_name in best_func:
+                    data_process = list(x() for x in data_process)
+                    data_analysis = yield_analysis(data_process, boot_size)
 
-        global_data[(d_problem.name, metrics_name_long)][d_algorithm.name] = data
+                    score = data_analysis["btstrpd"]["metrics"]
+                    global_data[(problem_name, metric_name)][algo_name] = score
 
     for problem, metric in global_data:
         try:

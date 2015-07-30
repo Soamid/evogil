@@ -3,6 +3,7 @@ import logging
 from contextlib import suppress
 from pathlib import Path
 import math
+from mpl_toolkits.mplot3d import Axes3D
 
 from evotools import ea_utils
 from evotools.serialization import RunResult
@@ -15,6 +16,16 @@ import problems.ZDT2.problem as zdt2
 import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
+import problems.UF1.problem as uf1
+import problems.UF2.problem as uf2
+import problems.UF3.problem as uf3
+import problems.UF4.problem as uf4
+import problems.UF5.problem as uf5
+import problems.UF6.problem as uf6
+import problems.UF7.problem as uf7
+import problems.UF8.problem as uf8
+import problems.UF9.problem as uf9
+
 
 PLOTS_DIR = Path('plots')
 
@@ -64,7 +75,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
 }
 
 algos_order = [
-    'SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
+    'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
     'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA',
 ]
@@ -100,22 +111,30 @@ algos_groups = {a: group for algorithms, group in algos_groups_configuration.ite
 
 
 def plot_pareto_fronts():
-    problems = [(zdt1, 'ZDT1'), (zdt2, 'ZDT2'), (zdt4, 'ZDT4'), (zdt6, 'ZDT6')]
+    problems = [(zdt1, 'ZDT1'), (zdt2, 'ZDT2'), (zdt4, 'ZDT4'), (zdt6, 'ZDT6'),
+                (uf1, 'UF1'), (uf2, 'UF2'), (uf3, 'UF3'), (uf4, 'UF4'),
+                (uf7, 'UF7')]
 
     for problem in problems:
         problem, name = problem
         pareto_front = problem.pareto_front
         plot_front(pareto_front, name)
 
-    plot_front(ackley.pareto_front, 'Ackley', scattered=True)
+    plot_splitted(zdt3, 'ZDT3', 0.05)
+    plot_front(uf5.pareto_front, 'UF5', scattered=True)
+    plot_splitted(uf6, 'UF6', 0.01)
+    plot_front(uf8.pareto_front, 'UF8', scattered=True)
+    plot_front(uf9.pareto_front, 'UF9', scattered=True)
 
-    zdt3_front = zdt3.pareto_front
-    fronts = ea_utils.split_front(zdt3_front, 0.05)
+
+def plot_splitted(problem, name, eps):
+    problem_front = problem.pareto_front
+    fronts = ea_utils.split_front(problem_front, eps)
     fig = None
     for front in fronts[:-1]:
         fig = plot_front(front, None, figure=fig, save=False)
 
-    plot_front(fronts[-1], 'ZDT3', figure=fig, save=True)
+    plot_front(fronts[-1], name, figure=fig, save=True)
 
 
 def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
@@ -123,17 +142,26 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
         f = figure
     else:
         f = plt.figure()
+        if len(pareto_front[0]) > 2:
+            ax = Axes3D(f)
     plt.axhline(linestyle='--', lw=0.9, c='#7F7F7F')
     plt.axvline(linestyle='--', lw=0.9, c='#7F7F7F')
 
     prto_x = [x[0] for x in pareto_front]
     prto_y = [x[1] for x in pareto_front]
+    prto_z = [x[2] for x in pareto_front] if len(pareto_front[0]) > 2 else None
 
     if scattered:
-        plt.scatter(prto_x, prto_y, c='k', s=300, edgecolors='none')
+        if prto_z:
+            ax.scatter(prto_x, prto_y, prto_z, c='k', s=300, edgecolors='none')
+        else:
+            plt.scatter(prto_x, prto_y, c='k', s=300, edgecolors='none')
     else:
-        plt.margins(y=.1, x=.1)
-        plt.plot(prto_x, prto_y, 'k-', lw=6)
+        if prto_z:
+            ax.plot(prto_x, prto_y, prto_z, 'k-', lw=6)
+        else:
+            plt.margins(y=.1, x=.1)
+            plt.plot(prto_x, prto_y, 'k-', lw=6)
 
     frame = plt.gca()
 
@@ -141,7 +169,7 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
     frame.axes.get_yaxis().set_ticklabels([])
 
     if save:
-        path = PLOTS_DIR / 'pareto_fronts' / (name + '.pdf')
+        path = PLOTS_DIR / 'pareto_fronts' / (name + '.eps')
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
@@ -491,3 +519,6 @@ def pictures_summary(args, queue):
                         scoring[metric_name][algo_name][problem_name] /= max_score
 
     plot_results_summary(problems, scoring, selected)
+
+
+plot_pareto_fronts()
