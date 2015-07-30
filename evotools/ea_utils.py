@@ -89,7 +89,7 @@ def split_front(pareto_front, epsilon):
     prev_x = 0
 
     for x, y in pareto_front:
-        if x - prev_x > epsilon:
+        if x - prev_x > epsilon and len(group) > 1:
             groups.append(group)
             group = [(x, y)]
         else:
@@ -99,6 +99,7 @@ def split_front(pareto_front, epsilon):
     if groups[-1] != group:
         groups.append(group)
 
+    print(groups)
     return groups
 
 
