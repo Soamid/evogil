@@ -378,7 +378,7 @@ def pictures_from_stats(args, queue):
 
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result():
+        for problem_name, problem_mod, algorithms in RunResult.each_result('../results/results0'):
             for algo_name, budgets in algorithms:
                 for result in budgets:
                     _, _, cost_data = next(result["analysis"])
@@ -439,12 +439,15 @@ def plot_results_summary(problems, scoring, selected):
             if algo in selected:
                 ax = plt.plot(x_algo, y_algo, color=color, label=name)
                 ax[0].set_dashes(lines)
+        lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        path = PLOTS_DIR / 'plots_summary' / '{}.pdf'.format(metric_name)
+        path = PLOTS_DIR / 'plots_summary' / '{}.eps'.format(metric_name)
+        path2 = PLOTS_DIR / 'plots_summary' / '{}.pdf'.format(metric_name)
 
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
-        plt.savefig(str(path))
+        plt.savefig(str(path), bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(str(path2), bbox_extra_artists=(lgd,), bbox_inches='tight')
         plt.close()
 
 
@@ -461,7 +464,7 @@ def pictures_summary(args, queue):
     problems = set()
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result():
+        for problem_name, problem_mod, algorithms in RunResult.each_result('../results/results1'):
             problems.add(problem_name)
             problem_score = collections.defaultdict(list)
             algos = list(algorithms)
