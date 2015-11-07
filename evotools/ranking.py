@@ -4,7 +4,7 @@ from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
 
-best_func = { 'hypervolume' : max, 'igd' : min, 'spacing' : min,  'epsilon' : max}
+best_func = { 'hypervolume' : max, 'igd' : min, 'spacing' : min,  'gd' : min}
 
 
 def table_rank(args, queue):
@@ -13,7 +13,7 @@ def table_rank(args, queue):
 
     boot_size = int(args['--bootstrap'])
 
-    result_dirs = ['results0', 'results1', 'results2']
+    result_dirs = ['../results/results0', '../results/results1', '../results/results2']
 
 
     results = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
@@ -82,7 +82,7 @@ def rank(args, queue):
     scoring = collections.defaultdict(list)
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result():
+        for problem_name, problem_mod, algorithms in RunResult.each_result('../results/results1'):
             for algo_name, budgets in algorithms:
                 max_budget = list(budgets)[4]
                 for metric_name, metric_name_long, data_process in max_budget["analysis"]:

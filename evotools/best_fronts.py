@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from evotools import ea_utils
 
+from evotools import config
 from evotools.pictures import algos, algos_order
 from evotools.serialization import RunResult
 
@@ -21,11 +22,11 @@ algo_names = [algos[a][0] for a in algos_order]
 def plot_problem_front(original_front, multimodal=False, scatter=False):
     f = plt.figure(num=None, facecolor='w', edgecolor='k', figsize=(15, 7))
     ax = Axes3D(f) if len(original_front[0]) > 2 else plt.subplot(111)
+    plt.tight_layout()
+    plt.xlabel('1st objective', fontsize=25)
+    plt.ylabel("2nd objective", fontsize=30)
 
-    plt.xlabel('1st objective', fontsize=20)
-    plt.ylabel("2nd objective", fontsize=20)
-
-    plt.tick_params(axis='both', labelsize=15)
+    plt.tick_params(axis='both', labelsize=25)
 
     plt.axhline(linestyle='--', lw=0.9, c='#7F7F7F')
     plt.axvline(linestyle='--', lw=0.9, c='#7F7F7F')
@@ -71,15 +72,15 @@ def plot_results(f, best_result, best_result_name):
 
 def save_plot(ax, f, d_problem):
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
+    # ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
     handles, labels = ax.get_legend_handles_labels()
 
     handle_d = dict(zip(labels, handles))
     handles_order = [handle_d[l] for l in algo_names if l in handle_d]
 
-    plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
+    # plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
 
-    path = Path(PLOTS_DIR) / RESULTS_DIR / '{}.pdf'.format(d_problem.name.replace('emoa', 'moea'))
+    path = Path(PLOTS_DIR) / RESULTS_DIR / '{}.eps'.format(d_problem.name.replace('emoa', 'moea'))
     with suppress(FileExistsError):
         path.parent.mkdir(parents=True)
 
@@ -88,26 +89,27 @@ def save_plot(ax, f, d_problem):
 
 
 def main(*args, **kwargs):
-    for problem_name, problem_mod, algorithms in RunResult.each_result():
-        original_front = problem_mod.pareto_front
-        ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
+    for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
+        if problem_name == 'ZDT2':
+            original_front = problem_mod.pareto_front
+            ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
 
-        for algo_name, budgets in algorithms:
-            best_result, best_result_name, best_result_metric = None, None, None
-            """:type: RunResultBudget """
+            for algo_name, budgets in algorithms:
+                best_result, best_result_name, best_result_metric = None, None, None
+                """:type: RunResultBudget """
 
-            for result in budgets:
-                # print(result)
-                for metrics_name, _, precomp in result["analysis"]:
-                    if metrics_name == "igd":
-                        precomp = [x() for x in precomp]
-                        for runresbud, metric_val in zip(result["results"], precomp):
-                            print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
+                for result in budgets:
+                    # print(result)
+                    for metrics_name, _, precomp in result["analysis"]:
+                        if metrics_name == "igd":
+                            precomp = [x() for x in precomp]
+                            for runresbud, metric_val in zip(result["results"], precomp):
+                                print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
 
-                            if best_result_metric is None or metric_val < best_result_metric:
-                                best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
+                                if best_result_metric is None or metric_val < best_result_metric:
+                                    best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
 
-            plot_results(ax, best_result, best_result_name)
-        save_plot(ax, f, problem_mod)
+                plot_results(ax, best_result, best_result_name)
+            save_plot(ax, f, problem_mod)
 
 

@@ -1,3 +1,5 @@
+RESULTS_DIR = '../results/results1'
+
 PLOTS_DIR = 'plots'
 
 SPEA_LS = '-'

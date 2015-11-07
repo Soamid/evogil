@@ -5,7 +5,9 @@ from pathlib import Path
 import math
 from mpl_toolkits.mplot3d import Axes3D
 
+from evotools import config
 from evotools import ea_utils
+from evotools.ranking import best_func
 from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
@@ -66,18 +68,18 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IMGA+NSGAIII': ('IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
          'IMGA+SMSEMOA': ('IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
 
-         'RHGS+SPEA2': ('RHGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
-         'RHGS+NSGAII': ('RHGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
-         'RHGS+IBEA': ('RHGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
-         'RHGS+OMOPSO': ('RHGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
-         'RHGS+NSGAIII': ('RHGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
-         'RHGS+SMSEMOA': ('RHGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
+         'RHGS+SPEA2': ('HGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
+         'RHGS+NSGAII': ('HGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
+         'RHGS+IBEA': ('HGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
+         'RHGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
+         'RHGS+NSGAIII': ('HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
+         'RHGS+SMSEMOA': ('HGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
 }
 
 algos_order = [
     'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
-    'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
-    'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA',
+     'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
+     'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA',
 ]
 
 algos_groups_configuration_all_together = {
@@ -105,7 +107,7 @@ problems_order = ['EWA1', 'EWA2', 'ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1',
                   'UF7', 'UF8', 'UF9',
                   'UF10', 'UF11', 'UF12']
 
-algos_groups_configuration = algos_groups_configuration_tres_caballeros
+algos_groups_configuration = algos_groups_configuration_all_together
 
 algos_groups = {a: group for algorithms, group in algos_groups_configuration.items() for a in algorithms}
 
@@ -294,13 +296,15 @@ def align_to_error(result, error):
 def plot_legend(series):
     figlegend = plt.figure(num=None, figsize=(8.267 / 2.0, 11.692 / 4.0), facecolor='w', edgecolor='k')
 
-    figlegend.legend(series, [s.get_label() for s in series], 'center', prop={'size': 10},
-                     handlelength=8, borderpad=1.2, labelspacing=1, frameon=False)
+    lgd = figlegend.legend(series, [s.get_label() for s in series], 'center', prop={'size': 15},
+                     handlelength=8, borderpad=1.2, labelspacing=1, frameon=False, ncol=2)
 
     path = PLOTS_DIR / 'plots_bnw' / 'legend.eps'
+    path2 = PLOTS_DIR / 'plots_bnw' / 'legend.pdf'
     with suppress(FileExistsError):
         path.parent.mkdir(parents=True)
-    figlegend.savefig(str(path))
+    figlegend.savefig(str(path), bbox_extra_artists=(lgd,), bbox_inches='tight')
+    figlegend.savefig(str(path2), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 def plot_results(results):
@@ -347,9 +351,11 @@ def plot_results(results):
                 logger.debug("plt.ylim = %s", ylim)
                 plt.ylim(ylim)
         logger.debug("plt.ylabel = %s", metric)
-        plt.ylabel(metric, fontsize=20)
-        plt.xlabel('calls to fitness function', fontsize=20)
-        plt.tick_params(axis='both', labelsize=15)
+        plt.xlim(500, 4500)
+        plt.ylabel(metric, fontsize=30)
+        plt.xlabel('calls to fitness function', fontsize=25)
+        plt.tick_params(axis='both', labelsize=25)
+        plt.tight_layout()
         plot_data = sorted(plot_data, key=lambda x: x[0])
         logger.debug("plot_data = %s", plot_data)
         lw = 5
@@ -375,24 +381,26 @@ def plot_results(results):
 
         # plt.legend(loc='best', fontsize=6)
         # plt.show()
-        # if not legend_saved:
-        # plot_legend(last_plt)
-        # legend_saved = True
+        if not legend_saved:
+            plot_legend(last_plt)
+            legend_saved = True
 
         box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
+        # ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
 
-        plt.legend(last_plt, [s.get_label() for s in last_plt], loc='center left', bbox_to_anchor=(1, 0.5),
-                   prop={'size': 20}, frameon=False)
+        # plt.legend(last_plt, [s.get_label() for s in last_plt], loc='center left', bbox_to_anchor=(1, 0.5),
+        #            prop={'size': 20}, frameon=False)
 
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
         path = PLOTS_DIR / 'plots_bnw' / '{}_{}.pdf'.format(problem_moea, metric_short + str(group))
+        path2 = PLOTS_DIR / 'plots_bnw' / '{}_{}.eps'.format(problem_moea, metric_short + str(group))
 
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
+        plt.savefig(str(path2))
         plt.close()
 
 
@@ -406,31 +414,33 @@ def pictures_from_stats(args, queue):
 
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result('../results/results0'):
-            for algo_name, budgets in algorithms:
-                for result in budgets:
-                    _, _, cost_data = next(result["analysis"])
-                    cost_data = list(x() for x in cost_data)
-                    cost_analysis = yield_analysis(cost_data, boot_size)
+        for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
+            if problem_name == 'ZDT2':
+                for algo_name, budgets in algorithms:
+                    for result in budgets:
+                        _, _, cost_data = next(result["analysis"])
+                        cost_data = list(x() for x in cost_data)
+                        cost_analysis = yield_analysis(cost_data, boot_size)
 
-                    budget = cost_analysis["btstrpd"]["metrics"]
-                    budget_err = cost_analysis["stdev"]
+                        budget = cost_analysis["btstrpd"]["metrics"]
+                        budget_err = cost_analysis["stdev"]
 
-                    for metric_name, metric_name_long, data_process in result["analysis"]:
-                        if metric_name == 'dst from pareto':
-                            metric_name = 'dst'
-                        data_process = list(x() for x in data_process)
+                        for metric_name, metric_name_long, data_process in result["analysis"]:
+                            if metric_name in best_func:
+                                if metric_name == 'dst from pareto':
+                                    metric_name = 'dst'
+                                data_process = list(x() for x in data_process)
 
-                        data_analysis = yield_analysis(data_process, boot_size)
+                                data_analysis = yield_analysis(data_process, boot_size)
 
-                        score = data_analysis["btstrpd"]["metrics"]
-                        score_err = data_analysis["stdev"]
+                                score = data_analysis["btstrpd"]["metrics"]
+                                score_err = data_analysis["stdev"]
 
-                        keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
-                        value = (budget, budget_err, score, score_err)
+                                keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
+                                value = (budget, budget_err, score, score_err)
 
-                        for key in keys:
-                            results[key].append(value)
+                                for key in keys:
+                                    results[key].append(value)
 
     plot_results(results)
 
@@ -440,8 +450,7 @@ def plot_results_summary(problems, scoring, selected):
         metric_score = scoring[metric_name]
 
         plt.figure()
-        plt.title(
-            u'{} ({})'.format(metric_name, 'v' if ranking.best_func[metric_name] == min else '^'))
+        plt.title(metric_name)
         x_axis = range(len(problems))
         problem_labels = [p for p in problems_order if p in problems]
         plt.xticks(x_axis, problem_labels)
@@ -451,7 +460,7 @@ def plot_results_summary(problems, scoring, selected):
         else:
             plt.ylim([-0.1, 1.1])
 
-        for algo in metric_score:
+        for algo in algos_order:
             name, lines, marker, color = algos[algo]
             x_algo = []
             y_algo = []
@@ -492,7 +501,7 @@ def pictures_summary(args, queue):
     problems = set()
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result('../results/results1'):
+        for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
             problems.add(problem_name)
             problem_score = collections.defaultdict(list)
             algos = list(algorithms)

@@ -109,7 +109,7 @@ def main_worker(queue, configurer):
         'run':         evotools.run_parallel.run_parallel,
         'statistics':  evotools.stats.statistics,
         'stats':       evotools.stats.statistics,
-        'rank':        evotools.ranking.table_rank,
+        'rank':        evotools.ranking.rank,
         'pictures':    evotools.pictures.pictures_from_stats,
         'pictures_summary':    evotools.pictures.pictures_summary,
         'best_fronts': evotools.best_fronts.main,

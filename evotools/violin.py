@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from numpy.linalg import LinAlgError
 
 # self
+from evotools import config
 from evotools.pictures import algos, algos_order, PLOTS_DIR
 from evotools.ranking import best_func
 from evotools.serialization import RunResult
@@ -36,15 +37,12 @@ def violin(args, queue):
 
     boot_size = int(args['--bootstrap'])
 
-    for problem_name, problem_mod, algorithms in RunResult.each_result('results'):
+    for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
         for algo_name, budgets in algorithms:
             for metric_name, metric_name_long, data_process in list(budgets)[-1]["analysis"]:
                 if metric_name in best_func:
                     data_process = list(x() for x in data_process)
-                    data_analysis = yield_analysis(data_process, boot_size)
-
-                    score = data_analysis["btstrpd"]["metrics"]
-                    global_data[(problem_name, metric_name)][algo_name] = score
+                    global_data[(problem_name, metric_name)][algo_name] = data_process
 
     for problem, metric in global_data:
         try:
@@ -67,9 +65,9 @@ def violin(args, queue):
 
                 plt.figure(num=None, facecolor='w', edgecolor='k')
                 # plt.yscale('log')
-                x_index = range(1, len(algos) + 1)
+                x_index = range(1, len(algos_order) + 1)
                 plt.ylabel(metric, fontsize=20)
-                plt.xticks(x_index, [algos[a][0] for a in algos_order], rotation=20)
+                plt.xticks(x_index, [algos[a][0] for a in algos_order], rotation=30)
                 for i in x_index:
                     plt.axvline(i, lw=0.9, c='#AFAFAF', alpha=0.5)
                 plt.tick_params(axis='both',  labelsize=15)
@@ -92,12 +90,13 @@ def violin(args, queue):
 
 
                 plt.tight_layout()
-                os.makedirs(PLOTS_DIR, exist_ok=True)
-                os.makedirs(os.path.join(PLOTS_DIR, 'plots_violin'), exist_ok=True)
+                # os.makedirs(PLOTS_DIR, exist_ok=True)
+                # os.makedirs(os.path.join(PLOTS_DIR, 'plots_violin'), exist_ok=True)
                 problem_moea = problem.replace('emoa', 'moea')
                 metric_short = metric.replace('distance from Pareto front', 'dst')
-                fig_path = os.path.join(PLOTS_DIR, 'plots_violin', problem_moea + '_' + metric_short + '.pdf')
-                plt.savefig(fig_path)
+                fig_path = PLOTS_DIR / 'plots_violin' / '{}_{}.eps'.format( problem_moea, metric_short)
+                print(fig_path)
+                plt.savefig(str(fig_path))
 
         except KeyError as e:
             print('Missing algo: {}, (problem: {}, metrics: {}'.format(e, problem, metric))
