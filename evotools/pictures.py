@@ -60,6 +60,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'OMOPSO': ('OMOPSO', OMOPSO_LS, OMOPSO_M, BARE_CL),
          'NSGAIII': ('NSGAIII', NSGAIII_LS, NSGAIII_M, BARE_CL),
          'SMSEMOA': ('SMSEMOA', SMSEMOA_LS, SMSEMOA_M, BARE_CL),
+         'JGBL': ('JGBL', SMSEMOA_LS, SMSEMOA_M, BARE_CL),
 
          'IMGA+SPEA2': ('IMGA+SPEA2', SPEA_LS, SPEA_M, IMGA_CL),
          'IMGA+NSGAII': ('IMGA+NSGAII', NSGAII_LS, NSGAII_M, IMGA_CL),
@@ -77,19 +78,19 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
 }
 
 algos_order = [
-    'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
+    'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL',
      'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
      'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA',
 ]
 
 algos_groups_configuration_all_together = {
-    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA',
+    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL',
      'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA',
      'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA'): ('',)
 }
 
 algos_groups_configuration_splitted = {
-    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA'): (0, 1),
+    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL'): (0, 1),
     ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA'): (0, 2),
     ('RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA'): (1, 2)
 }
@@ -531,6 +532,3 @@ def pictures_summary(args, queue):
                         scoring[metric_name][algo_name][problem_name] /= max_score
 
     plot_results_summary(problems, scoring, selected)
-
-
-plot_pareto_fronts()

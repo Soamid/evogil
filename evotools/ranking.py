@@ -1,5 +1,6 @@
 import logging
 import collections
+from evotools import config
 from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
@@ -82,7 +83,7 @@ def rank(args, queue):
     scoring = collections.defaultdict(list)
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result('../results/results1'):
+        for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
             for algo_name, budgets in algorithms:
                 max_budget = list(budgets)[4]
                 for metric_name, metric_name_long, data_process in max_budget["analysis"]:

@@ -6,6 +6,7 @@ _drivers = [
     'NSGAII',
     'OMOPSO',
     'NSGAIII',
+    'JGBL',
     'SMSEMOA',
 ]
 
@@ -55,6 +56,12 @@ algo_base = {
 
     "NSGAII": {
         "mating_population_size": 0.5,
+    },
+
+    "JGBL": {
+        "mating_population_size": 0.5,
+        "jumping_rate": 0.6,
+        "jumping_percentage": 0.5
     },
 
     "IMGA": {
@@ -112,6 +119,9 @@ def init_alg___NSGAII(algo_config, problem_mod):
 
 
 def init_alg___NSGAIII(algo_config, problem_mod):
+    standard_variance(algo_config, problem_mod)
+
+def init_alg___JGBL(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
 
 
