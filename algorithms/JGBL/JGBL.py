@@ -37,7 +37,7 @@ class JGBL(NSGAII):
 
         self.individuals = set(old_pop + new_pop)
 
-        print("sum: " + str(len(self.individuals)))
+        # print("sum: " + str(len(self.individuals)))
 
         self._nd_sort()
         self._crowding()
@@ -46,8 +46,8 @@ class JGBL(NSGAII):
 
 
         # print("nondom pop: " + str(len([p for p in self.individuals for f in self.front.values() if p in f])))
-        print("after selection: " + str(len(self.individuals)))
-        print("nondom: " + str(len(nondominanted)))
+        # print("after selection: " + str(len(self.individuals)))
+        # print("nondom: " + str(len(nondominanted)))
 
         if len(nondominanted) > len(self.individuals):
             print('hop')
@@ -57,14 +57,14 @@ class JGBL(NSGAII):
 
             jumping_pop = self.jump_genes(self.individuals, nondominanted)
 
-            self.individuals += set(self.individuals + jumping_pop)
+            self.individuals = set(self.individuals + jumping_pop)
             self._calculate_objectives()
             self._nd_sort()
             self._crowding()
             self._environmental_selection()
         else:
             self.individuals = new_pop
-            print("check new: " + str(len(self.individuals)))
+            # print("check new: " + str(len(self.individuals)))
 
     def jump_genes(self, pop, nondominated):
         jumping_pop = []
