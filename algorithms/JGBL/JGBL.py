@@ -33,21 +33,12 @@ class JGBL(NSGAII):
         super()._next_step()
         new_pop = list(self.individuals)
 
-        # print("\nnew: " + str(len(self.individuals)))
-
         self.individuals = set(old_pop + new_pop)
-
-        # print("sum: " + str(len(self.individuals)))
 
         self._nd_sort()
         self._crowding()
         self._environmental_selection()
         nondominanted = self.front[1]
-
-
-        # print("nondom pop: " + str(len([p for p in self.individuals for f in self.front.values() if p in f])))
-        # print("after selection: " + str(len(self.individuals)))
-        # print("nondom: " + str(len(nondominanted)))
 
         if len(nondominanted) > len(self.individuals):
             print('hop')
@@ -64,7 +55,6 @@ class JGBL(NSGAII):
             self._environmental_selection()
         else:
             self.individuals = new_pop
-            # print("check new: " + str(len(self.individuals)))
 
     def jump_genes(self, pop, nondominated):
         jumping_pop = []
@@ -92,12 +82,6 @@ class JGBL(NSGAII):
         x_ratio = x_ratio[:x_pos] + y_transposon + x_ratio[x_pos:]
         y_ratio = y_ratio[:y_pos] + x_transposon + y_ratio[y_pos:]
 
-        # print("Wycinam z x " + str(x_to_cut))
-        # print("Wrzucam na pozycje y: " + str(y_pos))
-        #
-        # print("Wycinam z y " + str(y_to_cut))
-        # print("Wrzucam na pozycje x: " + str(x_pos))
-
         return self.decode_ratio(x_ratio), self.decode_ratio(y_ratio)
 
     def copy_and_paste(self, x, y):
@@ -106,12 +90,6 @@ class JGBL(NSGAII):
 
         x_pos = random.randint(0, len(x_ratio) - 1)
         y_pos = random.randint(0, len(y_ratio) - 1)
-        #
-        # print("Kopiuje z x " + str(x_to_copy))
-        # print("Wrzucam na pozycje y: " + str(y_pos))
-        #
-        # print("Kopiuje z y " + str(y_to_copy))
-        # print("Wrzucam na pozycje x: " + str(x_pos))
 
         self.paste(x_ratio, y_transposon, x_pos)
         self.paste(y_ratio, x_transposon, y_pos)
