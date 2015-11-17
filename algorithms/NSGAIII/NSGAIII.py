@@ -91,7 +91,6 @@ class NSGAIII(DriverGen):
 
         self.clusters = [[] for _ in self.reference_points]
 
-
     def generate_reference_points(self):
         return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
 
@@ -119,7 +118,6 @@ class NSGAIII(DriverGen):
                     ind.objectives = [objective(ind.v) for objective in self.objectives]
                     if self.fitness_archive is not None:
                         self.fitness_archive[ind.v] = ind.objectives
-
 
     def update_ideal_point(self, individuals):
         self._calculate_objectives(individuals)
