@@ -135,6 +135,8 @@ class NSGAII(DriverGen):
         self._mating_selection(0.9)
         self._crossover()
         self._mutation()
+        for ind in self.mating_individuals:
+            ind.v = self.trim_function(ind.v)
         self.individuals += self.mating_individuals
         self._calculate_objectives()
         self.generation_counter += 1
@@ -144,6 +146,7 @@ class NSGAII(DriverGen):
             if ind.objectives is None:
                 if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
                     fitnesses = self.fitness_archive[ind.v]
+                    print("in archive!")
                 else:
                     self.cost += 1
                     fitnesses = [objective(ind.v) for objective in self.objectives]
