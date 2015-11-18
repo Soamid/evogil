@@ -8,6 +8,7 @@ _drivers = [
     'NSGAIII',
     'JGBL',
     'SMSEMOA',
+    'NSLS'
 ]
 
 _metaalgorithms = [
@@ -70,6 +71,11 @@ algo_base = {
         "epoch_length": 5,
     },
 
+    "NSLS": {
+        "local_search_mu": 0.5,
+        "local_search_sigma": 0.5,
+    },
+
     "RHGS": {
         "fitness_errors": (0.1, 0.01, 0.0),
         "cost_modifiers": (0.1, 0.5, 1.0),
@@ -117,9 +123,13 @@ def init_alg___NSGAII(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
 
 
-
 def init_alg___NSGAIII(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
+
+
+def init_alg___NSLS(algo_config, problem_mod):
+    standard_variance(algo_config, problem_mod)
+
 
 def init_alg___JGBL(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)

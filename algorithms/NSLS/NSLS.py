@@ -9,9 +9,10 @@ from algorithms.NSGAII import NSGAII
 
 class NSLS(DriverGen):
     class NSLSProxy(DriverGen.Proxy):
-        def __init__(self, cost, individuals):
+        def __init__(self, cost, fronts, individuals):
             super().__init__(cost)
             self.individuals = individuals
+            self.fronts = fronts
 
         def finalized_population(self):
             return [x.v for x in self.individuals]
@@ -36,12 +37,16 @@ class NSLS(DriverGen):
             self.individuals.extend(emigrants)
 
         def nominate_delegates(self):
-            pass
+            return [x.v for x in self.fronts[1]]
 
     def __init__(self,
                  population,
                  dims,
                  fitnesses,
+                 mutation_eta,
+                 crossover_eta,
+                 mutation_rate,
+                 crossover_rate,
                  trim_function=lambda x: x,
                  fitness_archive=None,
                  local_search_mu=0.5,
@@ -69,7 +74,6 @@ class NSLS(DriverGen):
         self.front = None
 
         self.cost = 0
-        self.calculate_objectives(self.individuals)
 
     @property
     def population(self):
@@ -83,7 +87,7 @@ class NSLS(DriverGen):
     def population_generator(self):
         while True:
             self.next_step()
-            yield NSLS.NSLSProxy(self.cost, self.individuals)
+            yield NSLS.NSLSProxy(self.cost, self.front, self.individuals)
             self.cost = 0
         return self.cost
 
@@ -91,14 +95,16 @@ class NSLS(DriverGen):
         for ind in individuals:
             if ind.objectives is None:
                 if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
-                    ind.objectives = self.fitness_archive[ind.v]
+                    fitnesses = self.fitness_archive[ind.v]
                 else:
                     self.cost += 1
-                    ind.objectives = [objective(ind.v) for objective in self.objectives]
+                    fitnesses = [objective(ind.v) for objective in self.objectives]
                     if self.fitness_archive is not None:
-                        self.fitness_archive[ind.v] = ind.objectives
+                        self.fitness_archive[ind.v] = fitnesses
+                ind.objectives = {objective: fitness for objective, fitness in zip(self.objectives, fitnesses)}
 
     def next_step(self):
+        self.calculate_objectives(self.individuals)
         self.local_search()
         self.nd_sort()
         self.next_generation()
@@ -106,7 +112,7 @@ class NSLS(DriverGen):
     def local_search(self):
         individuals_copy = [ind for ind in self.individuals]
         for i in range(len(individuals_copy)):
-            for k in range(self.dims):
+            for k in range(self.dims_no):
                 ind_x = individuals_copy[i]
                 c = random.gauss(self.local_search_mu, self.local_search_sigma)
                 [ind_u, ind_v] = random.sample(individuals_copy, 2)
@@ -180,13 +186,13 @@ class NSLS(DriverGen):
 
         to_select = self.population_size - len(next_gen_individuals)
         additional = []
-        for i in range(self.objective_no):
+        for obj_f in self.objectives:
             min_obj = float('+inf')
             min_ind = None
             max_obj = float('-inf')
             max_ind = None
             for ind in last_front:
-                obj = ind.objectives[i]
+                obj = ind.objectives[obj_f]
                 if obj < min_obj:
                     min_obj = obj
                     min_ind = ind
@@ -202,7 +208,7 @@ class NSLS(DriverGen):
             additional = random.sample(additional, to_select)
         elif len(additional) < to_select:
             last_front = [x for x in last_front if x not in additional]
-            distances = collections.defaultdict(0)
+            distances = collections.defaultdict(float)
             for ind in last_front:
                 distances[ind] = min([distance.euclidean(ind.v, x.v) for x in additional])
 

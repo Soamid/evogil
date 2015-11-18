@@ -42,6 +42,7 @@ NSGAIII_LS = [30, 2]  # '-- --'
 IBEA_LS = [2, 2]  # '.....'
 OMOPSO_LS = [10, 2, 5, 2]  # '-.'
 SMSEMOA_LS = [2, 10]  # ':  :  :'
+NSLS_LS = [4, 30]  # ':    :     :'
 
 SPEA_M = 'o'
 NSGAII_M = '*'
@@ -49,6 +50,7 @@ IBEA_M = '^'
 OMOPSO_M = '>'
 NSGAIII_M = 'v'
 SMSEMOA_M = '<'
+NSLS_M = 'x'
 
 BARE_CL = '0.8'
 IMGA_CL = '0.4'
@@ -61,6 +63,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAIII': ('NSGAIII', NSGAIII_LS, NSGAIII_M, BARE_CL),
          'SMSEMOA': ('SMSEMOA', SMSEMOA_LS, SMSEMOA_M, BARE_CL),
          'JGBL': ('JGBL-NSGAII', SMSEMOA_LS, SMSEMOA_M, BARE_CL),
+         'NSLS': ('NSLS', NSLS_LS, NSLS_M, BARE_CL),
 
          'IMGA+SPEA2': ('IMGA+SPEA2', SPEA_LS, SPEA_M, IMGA_CL),
          'IMGA+NSGAII': ('IMGA+NSGAII', NSGAII_LS, NSGAII_M, IMGA_CL),
@@ -69,6 +72,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IMGA+NSGAIII': ('IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
          'IMGA+SMSEMOA': ('IMGA+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
          'IMGA+JGBL': ('IMGA+JGBL-NSGAII', SMSEMOA_LS, SMSEMOA_M, IMGA_CL),
+         'IMGA+NSLS': ('IMGA+NSLS', NSLS_LS, NSLS_M, IMGA_CL),
 
          'RHGS+SPEA2': ('HGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
          'RHGS+NSGAII': ('HGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
@@ -76,25 +80,26 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'RHGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
          'RHGS+NSGAIII': ('HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
          'RHGS+SMSEMOA': ('HGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
-         'RHGS+JGBL' : ('HGS+JGBL-NSGAII', SMSEMOA_LS, SMSEMOA_M, RHGS_CL)
+         'RHGS+JGBL' : ('HGS+JGBL-NSGAII', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
+         'RHGS+NSLS': ('IMGA+NSLS', NSLS_LS, NSLS_M, IMGA_CL),
 }
 
 algos_order = [
-    'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL',
-     'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL',
-     'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL'
+    'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL', 'NSLS',
+     'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL', 'IMGA+NSLS',
+     'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL', 'RHGS+NSLS',
 ]
 
 algos_groups_configuration_all_together = {
-    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL',
-     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL',
-     'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL'): ('',)
+    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL', 'NSLS',
+     'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL', 'IMGA+NSLS',
+     'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL', 'RHGS+NSLS',): ('',)
 }
 
 algos_groups_configuration_splitted = {
-    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL'): (0, 1),
-    ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL'): (0, 2),
-    ('RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL'): (1, 2)
+    ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL', 'NSLS',): (0, 1),
+    ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL', 'IMGA+NSLS',): (0, 2),
+    ('RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL', 'RHGS+NSLS',): (1, 2)
 }
 
 algos_groups_configuration_tres_caballeros = {
@@ -104,7 +109,8 @@ algos_groups_configuration_tres_caballeros = {
     ('NSGAIII', 'IMGA+NSGAIII', 'RHGS+NSGAIII'): ('_nsgaiii',),
     ('SMSEMOA', 'IMGA+SMSEMOA', 'RHGS+SMSEMOA'): ('_smsemoa',),
     ('OMOPSO', 'IMGA+OMOPSO', 'RHGS+OMOPSO'): ('_omopso',),
-    ('JGBL', 'IMGA+JGBL', 'RHGS+JGBL'): ('_jgbl',)
+    ('JGBL', 'IMGA+JGBL', 'RHGS+JGBL'): ('_jgbl',),
+    ('NSLS', 'IMGA+NSLS', 'RHGS+NSLS'): ('_nsls',)
 }
 
 problems_order = ['EWA1', 'EWA2', 'ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6',
@@ -445,7 +451,6 @@ def pictures_from_stats(args, queue):
 
                                 for key in keys:
                                     results[key].append(value)
-
     plot_results(results)
 
 
