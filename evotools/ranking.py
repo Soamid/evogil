@@ -5,7 +5,7 @@ from evotools.serialization import RunResult
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
 
-best_func = { 'hypervolume' : max, 'igd' : min, 'spacing' : min,  'gd' : min}
+best_func = { 'hypervolume' : max, 'igd' : min, 'avd' : min, 'spacing' : min,  'gd' : min}
 
 
 def table_rank(args, queue):

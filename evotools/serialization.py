@@ -1,14 +1,14 @@
+import logging
+import pickle
+import random
+import re
 from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from functools import partial
 from importlib import import_module
 from itertools import chain
-import pickle
-import logging
 from pathlib import Path
-import random
-import re
 
 import evotools.metrics
 
@@ -58,6 +58,8 @@ class RunResult:
             yield "igd", "inverse generational distance", [
                 partial(x.inverse_generational_distance, pareto=problem_mod.pareto_front)
                 for x in result_list]
+            yield "avd", "average_hausdorff_distance", [
+                partial(x.average_hausdorff_distance, pareto=problem_mod.pareto_front) for x in result_list]
             yield "epsilon", "epsilon", [partial(x.epsilon, pareto=problem_mod.pareto_front)
                                          for x in result_list]
             yield "extent", "extent", [partial(x.extent, pareto=problem_mod.pareto_front)
@@ -113,8 +115,8 @@ class RunResult:
         store_path = self.path / "{budget}.pickle".format(**locals())
         with store_path.open(mode='wb') as fh:
             pickle_store = {"population": population,
-                          "fitnesses": population_fitnesses,
-                          "cost": cost}
+                            "fitnesses": population_fitnesses,
+                            "cost": cost}
             pickle.dump(pickle_store, fh)
 
         self.budgets[budget] = RunResultBudget(budget,
@@ -210,11 +212,11 @@ class RunResultBudget:
 
             with metric_path.open(mode='wb') as fh:
                 pickle_store = {"value": metric_val,
-                              "metric": {
-                                  "name": metric_name,
-                                  "module": metric_mod_name,
-                                  "params": metric_params}
-                }
+                                "metric": {
+                                    "name": metric_name,
+                                    "module": metric_mod_name,
+                                    "params": metric_params}
+                                }
                 pickle.dump(pickle_store, fh)
 
             return self.metrics.setdefault(metric_name, metric_val)
@@ -231,6 +233,9 @@ class RunResultBudget:
     def inverse_generational_distance(self, pareto):
         return self._get_metric("inverse_generational_distance",
                                 metric_params={"pareto": pareto})
+
+    def average_hausdorff_distance(self, pareto):
+        return self._get_metric("average_hausdorff_distance", metric_params={"pareto": pareto})
 
     def epsilon(self, pareto):
         return self._get_metric("epsilon",
