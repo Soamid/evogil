@@ -11,6 +11,9 @@ from itertools import chain
 from pathlib import Path
 
 import evotools.metrics
+from evotools import metrics
+
+cache = defaultdict(list)
 
 
 class RunResult:
@@ -31,6 +34,7 @@ class RunResult:
         rootpath = Path(results_path,
                         problem,
                         algo)
+        run_no = 0
         for candidate in sorted(rootpath.iterdir()):
             try:
                 match = re.fullmatch("(?P<rundate>\d{4}-\d{2}-\d{2}\.\d{2}\d{2}\d{2}\.\d{6})__(?P<runid>\d{7})",
@@ -40,7 +44,8 @@ class RunResult:
                                 results_path=results_path,
                                 rundate=matchdict["rundate"],
                                 runid=matchdict["runid"])
-                res.preload_all_budgets()
+                res.preload_all_budgets(run_no)
+                run_no += 1
                 yield res
             except AttributeError:
                 pass
@@ -58,7 +63,7 @@ class RunResult:
             yield "igd", "inverse generational distance", [
                 partial(x.inverse_generational_distance, pareto=problem_mod.pareto_front)
                 for x in result_list]
-            yield "avd", "average_hausdorff_distance", [
+            yield "avd", "average hausdorff distance", [
                 partial(x.average_hausdorff_distance, pareto=problem_mod.pareto_front) for x in result_list]
             yield "epsilon", "epsilon", [partial(x.epsilon, pareto=problem_mod.pareto_front)
                                          for x in result_list]
@@ -70,6 +75,9 @@ class RunResult:
                                                   for x in result_list]
             yield "hypervolume", "hypervolume", [partial(x.hypervolume, pareto=problem_mod.pareto_front)
                                                  for x in result_list]
+            yield "pdi", "pareto dominance indicator", [
+                partial(x.pareto_dominance_indicator)
+                for x in result_list]
 
         def f_algo(problem_path, algo_path, problem_mod):
             by_budget = defaultdict(list)
@@ -107,6 +115,8 @@ class RunResult:
                          algo,
                          "{rundate}__{runid:0>7}".format(**locals()))
         self.budgets = {}
+        self.algo = algo
+        self.problem = problem
 
     def store(self, budget, cost, population, population_fitnesses):
         with suppress(FileExistsError):
@@ -119,19 +129,26 @@ class RunResult:
                             "cost": cost}
             pickle.dump(pickle_store, fh)
 
-        self.budgets[budget] = RunResultBudget(budget,
+        self.budgets[budget] = RunResultBudget(self.problem,
+                                               self.algo,
+                                               budget,
+                                               None,
                                                cost,
                                                population,
                                                population_fitnesses,
                                                store_path)
 
     def load(self, budget):
+        print('laduje')
         if budget in self.budgets:
             return self.budgets[budget]
 
         store_path = self.path / "{budget}.pickle".format(**locals())
-        population_pickle = self._load_file(store_path)
-        res = RunResultBudget(budget,
+        population_pickle = self.load_file(store_path)
+        res = RunResultBudget(self.problem,
+                              self.algo,
+                              budget,
+                              None,
                               population_pickle["cost"],
                               population_pickle["population"],
                               population_pickle["fitnesses"],
@@ -139,11 +156,11 @@ class RunResult:
         return self.budgets.setdefault(budget, res)
 
     @staticmethod
-    def _load_file(path):
+    def load_file(path):
         with path.open(mode='rb') as fh:
             return pickle.load(fh)
 
-    def preload_all_budgets(self):
+    def preload_all_budgets(self, run_no):
         self.budgets = {}
         with suppress(FileNotFoundError):
             for candidate in sorted(self.path.iterdir()):
@@ -152,9 +169,12 @@ class RunResult:
                                          candidate.name)
 
                     budget = int(match.groupdict()["budget"])
-                    population_pickle = self._load_file(candidate)
+                    population_pickle = self.load_file(candidate)
 
-                    res = RunResultBudget(budget,
+                    res = RunResultBudget(self.problem,
+                                          self.algo,
+                                          budget,
+                                          run_no,
                                           population_pickle["cost"],
                                           population_pickle["population"],
                                           population_pickle["fitnesses"],
@@ -170,8 +190,11 @@ class RunResult:
 
 
 class RunResultBudget:
-    def __init__(self, budget, cost, population, fitnesses, path):
+    def __init__(self, problem, algo, budget, run_no, cost, population, fitnesses, path):
+        self.problem = problem
+        self.algo = algo
         self.budget = budget
+        self.run_no = run_no
         self.cost = cost
         self.population = population
         self.fitnesses = fitnesses
@@ -256,3 +279,43 @@ class RunResultBudget:
     def hypervolume(self, pareto):
         return self._get_metric("hypervolume",
                                 metric_params={"pareto": pareto})
+
+    def pareto_dominance_indicator(self):
+        if (self.problem, self.budget, self.run_no) not in cache:
+            self.preload_results_for_problem()
+        try:
+            all_solutions = cache[(self.problem, self.budget, self.run_no)]
+            return self._get_metric("pareto_dominance_indicator", metric_params={"all_solutions" : all_solutions})
+
+        except KeyError:
+            logger = logging.getLogger(__name__)
+            logger.exception("No matching run for: problem={} algo={} run_no{}={}".format(self.problem, self.budget,self.run_no))
+            return None
+
+    def preload_results_for_problem(self):
+        problem_path = self.path.parent.parent.parent
+        print("Loading for problem : {}".format(problem_path.name))
+        for algo_path in problem_path.iterdir():
+            runs = [run for run in algo_path.iterdir() if run.is_dir()]
+            for i in range(len(runs)):
+                print(runs[i].name)
+                for result_file in runs[i].iterdir():
+                    try:
+                        match = re.fullmatch("(?P<budget>[0-9]+)\.pickle",
+                                             result_file.name)
+
+                        budget = int(match.groupdict()["budget"])
+                        population_pickle = RunResult.load_file(result_file)
+
+                        print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
+                        cache[(self.problem, budget, i)].append(population_pickle["fitnesses"])
+                    except (AttributeError, IsADirectoryError):
+                        pass
+        self.filter_non_dominated_in_cache()
+
+    def filter_non_dominated_in_cache(self):
+        for key in set(cache.keys()):
+            print('Filtering non dominated for: ' + str(key))
+            solutions = cache[key]
+            cache[key] = set(metrics.filter_not_dominated(tuple(y) for s in solutions for y in s))
+        print("Cache of results -> cache of nondominated results")
