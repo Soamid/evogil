@@ -146,7 +146,6 @@ class NSGAII(DriverGen):
             if ind.objectives is None:
                 if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
                     fitnesses = self.fitness_archive[ind.v]
-                    print("in archive!")
                 else:
                     self.cost += 1
                     fitnesses = [objective(ind.v) for objective in self.objectives]

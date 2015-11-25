@@ -123,14 +123,12 @@ class NSLS(DriverGen):
                 w_plus.v = self.trim_function(w_plus.v)
                 if w_plus.v[k] < self.dims[k][0] or w_plus.v[k] > self.dims[k][1]:
                     w_plus.v[k] = ind_x.v[k]
-                    # print("sciana+")
 
                 w_minus = Individual([x for x in ind_x.v])
                 w_minus.v[k] -= diff
                 w_minus.v = self.trim_function(w_minus.v)
                 if w_minus.v[k] < self.dims[k][0] or w_minus.v[k] > self.dims[k][1]:
                     w_minus.v[k] = ind_x.v[k]
-                    # print("sciana-")
 
                 self.calculate_objectives([w_plus, w_minus])
                 plus_dominates = NSGAII.dominates(w_plus, ind_x)
@@ -138,34 +136,22 @@ class NSLS(DriverGen):
                 minus_dominates = NSGAII.dominates(w_minus, ind_x)
                 minus_dominated = NSGAII.dominates(ind_x, w_minus)
 
-                # print([ind_x.objectives[x] for x in self.objectives])
-                # print([w_plus.objectives[x] for x in self.objectives])
-                # print([w_minus.objectives[x] for x in self.objectives])
-
                 if plus_dominates and minus_dominates:
-                    # print("both dominate")
                     w_final = random.choice([w_plus, w_minus])
                     individuals_copy[i] = w_final
                 elif plus_dominates:
-                    # print("plus dominate")
                     individuals_copy[i] = w_plus
                 elif minus_dominates:
-                    # print("minus dominate")
                     individuals_copy[i] = w_minus
                 elif not plus_dominated and not minus_dominated:
-                    # print("whatevah")
                     w_final = random.choice([w_plus, w_minus])
                     individuals_copy[i] = w_final
                 elif not plus_dominated:
-                    # print("whatevah plus")
                     individuals_copy[i] = w_plus
                 elif not minus_dominated:
-                    # print("whatevah minus")
                     individuals_copy[i] = w_minus
                 else:
-                    # print("stay the same")
                     pass
-                # print()
 
         for ind in individuals_copy:
             if ind not in self.individuals:

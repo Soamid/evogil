@@ -81,7 +81,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'RHGS+NSGAIII': ('HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
          'RHGS+SMSEMOA': ('HGS+SMSEMOA', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
          'RHGS+JGBL' : ('HGS+JGBL-NSGAII', SMSEMOA_LS, SMSEMOA_M, RHGS_CL),
-         'RHGS+NSLS': ('IMGA+NSLS', NSLS_LS, NSLS_M, IMGA_CL),
+         'RHGS+NSLS': ('HGS+NSLS', NSLS_LS, NSLS_M, IMGA_CL),
 }
 
 algos_order = [
@@ -361,7 +361,7 @@ def plot_results(results):
                 logger.debug("plt.ylim = %s", ylim)
                 plt.ylim(ylim)
         logger.debug("plt.ylabel = %s", metric)
-        plt.xlim(500, 4500)
+        plt.xlim(500, 30000)
         plt.ylabel(metric, fontsize=30)
         plt.xlabel('calls to fitness function', fontsize=25)
         plt.tick_params(axis='both', labelsize=25)
@@ -425,32 +425,31 @@ def pictures_from_stats(args, queue):
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
         for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
-            if problem_name == 'ZDT2':
-                for algo_name, budgets in algorithms:
-                    for result in budgets:
-                        _, _, cost_data = next(result["analysis"])
-                        cost_data = list(x() for x in cost_data)
-                        cost_analysis = yield_analysis(cost_data, boot_size)
+            for algo_name, budgets in algorithms:
+                for result in budgets:
+                    _, _, cost_data = next(result["analysis"])
+                    cost_data = list(x() for x in cost_data)
+                    cost_analysis = yield_analysis(cost_data, boot_size)
 
-                        budget = cost_analysis["btstrpd"]["metrics"]
-                        budget_err = cost_analysis["stdev"]
+                    budget = cost_analysis["btstrpd"]["metrics"]
+                    budget_err = cost_analysis["stdev"]
 
-                        for metric_name, metric_name_long, data_process in result["analysis"]:
-                            if metric_name in best_func:
-                                if metric_name == 'dst from pareto':
-                                    metric_name = 'dst'
-                                data_process = list(x() for x in data_process)
+                    for metric_name, metric_name_long, data_process in result["analysis"]:
+                        if metric_name in best_func:
+                            if metric_name == 'dst from pareto':
+                                metric_name = 'dst'
+                            data_process = list(x() for x in data_process)
 
-                                data_analysis = yield_analysis(data_process, boot_size)
+                            data_analysis = yield_analysis(data_process, boot_size)
 
-                                score = data_analysis["btstrpd"]["metrics"]
-                                score_err = data_analysis["stdev"]
+                            score = data_analysis["btstrpd"]["metrics"]
+                            score_err = data_analysis["stdev"]
 
-                                keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
-                                value = (budget, budget_err, score, score_err)
+                            keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
+                            value = (budget, budget_err, score, score_err)
 
-                                for key in keys:
-                                    results[key].append(value)
+                            for key in keys:
+                                results[key].append(value)
     plot_results(results)
 
 

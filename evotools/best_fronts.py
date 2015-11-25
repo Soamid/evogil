@@ -80,7 +80,7 @@ def save_plot(ax, f, d_problem):
 
     # plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
 
-    path = Path(PLOTS_DIR) / RESULTS_DIR / '{}.eps'.format(d_problem.name.replace('emoa', 'moea'))
+    path = Path(PLOTS_DIR) / RESULTS_DIR / '{}.pdf'.format(d_problem.name.replace('emoa', 'moea'))
     with suppress(FileExistsError):
         path.parent.mkdir(parents=True)
 
@@ -90,26 +90,25 @@ def save_plot(ax, f, d_problem):
 
 def main(*args, **kwargs):
     for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
-        if problem_name == 'ZDT2':
-            original_front = problem_mod.pareto_front
-            ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
+        original_front = problem_mod.pareto_front
+        ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
 
-            for algo_name, budgets in algorithms:
-                best_result, best_result_name, best_result_metric = None, None, None
-                """:type: RunResultBudget """
+        for algo_name, budgets in algorithms:
+            best_result, best_result_name, best_result_metric = None, None, None
+            """:type: RunResultBudget """
 
-                for result in budgets:
-                    # print(result)
-                    for metrics_name, _, precomp in result["analysis"]:
-                        if metrics_name == "igd":
-                            precomp = [x() for x in precomp]
-                            for runresbud, metric_val in zip(result["results"], precomp):
-                                print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
+            for result in budgets:
+                # print(result)
+                for metrics_name, _, precomp in result["analysis"]:
+                    if metrics_name == "igd":
+                        precomp = [x() for x in precomp]
+                        for runresbud, metric_val in zip(result["results"], precomp):
+                            print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
 
-                                if best_result_metric is None or metric_val < best_result_metric:
-                                    best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
+                            if best_result_metric is None or metric_val < best_result_metric:
+                                best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
 
-                plot_results(ax, best_result, best_result_name)
-            save_plot(ax, f, problem_mod)
+            plot_results(ax, best_result, best_result_name)
+        save_plot(ax, f, problem_mod)
 
 

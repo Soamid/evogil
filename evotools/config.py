@@ -1,4 +1,4 @@
-RESULTS_DIR = '../results/results1'
+RESULTS_DIR = './results'
 
 PLOTS_DIR = 'plots'
 
