@@ -1,4 +1,6 @@
+import fnmatch
 import logging
+import os
 import pickle
 import random
 import re
@@ -95,7 +97,8 @@ class RunResult:
 
         def f_problem(problem_path, problem_mod):
             for algo_path in problem_path.iterdir():
-                yield algo_path.name, f_algo(problem_path, algo_path, problem_mod)
+                if algo_path.is_dir():
+                    yield algo_path.name, f_algo(problem_path, algo_path, problem_mod)
 
         with suppress(FileNotFoundError):
             for problem in Path(results_path).iterdir():
@@ -159,6 +162,11 @@ class RunResult:
     def load_file(path):
         with path.open(mode='rb') as fh:
             return pickle.load(fh)
+
+    @staticmethod
+    def save_file(path, obj):
+        with path.open(mode='wb') as fh:
+            pickle.dump(obj, fh)
 
     def preload_all_budgets(self, run_no):
         self.budgets = {}
@@ -285,37 +293,74 @@ class RunResultBudget:
             self.preload_results_for_problem()
         try:
             all_solutions = cache[(self.problem, self.budget, self.run_no)]
-            return self._get_metric("pareto_dominance_indicator", metric_params={"all_solutions" : all_solutions})
+            return self._get_metric("pareto_dominance_indicator", metric_params={"all_solutions": all_solutions})
 
         except KeyError:
             logger = logging.getLogger(__name__)
-            logger.exception("No matching run for: problem={} algo={} run_no{}={}".format(self.problem, self.budget,self.run_no))
+            logger.exception(
+                "No matching run for: problem={} algo={} run_no{}={}".format(self.problem, self.budget, self.run_no))
             return None
 
     def preload_results_for_problem(self):
         problem_path = self.path.parent.parent.parent
         print("Loading for problem : {}".format(problem_path.name))
         for algo_path in problem_path.iterdir():
-            runs = [run for run in algo_path.iterdir() if run.is_dir()]
-            for i in range(len(runs)):
-                print(runs[i].name)
-                for result_file in runs[i].iterdir():
-                    try:
-                        match = re.fullmatch("(?P<budget>[0-9]+)\.pickle",
-                                             result_file.name)
+            if algo_path.is_dir():
+                runs = [run for run in algo_path.iterdir() if run.is_dir()]
+                for i in range(len(runs)):
+                    print(runs[i].name)
+                    for result_file in runs[i].iterdir():
+                        try:
+                            match = re.fullmatch("(?P<budget>[0-9]+)\.pickle",
+                                                 result_file.name)
 
-                        budget = int(match.groupdict()["budget"])
-                        population_pickle = RunResult.load_file(result_file)
+                            budget = int(match.groupdict()["budget"])
+                            population_pickle = RunResult.load_file(result_file)
 
-                        print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
-                        cache[(self.problem, budget, i)].append(population_pickle["fitnesses"])
-                    except (AttributeError, IsADirectoryError):
-                        pass
+                            print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
+                            cache[(self.problem, budget, i)].append(population_pickle["fitnesses"])
+                        except (AttributeError, IsADirectoryError):
+                            pass
         self.filter_non_dominated_in_cache()
 
     def filter_non_dominated_in_cache(self):
-        for key in set(cache.keys()):
-            print('Filtering non dominated for: ' + str(key))
-            solutions = cache[key]
-            cache[key] = set(metrics.filter_not_dominated(tuple(y) for s in solutions for y in s))
+        problem_keys = sorted(filter(lambda run_key: run_key[0] == self.problem, cache))
+        problem_solutions = [cache[key] for key in problem_keys]
+
+        problem_path = self.path.parent.parent.parent
+        # cache_path = problem_path / problem_hash
+
+        problem_cache_file = problem_path / "{}_nondominated".format(self.problem)
+        try:
+            solutions, problem_nondominated = RunResult.load_file(problem_cache_file)
+        except IOError:
+            problem_nondominated = {}
+            solutions = None
+
+        if solutions and solutions == problem_solutions:
+            print("Cache for problem {} does not changed, loading nondominated solutions from file...")
+        else:
+            print("Cache for problem {} changed, calculating new nondominated... ")
+            self.clear_old_pdi_metrics()
+            for key in problem_keys:
+                print('Filtering non dominated for: ' + str(key))
+                solutions = cache[key]
+                problem_nondominated[key] = set(metrics.filter_not_dominated(tuple(y) for s in solutions for y in s))
+
+            RunResult.save_file(problem_cache_file, (problem_solutions, problem_nondominated))
+
+        cache.update(problem_nondominated)
         print("Cache of results -> cache of nondominated results")
+
+    def clear_old_pdi_metrics(self):
+        problem_path = self.path.parent.parent.parent
+
+        for filename in fnmatch.filter([str(p) for p in problem_path.iterdir()], "*{}_*".format(self.problem)):
+            os.remove(filename)
+            print("Removing file: " + filename)
+
+        for root, dirnames, filenames in os.walk(str(problem_path)):
+            for filename in fnmatch.filter(filenames, '*.pareto_dominance_indicator.pickle'):
+                file_path = os.path.join(root, filename)
+                print("Removing file: " + str(file_path))
+                os.remove(file_path)

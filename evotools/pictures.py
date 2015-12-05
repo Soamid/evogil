@@ -466,7 +466,7 @@ def plot_results_summary(problems, scoring, selected):
 
         if metric_name == 'hypervolume':
             plt.ylim([0.8, 1.1])
-        else:
+        elif metric_name != 'pdi':
             plt.ylim([-0.1, 1.1])
 
         for algo in algos_order:
@@ -527,16 +527,16 @@ def pictures_summary(args, queue):
                         problem_score[metric_name].append((algo_name, score))
 
             for metric_name in scoring:
-
+                if metric_name != 'pdi':
                 # metric_rank = sorted(problem_score[metric_name], key=lambda x : x[1])
 
                 # for i in range(len(metric_rank)):
                 #     algo_name = metric_rank[i][0]
                 #     scoring[metric_name][algo_name][problem_name] = i
 
-                max_score = max(x for algo, x in problem_score[metric_name]) + 0.0001
-                for algo_name, _ in algos:
-                    if algo_name in scoring[metric_name]:
-                        scoring[metric_name][algo_name][problem_name] /= max_score
+                    max_score = max(x for algo, x in problem_score[metric_name]) + 0.0001
+                    for algo_name, _ in algos:
+                        if algo_name in scoring[metric_name]:
+                            scoring[metric_name][algo_name][problem_name] /= max_score
 
     plot_results_summary(problems, scoring, selected)
