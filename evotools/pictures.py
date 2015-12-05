@@ -389,12 +389,6 @@ def plot_results(results):
         logger.debug("last_plt = %s", last_plt)
         problem, metric, group = plot_name
 
-        # plt.legend(loc='best', fontsize=6)
-        # plt.show()
-        if not legend_saved:
-            plot_legend(last_plt)
-            legend_saved = True
-
         box = ax.get_position()
         # ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
 
@@ -411,7 +405,14 @@ def plot_results(results):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
         plt.savefig(str(path2))
+
         plt.close()
+        # plt.legend(loc='best', fontsize=6)
+        # plt.show()
+        if not legend_saved:
+            plot_legend(last_plt)
+            legend_saved = True
+
 
 
 def pictures_from_stats(args, queue):
