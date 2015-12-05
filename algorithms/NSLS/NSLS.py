@@ -195,6 +195,7 @@ class NSLS(DriverGen):
         last_front = self.front[front_no]
 
         to_select = self.population_size - len(next_gen_individuals)
+
         additional = []
         for obj_f in self.objectives:
             min_obj = float('+inf')
@@ -231,7 +232,7 @@ class NSLS(DriverGen):
                         max_dist = dist
                         max_ind = ind
                 additional.append(max_ind)
-                additional.remove(max_ind)
+                last_front.remove(max_ind)
                 for ind in last_front:
                     distances[ind] = min(distances[ind], distance.euclidean(ind.v, max_ind.v))
 
