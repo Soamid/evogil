@@ -40,7 +40,8 @@ class SPEA2(DriverGen):
         self.mutation_rate = mutation_rate
         self.crossover_eta = crossover_eta
         self.crossover_rate = crossover_rate
-        self.population = [trim_function(x) for x in population]
+        self.trim_function = trim_function
+        self.population = [self.trim_function(x) for x in population]
 
         self.__archive_size = len(population)
         self.__archive = []
@@ -98,7 +99,7 @@ class SPEA2(DriverGen):
             cost = self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
-            self.population = [mutate(
+            self.population = [self.trim_function(mutate(
                 crossover(self.select(self.__archive),
                           self.select(self.__archive),
                           self.dims,
@@ -106,7 +107,7 @@ class SPEA2(DriverGen):
                           self.crossover_eta),
                 self.dims,
                 self.mutation_rate,
-                self.mutation_eta)
+                self.mutation_eta))
                 for _ in self.__population]
 
             yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)

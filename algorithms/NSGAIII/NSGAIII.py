@@ -74,7 +74,8 @@ class NSGAIII(DriverGen):
         self.reference_point_lengths = [numpy.linalg.norm(point) for point in self.reference_points]
 
         self.individuals = []
-        self.population = [trim_function(x) for x in population]
+        self.trim_function = trim_function
+        self.population = [self.trim_function(x) for x in population]
 
         self.cost = 0
         self.primary_cost_included = False
@@ -135,6 +136,8 @@ class NSGAIII(DriverGen):
 
     def next_step(self):
         offspring_inds = self.make_offspring_individuals()
+        for ind in offspring_inds:
+            ind.v = self.trim_function(ind.v)
 
         # TODO: remove debug
         # plt.scatter([x.v[0] for x in offspring_inds], [x.v[1] for x in offspring_inds], c='b', marker='^')

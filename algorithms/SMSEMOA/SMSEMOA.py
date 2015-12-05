@@ -29,7 +29,8 @@ class SMSEMOA(DriverGen):
         self.crossover_eta = crossover_eta
         self.crossover_rate = crossover_rate
 
-        self.population = [trim_function(x) for x in population]
+        self.trim_function = trim_function
+        self.population = [self.trim_function(x) for x in population]
         self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
         self.reference_point = reference_point
 
@@ -114,10 +115,10 @@ class SMSEMOA(DriverGen):
                           self.crossover_rate,
                           self.crossover_eta)
 
-        return Individual(mutate(child,
+        return Individual(self.trim_function(mutate(child,
                                  self.dims,
                                  self.mutation_rate,
-                                 self.mutation_eta))
+                                 self.mutation_eta)))
 
     def reduce_population(self, pop):
         sorted_pop = nd_sort(pop)

@@ -47,6 +47,8 @@ class JGBL(NSGAII):
             print(len(nondominanted))
 
             jumping_pop = self.jump_genes(self.individuals, nondominanted)
+            for ind in jumping_pop:
+                ind.v = self.trim_function(ind.v)
 
             self.individuals = set(self.individuals + jumping_pop)
             self._calculate_objectives()

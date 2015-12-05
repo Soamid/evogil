@@ -8,6 +8,7 @@ from algorithms.base.drivergen import DriverGen
 from algorithms.base.drivertools import rank, mutate, crossover
 from evotools.ea_utils import paretofront_layers
 
+
 class IBEA(DriverGen):
     class IBEAProxy(DriverGen.Proxy):
         def __init__(self, cost, individuals, driver):
@@ -72,7 +73,8 @@ class IBEA(DriverGen):
         self.generation_counter = 0
         self.k = kappa
         self.mating_size_c = mating_population_size
-        self.population = [trim_function(x) for x in population]
+        self.trim_function = trim_function
+        self.population = [self.trim_function(x) for x in population]
 
         self._scale_objectives()
 
@@ -107,6 +109,8 @@ class IBEA(DriverGen):
         self._mating_selection(0.9)
         self._crossover()
         self._mutation()  # (0.05)
+        for ind in self.mating_individuals:
+            ind.v = self.trim_function(ind.v)
         self.individuals += self.mating_individuals
         self._scale_objectives()
         self.generation_counter += 1
