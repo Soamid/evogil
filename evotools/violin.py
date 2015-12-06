@@ -8,10 +8,9 @@ import matplotlib.pyplot as plt
 from numpy.linalg import LinAlgError
 
 # self
-from evotools import config
 from evotools.pictures import algos, algos_order, PLOTS_DIR
 from evotools.ranking import best_func
-from evotools.serialization import RunResult
+from evotools.serialization import RunResult, RESULTS_DIR
 from evotools.stats_bootstrap import yield_analysis
 
 
@@ -37,7 +36,7 @@ def violin(args, queue):
 
     boot_size = int(args['--bootstrap'])
 
-    for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
+    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
         for algo_name, budgets in algorithms:
             for metric_name, metric_name_long, data_process in list(budgets)[-1]["analysis"]:
                 if metric_name in best_func:

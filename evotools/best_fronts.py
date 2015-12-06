@@ -6,13 +6,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from evotools import ea_utils
 
-from evotools import config
 from evotools.pictures import algos, algos_order
-from evotools.serialization import RunResult
+from evotools.serialization import RunResult, RESULTS_DIR
 
 
 PLOTS_DIR = Path('plots')
-RESULTS_DIR = Path('pareto_results')
+PF_PLOTS_DIR = Path('pareto_results')
 
 metrics_name_long = "distance_from_pareto"
 
@@ -80,7 +79,7 @@ def save_plot(ax, f, d_problem):
 
     # plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
 
-    path = Path(PLOTS_DIR) / RESULTS_DIR / '{}.pdf'.format(d_problem.name.replace('emoa', 'moea'))
+    path = Path(PLOTS_DIR) / PF_PLOTS_DIR / '{}.pdf'.format(d_problem.name.replace('emoa', 'moea'))
     with suppress(FileExistsError):
         path.parent.mkdir(parents=True)
 
@@ -89,7 +88,7 @@ def save_plot(ax, f, d_problem):
 
 
 def main(*args, **kwargs):
-    for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
+    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
         original_front = problem_mod.pareto_front
         ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
 

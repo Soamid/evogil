@@ -23,9 +23,10 @@ from functools import partial
 from evotools.log_helper import init_worker
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from evotools.run_config import NotViableConfiguration
-from evotools.serialization import RunResult
+from evotools.serialization import RunResult, RESULTS_DIR
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
+
 
 
 def run_parallel(args, queue):
@@ -170,7 +171,7 @@ def worker(args):
 
     drivers = algo.split('+')
 
-    runres = RunResult(algo, problem, runid=runid)
+    runres = RunResult(algo, problem, runid=runid, results_path=RESULTS_DIR)
 
     try:
         final_driver, problem_mod = None, None

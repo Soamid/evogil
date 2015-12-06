@@ -5,10 +5,9 @@ from pathlib import Path
 import math
 from mpl_toolkits.mplot3d import Axes3D
 
-from evotools import config
 from evotools import ea_utils
 from evotools.ranking import best_func
-from evotools.serialization import RunResult
+from evotools.serialization import RunResult, RESULTS_DIR
 from evotools.stats_bootstrap import yield_analysis
 from evotools.timing import log_time, process_time
 from evotools import ranking
@@ -361,7 +360,7 @@ def plot_results(results):
                 logger.debug("plt.ylim = %s", ylim)
                 plt.ylim(ylim)
         logger.debug("plt.ylabel = %s", metric)
-        plt.xlim(500, 30000)
+        plt.xlim(500, 4500)
         plt.ylabel(metric, fontsize=30)
         plt.xlabel('calls to fitness function', fontsize=25)
         plt.tick_params(axis='both', labelsize=25)
@@ -425,7 +424,7 @@ def pictures_from_stats(args, queue):
 
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
+        for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
             for algo_name, budgets in algorithms:
                 for result in budgets:
                     _, _, cost_data = next(result["analysis"])
@@ -510,7 +509,7 @@ def pictures_summary(args, queue):
     problems = set()
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result(config.RESULTS_DIR):
+        for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
             problems.add(problem_name)
             problem_score = collections.defaultdict(list)
             algos = list(algorithms)

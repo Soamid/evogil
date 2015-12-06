@@ -17,6 +17,7 @@ from evotools import metrics
 
 cache = defaultdict(list)
 
+RESULTS_DIR = './results'
 
 class RunResult:
     @staticmethod

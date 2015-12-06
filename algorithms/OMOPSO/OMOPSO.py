@@ -63,6 +63,9 @@ class OMOPSO(DriverGen):
         self.leaders_size = len(population)  # parameter?
         self.mutation_perturbation = mutation_perturbation
         self.crowding_selector = CrowdingTournament()
+
+        self.trim_function = trim_function
+
         self.archive = Archive(self.ETA)
         self.leader_archive = LeaderArchive(self.leaders_size)
         self.fitness_archive = fitness_archive
@@ -94,6 +97,9 @@ class OMOPSO(DriverGen):
 
             progress = min(1.0, total_cost / self.max_budget) if self.max_budget else None
             self.mopso_mutation(progress)
+
+            for x in self.population:
+                x.value = self.trim_function(x.value)
 
             cost += self.calculate_objectives()
             total_cost += self.calculate_objectives()

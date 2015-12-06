@@ -1,8 +1,7 @@
 import json
 import os
 import pickle
-from evogil import main
-from evotools import config
+from evotools.serialization import RESULTS_DIR
 
 
 def walk(results_dir, fun):
@@ -35,5 +34,5 @@ def clear_budget(dirName, fname):
         os.remove(to_remove)
 
 if __name__ == '__main__':
-    walk(config.RESULTS_DIR, json2pickle)
+    walk(RESULTS_DIR, json2pickle)
 
