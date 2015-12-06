@@ -512,27 +512,23 @@ def pictures_summary(args, queue):
             algos = list(algorithms)
             for algo_name, budgets in algos:
                 max_budget = list(budgets)[-1]
-                for metric_name, metric_name_long, data_process in max_budget["analysis"]:
-                    if metric_name in ranking.best_func:
-                        data_process = list(x() for x in data_process)
-                        data_analysis = yield_analysis(data_process, boot_size)
+                if validate_cost(max_budget, boot_size):
+                    for metric_name, metric_name_long, data_process in max_budget["analysis"]:
+                        if metric_name in ranking.best_func:
+                            data_process = list(x() for x in data_process)
+                            data_analysis = yield_analysis(data_process, boot_size)
 
-                        score = math.log(math.fabs(data_analysis["btstrpd"]["metrics"]) + 1.0)
+                            score = math.log(math.fabs(data_analysis["btstrpd"]["metrics"]) + 1.0)
 
-                        scoring[metric_name][algo_name][problem_name] = score
-                        problem_score[metric_name].append((algo_name, score))
+                            scoring[metric_name][algo_name][problem_name] = score
+                            problem_score[metric_name].append((algo_name, score))
 
             for metric_name in scoring:
                 if metric_name != 'pdi':
-                # metric_rank = sorted(problem_score[metric_name], key=lambda x : x[1])
-
-                # for i in range(len(metric_rank)):
-                #     algo_name = metric_rank[i][0]
-                #     scoring[metric_name][algo_name][problem_name] = i
 
                     max_score = max(x for algo, x in problem_score[metric_name]) + 0.0001
                     for algo_name, _ in algos:
-                        if algo_name in scoring[metric_name]:
+                        if algo_name in scoring[metric_name] and problem_name in scoring[metric_name][algo_name]:
                             scoring[metric_name][algo_name][problem_name] /= max_score
 
     plot_results_summary(problems, scoring, selected)

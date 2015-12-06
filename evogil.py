@@ -112,7 +112,7 @@ def main_worker(queue, configurer):
         'rank':        evotools.ranking.rank,
         'pictures':    evotools.pictures.pictures_from_stats,
         'pictures_summary':    evotools.pictures.pictures_summary,
-        'best_fronts': evotools.best_fronts.main,
+        'best_fronts': evotools.best_fronts.best_fronts,
         'violin':      evotools.violin.violin,
         'summary':     evotools.benchmark_results.analyse_results,
         'list':        all_algos_problems,

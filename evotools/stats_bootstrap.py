@@ -3,6 +3,15 @@ from math import sqrt
 import numpy
 
 
+def validate_cost(result, boot_size):
+    budget = result["budget"]
+    for metric_name, _, data_process in result['analysis']:
+        if metric_name == "cost":
+            cost_data = list(x() for x in data_process)
+            data_analysis = yield_analysis(cost_data, boot_size)
+            cost_val = data_analysis["btstrpd"]["metrics"]
+            return cost_val <= budget + 500
+    return True
 
 def average(xs):
     if len(xs) == 0:

@@ -1,7 +1,7 @@
 import logging
 import collections
 from evotools.serialization import RunResult, RESULTS_DIR
-from evotools.stats_bootstrap import yield_analysis
+from evotools.stats_bootstrap import yield_analysis, validate_cost
 from evotools.timing import log_time, process_time
 
 best_func = { 'hypervolume' : max, 'igd' : min, 'avd' : min, 'spacing' : min,  'gd' : min, 'pdi' : max}
@@ -13,7 +13,7 @@ def table_rank(args, queue):
 
     boot_size = int(args['--bootstrap'])
 
-    result_dirs = ['../results/results0', '../results/results1', '../results/results2']
+    result_dirs = ['./results_k0', './results_k1', './results_k2']
 
 
     results = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
@@ -25,13 +25,14 @@ def table_rank(args, queue):
                 scoring = collections.defaultdict(list)
                 for algo_name, budgets in algorithms:
                     for budget in budgets:
-                        for metric_name, metric_name_long, data_process in budget["analysis"]:
-                            if metric_name in best_func:
-                                data_process = list(x() for x in data_process)
-                                data_analysis = yield_analysis(data_process, boot_size)
+                        if validate_cost(budget, boot_size):
+                            for metric_name, metric_name_long, data_process in budget["analysis"]:
+                                if metric_name in best_func:
+                                    data_process = list(x() for x in data_process)
+                                    data_analysis = yield_analysis(data_process, boot_size)
 
-                                score = data_analysis["btstrpd"]["metrics"]
-                                scoring[(budget['budget'], metric_name)].append((algo_name, score))
+                                    score = data_analysis["btstrpd"]["metrics"]
+                                    scoring[(budget['budget'], metric_name)].append((algo_name, score))
 
                 for budget, metric_name in scoring:
                     algo_win, score = best_func[metric_name](scoring[(budget, metric_name)], key=lambda x: x[1])
@@ -84,14 +85,15 @@ def rank(args, queue):
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
         for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
             for algo_name, budgets in algorithms:
-                max_budget = list(budgets)[4]
-                for metric_name, metric_name_long, data_process in max_budget["analysis"]:
-                    if metric_name in best_func:
-                        data_process = list(x() for x in data_process)
-                        data_analysis = yield_analysis(data_process, boot_size)
+                max_budget = list(budgets)[-1]
+                if validate_cost(max_budget, boot_size):
+                    for metric_name, metric_name_long, data_process in max_budget["analysis"]:
+                        if metric_name in best_func:
+                            data_process = list(x() for x in data_process)
+                            data_analysis = yield_analysis(data_process, boot_size)
 
-                        score = data_analysis["btstrpd"]["metrics"]
-                        scoring[(problem_name, metric_name)].append((algo_name, score))
+                            score = data_analysis["btstrpd"]["metrics"]
+                            scoring[(problem_name, metric_name)].append((algo_name, score))
 
     global_scoring = collections.defaultdict(collections.Counter)
 

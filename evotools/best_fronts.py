@@ -8,7 +8,7 @@ from evotools import ea_utils
 
 from evotools.pictures import algos, algos_order
 from evotools.serialization import RunResult, RESULTS_DIR
-
+from evotools.stats_bootstrap import validate_cost
 
 PLOTS_DIR = Path('plots')
 PF_PLOTS_DIR = Path('pareto_results')
@@ -87,7 +87,8 @@ def save_plot(ax, f, d_problem):
     plt.close(f)
 
 
-def main(*args, **kwargs):
+def best_fronts(args, queue):
+    boot_size = int(args['--bootstrap'])
     for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
         original_front = problem_mod.pareto_front
         ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
@@ -98,16 +99,17 @@ def main(*args, **kwargs):
 
             for result in budgets:
                 # print(result)
-                for metrics_name, _, precomp in result["analysis"]:
-                    if metrics_name == "igd":
-                        precomp = [x() for x in precomp]
-                        for runresbud, metric_val in zip(result["results"], precomp):
-                            print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
+                if validate_cost(result, boot_size):
+                    for metrics_name, _, precomp in result["analysis"]:
+                        if metrics_name == "igd":
+                            precomp = [x() for x in precomp]
+                            for runresbud, metric_val in zip(result["results"], precomp):
+                                print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
 
-                            if best_result_metric is None or metric_val < best_result_metric:
-                                best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
-
-            plot_results(ax, best_result, best_result_name)
+                                if best_result_metric is None or metric_val < best_result_metric:
+                                    best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
+            if best_result:
+                plot_results(ax, best_result, best_result_name)
         save_plot(ax, f, problem_mod)
 
 
