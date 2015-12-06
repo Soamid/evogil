@@ -1,7 +1,6 @@
 # base
 import os
-from contextlib import contextmanager
-
+from contextlib import contextmanager, suppress
 # numpy + matplotlib
 import collections
 import matplotlib.pyplot as plt
@@ -94,8 +93,12 @@ def violin(args, queue):
                 problem_moea = problem.replace('emoa', 'moea')
                 metric_short = metric.replace('distance from Pareto front', 'dst')
                 fig_path = PLOTS_DIR / 'plots_violin' / '{}_{}.eps'.format( problem_moea, metric_short)
+                fig_path_pdf = PLOTS_DIR / 'plots_violin' / '{}_{}.pdf'.format( problem_moea, metric_short)
+                with suppress(FileExistsError):
+                    fig_path.parent.mkdir(parents=True)
                 print(fig_path)
                 plt.savefig(str(fig_path))
+                plt.savefig(str(fig_path_pdf))
 
         except KeyError as e:
             print('Missing algo: {}, (problem: {}, metrics: {}'.format(e, problem, metric))
