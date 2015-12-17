@@ -7,6 +7,8 @@ Usage:
   evogil.py run <budget> [options]
   evogil.py (stats | statistics) [options]
   evogil.py rank
+  evogil.py rank_details
+  evogil.py table
   evogil.py summary
   evogil.py pictures [options]
   evogil.py pictures_summary [--selected <algo_name>]
@@ -66,7 +68,7 @@ Options:
 Pictures Summary Options:
   --selected <algo_name>
         Select and highlight specified algorithms on plots.
-        [default: RHGS+SPEA2,RHGS+NSGAII,RHGS+NSGAIII,RHGS+IBEA,RHGS+OMOPSO,RHGS+SMSEMOA,RHGS+JGBL]
+        [default: RHGS+SPEA2,RHGS+NSGAII,RHGS+NSGAIII,RHGS+IBEA,RHGS+OMOPSO,RHGS+SMSEMOA,RHGS+JGBL,RHGS+NSLS]
 """
 
 import logging
@@ -110,6 +112,8 @@ def main_worker(queue, configurer):
         'statistics':  evotools.stats.statistics,
         'stats':       evotools.stats.statistics,
         'rank':        evotools.ranking.rank,
+        'table':       evotools.ranking.table_rank,
+        'rank_details': evotools.ranking.detailed_rank,
         'pictures':    evotools.pictures.pictures_from_stats,
         'pictures_summary':    evotools.pictures.pictures_summary,
         'best_fronts': evotools.best_fronts.best_fronts,

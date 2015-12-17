@@ -8,7 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from evotools import ea_utils
 from evotools.ranking import best_func
 from evotools.serialization import RunResult, RESULTS_DIR
-from evotools.stats_bootstrap import yield_analysis
+from evotools.stats_bootstrap import yield_analysis, validate_cost, find_acceptable_result_for_budget
 from evotools.timing import log_time, process_time
 from evotools import ranking
 import problems.ackley.problem as ackley
@@ -461,7 +461,7 @@ def plot_results_summary(problems, scoring, selected):
         plt.xticks(x_axis, problem_labels)
 
         if metric_name == 'hypervolume':
-            plt.ylim([0.8, 1.1])
+            plt.ylim([0.98, 1.001])
         elif metric_name != 'pdi':
             plt.ylim([-0.1, 1.1])
 
@@ -510,10 +510,11 @@ def pictures_summary(args, queue):
             problems.add(problem_name)
             problem_score = collections.defaultdict(list)
             algos = list(algorithms)
-            for algo_name, budgets in algos:
-                max_budget = list(budgets)[-1]
-                if validate_cost(max_budget, boot_size):
-                    for metric_name, metric_name_long, data_process in max_budget["analysis"]:
+            for algo_name, results in algos:
+                max_result = find_acceptable_result_for_budget(list(results), boot_size)
+                if max_result:
+                    print('{}, {} , budget={}'.format(problem_name, algo_name, max_result['budget']))
+                    for metric_name, metric_name_long, data_process in max_result["analysis"]:
                         if metric_name in ranking.best_func:
                             data_process = list(x() for x in data_process)
                             data_analysis = yield_analysis(data_process, boot_size)
@@ -522,6 +523,10 @@ def pictures_summary(args, queue):
 
                             scoring[metric_name][algo_name][problem_name] = score
                             problem_score[metric_name].append((algo_name, score))
+                else:
+                    print('{}, {}, NO BUDGET'.format(problem_name, algo_name))
+
+
 
             for metric_name in scoring:
                 if metric_name != 'pdi':

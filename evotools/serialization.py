@@ -15,9 +15,8 @@ from pathlib import Path
 import evotools.metrics
 from evotools import metrics
 
-cache = defaultdict(list)
 
-RESULTS_DIR = './results'
+RESULTS_DIR = './results_k1'
 
 class RunResult:
     @staticmethod
@@ -30,7 +29,7 @@ class RunResult:
                                               for run in result["results"])
             res = [max(*l) for l in zip(*all_results)]
 
-            print(problem_name, res)
+            # print(problem_name, res)
 
     @staticmethod
     def each_run(algo, problem, results_path='results'):
@@ -55,6 +54,7 @@ class RunResult:
 
     @staticmethod
     def each_result(results_path='results'):
+        cache = defaultdict(list)
         def f_metrics(result_list, problem_mod):
             """ Pierwszy *zawsze* będzie cost. To ważne.
             Nazwa `igd` nie może się zmieniać, to ważne dla `best_fronts`.
@@ -79,7 +79,7 @@ class RunResult:
             yield "hypervolume", "hypervolume", [partial(x.hypervolume, pareto=problem_mod.pareto_front)
                                                  for x in result_list]
             yield "pdi", "pareto dominance indicator", [
-                partial(x.pareto_dominance_indicator)
+                partial(x.pareto_dominance_indicator, cache=cache)
                 for x in result_list]
 
         def f_algo(problem_path, algo_path, problem_mod):
@@ -143,7 +143,6 @@ class RunResult:
                                                store_path)
 
     def load(self, budget):
-        print('laduje')
         if budget in self.budgets:
             return self.budgets[budget]
 
@@ -289,9 +288,9 @@ class RunResultBudget:
         return self._get_metric("hypervolume",
                                 metric_params={"pareto": pareto})
 
-    def pareto_dominance_indicator(self):
+    def pareto_dominance_indicator(self, cache):
         if (self.problem, self.budget, self.run_no) not in cache:
-            self.preload_results_for_problem()
+            self.preload_results_for_problem(cache)
         try:
             all_solutions = cache[(self.problem, self.budget, self.run_no)]
             return self._get_metric("pareto_dominance_indicator", metric_params={"all_solutions": all_solutions})
@@ -302,14 +301,14 @@ class RunResultBudget:
                 "No matching run for: problem={} algo={} run_no{}={}".format(self.problem, self.budget, self.run_no))
             return None
 
-    def preload_results_for_problem(self):
+    def preload_results_for_problem(self, cache):
         problem_path = self.path.parent.parent.parent
-        print("Loading for problem : {}".format(problem_path.name))
+        # print("Loading for problem : {}".format(problem_path.name))
         for algo_path in problem_path.iterdir():
             if algo_path.is_dir():
                 runs = [run for run in algo_path.iterdir() if run.is_dir()]
                 for i in range(len(runs)):
-                    print(runs[i].name)
+                    # print(runs[i].name)
                     for result_file in runs[i].iterdir():
                         try:
                             match = re.fullmatch("(?P<budget>[0-9]+)\.pickle",
@@ -318,13 +317,13 @@ class RunResultBudget:
                             budget = int(match.groupdict()["budget"])
                             population_pickle = RunResult.load_file(result_file)
 
-                            print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
+                            # print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
                             cache[(self.problem, budget, i)].append(population_pickle["fitnesses"])
                         except (AttributeError, IsADirectoryError):
                             pass
-        self.filter_non_dominated_in_cache()
+        self.filter_non_dominated_in_cache(cache)
 
-    def filter_non_dominated_in_cache(self):
+    def filter_non_dominated_in_cache(self, cache):
         problem_keys = sorted(filter(lambda run_key: run_key[0] == self.problem, cache))
         problem_solutions = [cache[key] for key in problem_keys]
 
@@ -339,29 +338,30 @@ class RunResultBudget:
             solutions = None
 
         if solutions and solutions == problem_solutions:
-            print("Cache for problem {} does not changed, loading nondominated solutions from file...")
+            pass
+            # print("Cache for problem {} does not changed, loading nondominated solutions from file...")
         else:
-            print("Cache for problem {} changed, calculating new nondominated... ")
+            # print("Cache for problem {} changed, calculating new nondominated... ")
             self.clear_old_pdi_metrics()
             for key in problem_keys:
-                print('Filtering non dominated for: ' + str(key))
+                # print('Filtering non dominated for: ' + str(key))
                 solutions = cache[key]
                 problem_nondominated[key] = set(metrics.filter_not_dominated(tuple(y) for s in solutions for y in s))
 
             RunResult.save_file(problem_cache_file, (problem_solutions, problem_nondominated))
 
         cache.update(problem_nondominated)
-        print("Cache of results -> cache of nondominated results")
+        # print("Cache of results -> cache of nondominated results")
 
     def clear_old_pdi_metrics(self):
         problem_path = self.path.parent.parent.parent
 
         for filename in fnmatch.filter([str(p) for p in problem_path.iterdir()], "*{}_*".format(self.problem)):
             os.remove(filename)
-            print("Removing file: " + filename)
+            # print("Removing file: " + filename)
 
         for root, dirnames, filenames in os.walk(str(problem_path)):
             for filename in fnmatch.filter(filenames, '*.pareto_dominance_indicator.pickle'):
                 file_path = os.path.join(root, filename)
-                print("Removing file: " + str(file_path))
+                # print("Removing file: " + str(file_path))
                 os.remove(file_path)

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 from contextlib import suppress
 
@@ -5,10 +6,11 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from evotools import ea_utils
+from evotools import metrics
 
 from evotools.pictures import algos, algos_order
 from evotools.serialization import RunResult, RESULTS_DIR
-from evotools.stats_bootstrap import validate_cost
+from evotools.stats_bootstrap import validate_cost, find_acceptable_result_for_budget
 
 PLOTS_DIR = Path('plots')
 PF_PLOTS_DIR = Path('pareto_results')
@@ -54,11 +56,16 @@ def plot_front(f, series, scatter=False):
     f.plot(x, y, c='0.6', lw=6, zorder=1)
 
 
-def plot_results(f, best_result, best_result_name):
+def plot_results(f, best_result, best_result_name, nondominated=set()):
     name, _, markers, color = algos[best_result_name]
 
-    res_x = [x[0] for x in best_result.fitnesses]
-    res_y = [x[1] for x in best_result.fitnesses]
+    res_x = [x[0] for x in best_result.fitnesses if tuple(x) not in nondominated]
+    res_y = [x[1] for x in best_result.fitnesses if tuple(x) not in nondominated]
+
+    res_x_nondom = [x[0] for x in best_result.fitnesses if tuple(x) in nondominated]
+    res_y_nondom = [x[1] for x in best_result.fitnesses if tuple(x) in nondominated]
+
+    print('{} : {}'.format(best_result_name, len(res_x_nondom)/len(nondominated)))
 
 
     if len(best_result.fitnesses[0]) > 2:
@@ -66,6 +73,7 @@ def plot_results(f, best_result, best_result_name):
         f.scatter(res_x, res_y, res_z, marker=markers, s=60, color=color, label=name, zorder=2)
     else:
         f.scatter(res_x, res_y, marker=markers, s=60, color=color, label=name, zorder=2)
+        f.scatter(res_x_nondom, res_y_nondom, marker=markers, s=60, color='r', label=name, zorder=2)
     # f.scatter(res_x, res_y, marker=markers, s=60, edgecolors=color, facecolors='none', label=name, zorder=2)
 
 
@@ -86,30 +94,44 @@ def save_plot(ax, f, d_problem):
     plt.savefig(str(path))
     plt.close(f)
 
-
 def best_fronts(args, queue):
     boot_size = int(args['--bootstrap'])
+    scoring = defaultdict(list)
+    global_scoring = defaultdict(list)
     for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
-        original_front = problem_mod.pareto_front
-        ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
+        if problem_name in ['ZDT1']:
+            for algo_name, results in algorithms:
+                best_result = find_acceptable_result_for_budget(list(results), boot_size)
+                """:type: RunResultBudget """
 
-        for algo_name, budgets in algorithms:
-            best_result, best_result_name, best_result_metric = None, None, None
-            """:type: RunResultBudget """
+                if best_result:
+                    best_value = best_result['results'][0]
+                    scoring[problem_name, problem_mod].append((algo_name, best_value))
+                    global_scoring[problem_name].extend(tuple(v) for v in best_value.fitnesses)
 
-            for result in budgets:
-                # print(result)
-                if validate_cost(result, boot_size):
-                    for metrics_name, _, precomp in result["analysis"]:
-                        if metrics_name == "igd":
-                            precomp = [x() for x in precomp]
-                            for runresbud, metric_val in zip(result["results"], precomp):
-                                print(problem_name, algo_name, result["budget"], metrics_name, runresbud, metric_val)
+    for problem_name in set(global_scoring):
+        global_scoring[problem_name] = set(metrics.filter_not_dominated(global_scoring[problem_name]))
 
-                                if best_result_metric is None or metric_val < best_result_metric:
-                                    best_result, best_result_name, best_result_metric = runresbud, algo_name, metric_val
-            if best_result:
-                plot_results(ax, best_result, best_result_name)
+    for problem_name, problem_mod in scoring:
+        ax, f = plot_problem_front(problem_mod.pareto_front, multimodal=problem_name == 'ZDT3')
+        for algo_name,best_value in scoring[(problem_name, problem_mod)]:
+            plot_results(ax, best_value, algo_name, global_scoring[problem_name])
         save_plot(ax, f, problem_mod)
+
+
+def best_fronts2(args, queue):
+    boot_size = int(args['--bootstrap'])
+    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+        if problem_name in ['ZDT1', 'ZDT2', 'ZDT3','ZDT4','ZDT6']:
+            original_front = problem_mod.pareto_front
+            ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
+
+            for algo_name, results in algorithms:
+                best_result = find_acceptable_result_for_budget(list(results), boot_size)
+                """:type: RunResultBudget """
+
+                if best_result:
+                    plot_results(ax, best_result['results'][0], algo_name)
+            save_plot(ax, f, problem_mod)
 
 
