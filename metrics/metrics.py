@@ -1,6 +1,6 @@
 import algorithms.base.hv as hv
-import evotools.epsilon as eps
-import evotools.metrics_utils as metrics_utils
+import metrics.epsilon as eps
+import metrics.metrics_utils as metrics_utils
 
 EPSILON = eps.Epsilon()
 

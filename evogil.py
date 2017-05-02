@@ -76,16 +76,15 @@ import multiprocessing
 
 from docopt import docopt
 
-from evotools import run_config
-from evotools import log_helper
-import evotools.stats
-from evotools.timing import system_time, log_time
-import evotools.violin
-import evotools.run_parallel
-import evotools.benchmark_results
-import evotools.pictures
-import evotools.best_fronts
-import evotools.ranking
+import plots.best_fronts
+import plots.pictures
+import plots.violin
+import simulation.run_parallel
+import statistic.ranking
+import statistic.stats
+import statistic.summary
+from simulation import run_config, log_helper
+from simulation.timing import system_time, log_time
 
 
 # noinspection PyUnusedLocal
@@ -108,17 +107,17 @@ def main_worker(queue, configurer):
     logger.debug("Parsing result: %s", argv)
 
     run_dict = {
-        'run':         evotools.run_parallel.run_parallel,
-        'statistics':  evotools.stats.statistics,
-        'stats':       evotools.stats.statistics,
-        'rank':        evotools.ranking.rank,
-        'table':       evotools.ranking.table_rank,
-        'rank_details': evotools.ranking.detailed_rank,
-        'pictures':    evotools.pictures.pictures_from_stats,
-        'pictures_summary':    evotools.pictures.pictures_summary,
-        'best_fronts': evotools.best_fronts.best_fronts,
-        'violin':      evotools.violin.violin,
-        'summary':     evotools.benchmark_results.analyse_results,
+        'run':         simulation.run_parallel.run_parallel,
+        'statistics':  statistic.stats.statistics,
+        'stats':       statistic.stats.statistics,
+        'rank':        statistic.ranking.rank,
+        'table':       statistic.ranking.table_rank,
+        'rank_details': statistic.ranking.detailed_rank,
+        'pictures':    plots.pictures.pictures_from_stats,
+        'pictures_summary':    plots.pictures.pictures_summary,
+        'best_fronts': plots.best_fronts.best_fronts,
+        'violin':      plots.violin.violin,
+        'summary':     statistic.summary.analyse_results,
         'list':        all_algos_problems,
     }
 

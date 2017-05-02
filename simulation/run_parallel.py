@@ -1,32 +1,27 @@
-import copy
-from datetime import datetime
+import collections
 import inspect
 import logging
-from logging.handlers import QueueHandler
 import multiprocessing
+import operator
 import os
 import random
 import time
-import collections
-import operator
-
+from contextlib import suppress
+from datetime import datetime
+from functools import partial
 from importlib import import_module
-from contextlib import suppress, closing, contextmanager
 from itertools import product, count
+
+from evotools.serialization import RunResult, RESULTS_DIR
+
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
-
 from evotools.ea_utils import gen_population
-from evotools import run_config
-
-from functools import partial
-from evotools.log_helper import init_worker
 from evotools.random_tools import show_partial, show_conf, close_and_join
-from evotools.run_config import NotViableConfiguration
-from evotools.serialization import RunResult, RESULTS_DIR
-from evotools.timing import log_time, process_time
-from evotools.timing import system_time
-
+from simulation import run_config
+from simulation.run_config import NotViableConfiguration
+from simulation.timing import log_time, process_time
+from simulation.timing import system_time
 
 
 def run_parallel(args, queue):

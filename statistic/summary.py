@@ -1,9 +1,7 @@
 # base
-import pathlib
-import json
 
 # self
-from evotools.serialization import RunResult
+from simulation.serialization import RunResult
 
 
 def analyse_results(*args, **kwargs):

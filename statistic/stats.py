@@ -1,13 +1,11 @@
-from contextlib import closing
-from functools import partial
-from itertools import repeat
 import logging
 import multiprocessing
-from evotools.log_helper import init_worker
+from itertools import repeat
+
 from evotools.random_tools import close_and_join
-from evotools.serialization import RunResult
-from evotools.stats_bootstrap import yield_analysis, average
-from evotools.timing import process_time, log_time
+from simulation.serialization import RunResult
+from simulation.timing import process_time, log_time
+from statistics.stats_bootstrap import yield_analysis, average
 
 fields = [
     ("PROBLEM",                     [9],             "{problem_name:{0}}"),

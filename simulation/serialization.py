@@ -12,9 +12,7 @@ from importlib import import_module
 from itertools import chain
 from pathlib import Path
 
-import evotools.metrics
-from evotools import metrics
-
+from metrics import metrics
 
 RESULTS_DIR = '../results/results_k1'
 
@@ -206,7 +204,7 @@ class RunResultBudget:
         self.cost = cost
         self.population = population
         self.fitnesses = fitnesses
-        self.non_dominated_fitnesses = evotools.metrics.filter_not_dominated(fitnesses)
+        self.non_dominated_fitnesses = metrics.metrics.filter_not_dominated(fitnesses)
         self.path = path
         self.metrics = {}
 

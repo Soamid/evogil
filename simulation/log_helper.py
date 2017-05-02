@@ -4,6 +4,8 @@ from logging.handlers import QueueHandler
 from pathlib import Path
 
 
+LOG_PATH = 'evogil.log'
+
 def init_listener():
     root = logging.getLogger()
 
@@ -15,7 +17,7 @@ def init_listener():
     h.setFormatter(f)
     root.addHandler(h)
 
-    h = logging.FileHandler(str(Path('logs', 'evogil.log')), encoding='utf-8')
+    h = logging.FileHandler(LOG_PATH, encoding='utf-8')
     h.setLevel(logging.DEBUG)
     f = logging.Formatter('%(asctime)s%(msecs)d %(process)d %(name)s %(levelname)s %(message)s',
                           datefmt='%Y-%m-%d %H:%M:%S')

@@ -1,10 +1,9 @@
-import itertools
 import logging
 import math
-from evotools.timing import log_time, process_time
-from evotools.ea_utils import dominates
 
 import numpy as np
+
+from evotools.ea_utils import dominates
 
 EPSILON = np.finfo(float).eps
 

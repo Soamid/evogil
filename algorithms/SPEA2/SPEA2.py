@@ -7,10 +7,11 @@
 import math
 import random
 
-from algorithms.base.drivertools import crossover, mutate
-from algorithms.base.drivergen import DriverGen
-from evotools import ea_utils, metrics
 from evotools.metrics_utils import euclid_distance
+
+from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivertools import crossover, mutate
+from evotools import ea_utils
 
 
 class SPEA2(DriverGen):

@@ -1,8 +1,11 @@
 import json
 import os
 import pickle
-from evotools.serialization import RESULTS_DIR
 
+from simulation.serialization import RESULTS_DIR
+
+# Directory walker with custom functions invoked on each subdirectory (recursively).
+# It can be utilized as results processor/fixing tool.
 
 def walk(results_dir, fun):
     rootDir = results_dir
