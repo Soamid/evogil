@@ -1,14 +1,15 @@
-from algorithms.base.drivergen import DriverGen
-from algorithms.base.drivertools import rank, mutate, crossover
-
+import collections
 import itertools
 import math
 import random
 import sys
 
+from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivertools import rank, mutate, crossover
+from evotools.ea_utils import paretofront_layers
+
 
 class IBEA(DriverGen):
-
     class IBEAProxy(DriverGen.Proxy):
         def __init__(self, cost, individuals, driver):
             super().__init__(cost)
@@ -37,8 +38,23 @@ class IBEA(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)
 
-    def __init__(self, population, dims, fitnesses, mutation_variance, crossover_variance, kappa,
-                 mating_population_size, mutation_probability=0.05):
+        def nominate_delegates(self):
+            return [x.v for x in
+                list(paretofront_layers(self.individuals, lambda indv: self.driver.calculate_objectives(indv)))[
+                0]]
+
+    def __init__(self,
+                 population,
+                 dims,
+                 fitnesses,
+                 kappa,
+                 mating_population_size,
+                 mutation_eta,
+                 crossover_eta,
+                 mutation_rate,
+                 crossover_rate,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
 
         self.individuals = []
@@ -46,9 +62,10 @@ class IBEA(DriverGen):
         self.mating_size = 0
 
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
 
         self.cost = 0
         self.objectives = fitnesses
@@ -56,9 +73,12 @@ class IBEA(DriverGen):
         self.generation_counter = 0
         self.k = kappa
         self.mating_size_c = mating_population_size
-        self.population = population
+        self.trim_function = trim_function
+        self.population = [self.trim_function(x) for x in population]
 
         self._scale_objectives()
+
+        self.fitness_archive = fitness_archive
 
     def step(self, steps=1):
         for _ in range(steps):
@@ -89,6 +109,8 @@ class IBEA(DriverGen):
         self._mating_selection(0.9)
         self._crossover()
         self._mutation()  # (0.05)
+        for ind in self.mating_individuals:
+            ind.v = self.trim_function(ind.v)
         self.individuals += self.mating_individuals
         self._scale_objectives()
         self.generation_counter += 1
@@ -96,7 +118,7 @@ class IBEA(DriverGen):
     def _scale_objectives(self):
         min_max = lambda x: (min(x), max(x))
         for ind in self.individuals:
-            if not ind.known_objectives:
+            if not ind.known_objectives or not ((self.fitness_archive is not None) and (ind.v in self.fitness_archive)):
                 self.cost += 1
             ind.known_objectives = True
         measured = [(objective, min_max([objective(ind.v) for ind in self.individuals])) for objective in
@@ -128,19 +150,20 @@ class IBEA(DriverGen):
 
     def _mating_selection(self, p):
         coin = lambda: random.random() < p
-        better = lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin()\
+        better = lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin() \
             else self.fitness[x1] > self.fitness[x2] and x1 or x2
         self.mating_individuals = [better(random.choice(self.individuals), random.choice(self.individuals)) for _ in
                                    range(2 * self.mating_size)]
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v) for i in
+            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims,
+                      self.crossover_rate, self.crossover_eta) for i in
             range(self.mating_size)]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
             self.mating_individuals]
         for ind in self.mating_individuals:
             ind.known_objectives = False
@@ -156,9 +179,11 @@ class IBEA(DriverGen):
         self.mating_size = int(self.mating_size_c * self.population_size)
 
     def calculate_objectives(self, ind):
+        if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+            return self.fitness_archive[ind.v]
         if not ind.known_objectives:
             self.cost += 1
-        return [objective(ind) for objective in self.objectives]
+        return [objective(ind.v) for objective in self.objectives]
 
     class EPlusIndicator:
         def __init__(self, population):
@@ -178,7 +203,7 @@ if __name__ == "__main__":
     # import pylab
     # # objectives = [lambda x : (x[0]+5)*(x[0]+5), lambda x : (x[1]-5)*(x[1]-5)]
     # objectives = [lambda x: -10 * math.exp(-0.2 * math.sqrt(x[0] * x[0] + x[1] * x[1])),
-    #               lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3) + math.pow(abs(x[1]),
+    # lambda x: math.pow(abs(x[0]), 0.8) + 5 * math.pow(math.sin(x[0]), 3) + math.pow(abs(x[1]),
     #                                                                                               0.8) + 5 * math.pow(
     #                   math.sin(x[1]), 3)
     # ]

@@ -3,6 +3,26 @@ from math import sqrt
 import numpy
 
 
+def validate_cost(result, boot_size, delta=500):
+    budget = result["budget"]
+    for metric_name, _, data_process in result['analysis']:
+        if metric_name == "cost":
+            cost_data = list(x() for x in data_process)
+            data_analysis = yield_analysis(cost_data, boot_size)
+            cost_val = data_analysis["btstrpd"]["metrics"]
+            return cost_val <= budget + delta
+    return True
+
+def find_acceptable_result_for_budget(results, boot_size):
+    delta = 500
+    prev_budget = results[-1]['budget']
+    for result in reversed(results):
+        budget = result['budget']
+        delta += prev_budget - budget
+        if validate_cost(result,boot_size, delta):
+            return result
+        prev_budget = budget
+    return None
 
 def average(xs):
     if len(xs) == 0:

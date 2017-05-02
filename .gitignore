@@ -38,3 +38,7 @@ plots/pareto_fronts/
 plots/plots_violin/
 plots/plots_bnw/
 plots/
+run_all.bat
+run_queue.bat
+*.rar
+jmetal_src/

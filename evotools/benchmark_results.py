@@ -3,7 +3,6 @@ import pathlib
 import json
 
 # self
-from evotools.config import metric_names
 from evotools.serialization import RunResult
 
 

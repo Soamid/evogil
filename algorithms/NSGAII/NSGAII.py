@@ -1,5 +1,5 @@
 from algorithms.base.drivergen import DriverGen
-from algorithms.base.drivertools import rank, mutate, crossover
+from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'
 
@@ -26,7 +26,6 @@ def dominates(x, y):
 
 
 class NSGAII(DriverGen):
-
     class NSGAIIProxy(DriverGen.Proxy):
         def __init__(self, cost, individuals, driver):
             super().__init__(cost)
@@ -39,7 +38,7 @@ class NSGAII(DriverGen):
         def current_population(self):
             return [x.v for x in self.individuals]
 
-        def deport_emigrants(self, immigrants):
+        def deport_emigrants(self, immigrants, remove=True):
             immigrants_cp = list(immigrants)
             to_remove = []
 
@@ -48,37 +47,52 @@ class NSGAII(DriverGen):
                     to_remove.append(p)
                     immigrants_cp.remove(p.v)
 
-            for p in to_remove:
-                self.individuals.remove(p)
-            return to_remove
+            if remove:
+                for p in to_remove:
+                    self.individuals.remove(p)
+                return to_remove
+            else:
+                return [NSGAII.Individual([vec for vec in x.v]) for x in to_remove]
 
         def assimilate_immigrants(self, emigrants):
             self.individuals.extend(emigrants)
+
+        def nominate_delegates(self):
+            self.driver.finish()
+            return [x.v for x in self.driver.front[1]]
 
     def __init__(self,
                  population,
                  dims,
                  fitnesses,
-                 mutation_variance,
-                 crossover_variance,
                  mating_population_size,
-                 mutation_probability=0.05):
+                 mutation_eta,
+                 crossover_eta,
+                 mutation_rate,
+                 crossover_rate,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
 
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
+
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
 
         self.cost = 0
         self.objectives = fitnesses
         self.mating_size_c = mating_population_size
         self.generation_counter = 0
 
+        self.trim_function = trim_function
+        self.fitness_archive = fitness_archive
+
         self.population_size = 0
         self.individuals = []
         self.mating_size = 0
-        self.population = population
+        self.population = [self.trim_function(x) for x in population]
 
         self._calculate_objectives()
 
@@ -107,9 +121,6 @@ class NSGAII(DriverGen):
         self._environmental_selection()
         return self.cost
 
-    def get_indivs_inorder(self):
-        return rank(self.population, self.calculate_objectives)
-
     def finish(self):
         self._calculate_objectives()
         self._nd_sort()
@@ -123,7 +134,9 @@ class NSGAII(DriverGen):
         self._environmental_selection()
         self._mating_selection(0.9)
         self._crossover()
-        self._mutation()  # (0.05)
+        self._mutation()
+        for ind in self.mating_individuals:
+            ind.v = self.trim_function(ind.v)
         self.individuals += self.mating_individuals
         self._calculate_objectives()
         self.generation_counter += 1
@@ -131,12 +144,14 @@ class NSGAII(DriverGen):
     def _calculate_objectives(self):
         for ind in self.individuals:
             if ind.objectives is None:
-                self.cost += 1
-                ind.objectives = {objective: objective(ind.v) for objective in self.objectives}
-
-    def calculate_objectives(self, ind):
-        self.cost += 1
-        return [objective(ind) for objective in self.objectives]
+                if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+                    fitnesses = self.fitness_archive[ind.v]
+                else:
+                    self.cost += 1
+                    fitnesses = [objective(ind.v) for objective in self.objectives]
+                    if self.fitness_archive is not None:
+                        self.fitness_archive[ind.v] = fitnesses
+                ind.objectives = {objective: fitness for objective, fitness in zip(self.objectives, fitnesses)}
 
     def _nd_sort(self):
         self.dominated_by = collections.defaultdict(set)
@@ -198,12 +213,13 @@ class NSGAII(DriverGen):
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v) for i in
+            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims,
+                      self.crossover_rate, self.crossover_eta) for i in
             range(self.mating_size)]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_probability, self.mutation_variance)) for x in
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
             self.mating_individuals]
 
     class Individual:

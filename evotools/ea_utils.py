@@ -25,7 +25,7 @@ def domination_cmp(xs, ys) -> 'Int':
     :return: Zwraca 1 gdy A dominuje B, -1 gdy B dominuje A oraz 0 wpp.
     """
     direction = 0
-    for i, j in zip(xs, ys):
+    for i, j in zip([float(x) for x in xs], [float(y) for y in ys]):
         ndir = (-1, 0, 1)[(i <= j) + (i < j)]  # hacky!
         if ndir != 0:
             if direction != 0 and ndir != direction:
@@ -89,7 +89,7 @@ def split_front(pareto_front, epsilon):
     prev_x = 0
 
     for x, y in pareto_front:
-        if x - prev_x > epsilon:
+        if x - prev_x > epsilon and len(group) > 1:
             groups.append(group)
             group = [(x, y)]
         else:
@@ -99,6 +99,7 @@ def split_front(pareto_front, epsilon):
     if groups[-1] != group:
         groups.append(group)
 
+    print(groups)
     return groups
 
 

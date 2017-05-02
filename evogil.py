@@ -6,8 +6,12 @@ Usage:
   evogil.py list
   evogil.py run <budget> [options]
   evogil.py (stats | statistics) [options]
+  evogil.py rank
+  evogil.py rank_details
+  evogil.py table
   evogil.py summary
   evogil.py pictures [options]
+  evogil.py pictures_summary [--selected <algo_name>]
   evogil.py best_fronts
   evogil.py violin [options]
 
@@ -18,6 +22,8 @@ Commands:
     Returns number of results for each tuple: algorithm, problem, budget.
   stats
     Generates statistics from benchmarks' results.
+  rank
+    Generates report with algorithms ranking.
   pictures
     Some pictures?
   violin
@@ -58,6 +64,11 @@ Options:
         [default: 1]
   --renice <increment>
         Renice workers. Works on UNIX & derivatives.
+
+Pictures Summary Options:
+  --selected <algo_name>
+        Select and highlight specified algorithms on plots.
+        [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA,HGS+JGBL,HGS+NSLS]
 """
 
 import logging
@@ -74,6 +85,7 @@ import evotools.run_parallel
 import evotools.benchmark_results
 import evotools.pictures
 import evotools.best_fronts
+import evotools.ranking
 
 
 # noinspection PyUnusedLocal
@@ -99,8 +111,12 @@ def main_worker(queue, configurer):
         'run':         evotools.run_parallel.run_parallel,
         'statistics':  evotools.stats.statistics,
         'stats':       evotools.stats.statistics,
+        'rank':        evotools.ranking.rank,
+        'table':       evotools.ranking.table_rank,
+        'rank_details': evotools.ranking.detailed_rank,
         'pictures':    evotools.pictures.pictures_from_stats,
-        'best_fronts': evotools.best_fronts.main,
+        'pictures_summary':    evotools.pictures.pictures_summary,
+        'best_fronts': evotools.best_fronts.best_fronts,
         'violin':      evotools.violin.violin,
         'summary':     evotools.benchmark_results.analyse_results,
         'list':        all_algos_problems,

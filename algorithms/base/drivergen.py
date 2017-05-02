@@ -2,8 +2,7 @@ class DriverGen:
     max_budget = None
 
     def __init__(self):
-        pass
-
+        self.finished = False
 
     def population_generator(self):
         """ Generator.
@@ -14,8 +13,9 @@ class DriverGen:
             proxy.cost
             proxy.finalized_population()
             proxy.current_population()
-            proxy.deport_emigrants()
-            proxy.assimilate_immigrants()
+            proxy.deport_emigrants(immigrants)
+            proxy.assimilate_immigrants(emigrants)
+            proxy.nominate_delegates(delegates_no)
         """
         raise NotImplementedError
 
@@ -47,5 +47,11 @@ class DriverGen:
             """
             :param emigrants: Individuals that shall be assimilated into the population, expressed in driver-specific model form.
             :return: Does not return. This Proxy object shall be passed back to the generator.
+            """
+            raise NotImplementedError
+
+        def nominate_delegates(self):
+            """
+            :return: returns a reasonable number of delegates - best individuals that the population is able to provide.
             """
             raise NotImplementedError

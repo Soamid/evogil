@@ -23,9 +23,10 @@ from functools import partial
 from evotools.log_helper import init_worker
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from evotools.run_config import NotViableConfiguration
-from evotools.serialization import RunResult
+from evotools.serialization import RunResult, RESULTS_DIR
 from evotools.timing import log_time, process_time
 from evotools.timing import system_time
+
 
 
 def run_parallel(args, queue):
@@ -170,7 +171,7 @@ def worker(args):
 
     drivers = algo.split('+')
 
-    runres = RunResult(algo, problem, runid=runid)
+    runres = RunResult(algo, problem, runid=runid, results_path=RESULTS_DIR)
 
     try:
         final_driver, problem_mod = None, None
@@ -540,7 +541,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         ################################################################################
         descr = "GENERATING POPULATION"
         if "population" not in config:
-            initial_population = gen_population(config["__metaconfig__populationsize"], problem_mod.dims)
+            initial_population = gen_population(64, problem_mod.dims)
             update = {"population": initial_population}
             logger.debug("%s (size: %s, dims: %s): %s",
                          descr,

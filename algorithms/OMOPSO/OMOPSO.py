@@ -8,7 +8,6 @@ from algorithms.base.drivergen import DriverGen
 class OMOPSO(DriverGen):
     ETA = 0.0075
 
-
     class OMOPSOProxy(DriverGen.Proxy):
         def __init__(self, cost, archive, population):
             super().__init__(cost)
@@ -40,21 +39,36 @@ class OMOPSO(DriverGen):
                 e.reset_speed()
                 self.population.append(e)
 
+        def nominate_delegates(self):
+            return self.finalized_population()
 
-
-    def __init__(self, population, fitnesses, dims, mutation_perturbation=0.5, mutation_probability=0.05,
-                 mutation_variance=0, crossover_variance=0):
+    def __init__(self,
+                 population,
+                 fitnesses,
+                 dims,
+                 mutation_eta,
+                 mutation_rate,
+                 crossover_eta,
+                 crossover_rate,
+                 mutation_perturbation=0.5,
+                 mutation_probability=0.05,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
         self.fitnesses = fitnesses
         self.dims = dims
-        self.population = [Individual(p) for p in population]
+        self.population = [Individual(trim_function(x)) for x in population]
         self.mutation_probability = mutation_probability
 
         self.leaders_size = len(population)  # parameter?
         self.mutation_perturbation = mutation_perturbation
         self.crowding_selector = CrowdingTournament()
+
+        self.trim_function = trim_function
+
         self.archive = Archive(self.ETA)
         self.leader_archive = LeaderArchive(self.leaders_size)
+        self.fitness_archive = fitness_archive
 
     def init_personal_best(self):
         for p in self.population:
@@ -84,6 +98,9 @@ class OMOPSO(DriverGen):
             progress = min(1.0, total_cost / self.max_budget) if self.max_budget else None
             self.mopso_mutation(progress)
 
+            for x in self.population:
+                x.value = self.trim_function(x.value)
+
             cost += self.calculate_objectives()
             total_cost += self.calculate_objectives()
 
@@ -105,7 +122,6 @@ class OMOPSO(DriverGen):
             if self.leader_archive.add(copy.deepcopy(p)):
                 self.archive.add(copy.deepcopy(p))
 
-
     def update_personal_best(self):
         for p in self.population:
             # print("new: {}, best: {}".format(p.objectives, p.best_val.objectives))
@@ -113,20 +129,22 @@ class OMOPSO(DriverGen):
                 # print("new best: {}".format(p.objectives))
                 p.best_val = copy.deepcopy(p)
 
-
     def update_leaders(self):
         for p in self.population:
             new_ind = copy.deepcopy(p)
             if self.leader_archive.add(new_ind):
                 self.archive.add(copy.deepcopy(p))
 
-
     def calculate_objectives(self):
         for p in self.population:
-            p.objectives = [o(p.value)
-                            for o in self.fitnesses]
-        return len(self.population)
-
+            if (self.fitness_archive is not None) and (p.value in self.fitness_archive):
+                p.objectives = self.fitness_archive[p.value]
+                cost = 0
+            else:
+                p.objectives = [o(p.value)
+                                for o in self.fitnesses]
+                cost = len(self.population)
+        return cost
 
     def move(self):
         for p in self.population:
@@ -139,7 +157,6 @@ class OMOPSO(DriverGen):
                     p.speed[i] *= -1
 
                 p.value[i] = bounded_x
-
 
     def compute_speed(self):
         for p in self.population:
@@ -156,7 +173,6 @@ class OMOPSO(DriverGen):
                 p.speed[j] = W * p.speed[j] \
                              + C1 * r1 * (p.best_val.value[j] - p.value[j]) \
                              + C2 * r2 * (best_global.value[j] - p.value[j])
-
 
     def mopso_mutation(self, evolution_progress):
         pop_len = len(self.population)

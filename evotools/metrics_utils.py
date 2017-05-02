@@ -94,6 +94,19 @@ def distance(from_set, to_set):
     ]
     return math.sqrt(sum(distances) / len(distances))
 
+def pareto_dominance_indicator(solution, not_dominated_solution, all_solutions):
+    non_dominated_intersection = [s for s in not_dominated_solution if tuple(s) in all_solutions]
+    return len(non_dominated_intersection) / len(all_solutions)
+
+def filter_not_dominated2(ind_set):
+    d = {tuple(ind) : [not dominates(other_ind, ind) for other_ind in ind_set] for ind in ind_set}
+    result= [ind for ind in d.keys() if all(d[ind])]
+    # for x in result:
+    #     for y in result:
+    #         if dominates(x,y) or dominates(y,x):
+    #             print("co do chuja wacława?!")
+    return result
+
 
 def filter_not_dominated(ind_set):
     not_dominated = []

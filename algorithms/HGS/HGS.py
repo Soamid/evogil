@@ -1,424 +1,391 @@
-# coding=utf-8
-from itertools import count, combinations
-import logging
+import collections
 import random
-from collections import deque
-from contextlib import suppress
-from algorithms.HGS.analyser import generate_hierarchy, NoMetaepochsException
+
+import floatextras
+import math
+import numpy as np
+import time
 
 from algorithms.base.drivergen import DriverGen
-from algorithms.base.driverlegacy import DriverLegacy
-from algorithms.base.drivertools import average_indiv, rank
-from evotools.metrics_utils import euclid_distance
-from evotools.ea_utils import paretofront_layers, one_fitness
-from evotools.random_tools import take
+from evotools import random_tools
 
 
 
+from algorithms.base import drivertools
+from algorithms.base.hv import HyperVolume
 
+
+EPSILON = np.finfo(float).eps
 class HGS(DriverGen):
-    # Kilka ustawień HGS-u
-    global_branch_compare = False
-    node_population_returns_only_front = False
 
-    def __init__(self, dims, population, fitnesses, population_per_level, scaling_coefficients, crossover_variance,
-                 sprouting_variance, mutation_variance, branch_comparison, metaepoch_len, driver, max_children,
-                 mutation_probability=0.05, sproutiveness=1, driver_kwargs_per_level=None):
-        """
-        :param dims: dimensions' ranges, one per dimension
-        :param population: initial population
-        :param fitnesses: fitness functions
-        :param population_per_level: one per depth
-        :param scaling_coefficients: scaling the universa, one per level
-        :param crossover_variance: one per dimension
-        :param sprouting_variance: one per dimension
-        :param mutation_variance: one per dimension
-        :param branch_comparison:
-        :param metaepoch_len: length of the metaepoch
-        :param driver:
-        :param max_children: limit the number of immediate sprouts
-        :param mutation_probability:
-        :param sproutiveness: number of sprouts generated on each metaepoch
-        :param driver_kwargs_per_level:
-        :return:
-        :type dims: list[(float,float)]
-        :type population: list[list[float]]
-        :type fitnesses: list[(list[float]) -> list[float]]
-        :type population_per_level: list[int]
-        :type scaling_coefficients: list[float]
-        :type crossover_variance: list[float]
-        :type sprouting_variance: list[float]
-        :type mutation_variance: list[float]
-        :type branch_comparison: float
-        :type metaepoch_len: int
-        :type driver: (Any) -> (DriverGen | DriverLegacy)
-        :type max_children: int
-        :type mutation_probability : float
-        :type sproutiveness: int
-        :type driver_kwargs_per_level : list[dict]
-        :rtype: HGS
-        """
-        logger = logging.getLogger(__name__)
-
-        logger.debug("Created HGS %s", self)
-
-        if not driver_kwargs_per_level:
-            driver_kwargs_per_level = [{} for _ in population_per_level]
+    def __init__(self,
+             population,
+             dims,
+             fitnesses,
+             fitness_errors,
+             cost_modifiers,
+             driver,
+             mutation_etas,
+             crossover_etas,
+             mutation_rates,
+             crossover_rates,
+             reference_point,
+             mantissa_bits,
+             min_progress_ratio,
+             metaepoch_len=5,
+             max_level=2,
+             max_sprouts_no=20,
+             sproutiveness=1,
+             comparison_multipliers=(1.0, 0.1, 0.01),
+             population_sizes=(64, 16, 4)):
         super().__init__()
-
-        self.fitnesses = fitnesses
-        self.dims = dims
-
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-
-        self.crossover_variance = crossover_variance
-
-        self.sprouting_variance = sprouting_variance
-        self.branch_comparison = branch_comparison
-
-        self.scaling_coefficients = scaling_coefficients
-        self.population_per_level = population_per_level
-        self.dims_per_lvl = [
-            [
-                (0, (b - a) / coeff)
-                for (a, b)
-                in dims
-            ]
-            for coeff
-            in self.scaling_coefficients
-        ]
-        self.fitnesses_per_lvl = [
-            [
-                lambda xs: fit(self.code(xs, lvl))
-                for fit
-                in self.fitnesses
-                ]
-            for lvl, _
-            in enumerate(self.scaling_coefficients)
-        ]
-        self.driver_kwargs_per_level = driver_kwargs_per_level
-
-        self.sproutiveness = sproutiveness
-        self.max_children = max_children
-        self.metaepoch_len = metaepoch_len
 
         self.driver = driver
 
-        self.id_cnt = count()  # counter for sprouts
-        logger.debug("Creating root node with %d indivs", len(population))
-        self.root = HGS.Node(self,
-                             level=0,
-                             population=[self.decode(p, lvl=0)
-                                         for p in population])
+        self.dims = dims
+        self.reference_point = reference_point
+        self.fitnesses = fitnesses
 
-    def code(self, xs, lvl):
-        """ U_l -> [a,b]^d, l=1..m
-        :type xs: list[float]
-        :type lvl: int
-        :rtype: list[float]
-        """
-        return [(x * self.scaling_coefficients[lvl] + a)
-                for x, (a, b)
-                in zip(xs,
-                       self.dims)]
+        self.fitness_errors = fitness_errors
+        self.cost_modifiers = cost_modifiers
 
-    def decode(self, xs, lvl):
-        """ [a,b]^d -> U_l, l=1..m
-        :type xs: list[float]
-        :type lvl: int
-        :return: list[float]
-        """
-        return [(x - a) / self.scaling_coefficients[lvl]
-                for x, (a, b)
-                in zip(xs,
-                       self.dims)]
+        corner_a = np.array([x for x, _ in dims])
+        corner_b = np.array([x for _, x in dims])
+        corner_dist = np.linalg.norm(corner_a - corner_b)
+        self.min_dists = [x * corner_dist for x in comparison_multipliers]
 
-    def scale(self, xs, lvl):
-        """ U_i -> U_{i+1}
-        :type xs: list[float]
-        :type lvl: int
-        :return: list[float]
-        """
-        coeff_i = self.scaling_coefficients[lvl]
-        coeff_j = self.scaling_coefficients[lvl + 1]
-        return [x * coeff_i / coeff_j
-                for x
-                in xs]
+        self.metaepoch_len = metaepoch_len
+        self.max_level = max_level
+        self.max_sprouts_no = max_sprouts_no
+        self.sproutiveness = sproutiveness
+        self.min_progress_ratio = min_progress_ratio
 
-    def get_nodes(self, include_finished=False):
-        """ HGS nodes in level-order. """
-        logger = logging.getLogger(__name__)
-        logger.debug("HGS.get_nodes(include_finished=%s)", include_finished)
-        deq = deque([self.root])
+        self.mutation_etas = mutation_etas
+        self.mutation_rates = mutation_rates
+        self.crossover_etas = crossover_etas
+        self.crossover_rates = crossover_rates
+        self.population_sizes = population_sizes
 
-        with suppress(IndexError):
-            while True:
-                x = deq.popleft()
-                deq.extend(x.sprouts)
-                if not x.finished or include_finished:
-                    logger.debug("HGS.get_nodes :: yielding #%d", x.id)
-                    yield x
-                else:
-                    logger.debug("HGS.get_nodes :: not yielding #%d", x.id)
+        self.mantissa_bits = mantissa_bits
+        self.global_fitness_archive = [ResultArchive() for _ in range(3)]
 
-    def population_generator(self):
-        logger = logging.getLogger(__name__)
-        logger.debug("HGS.population_generator()")
-        itername = count()
-        while True:
-            logger.debug("HGS.population_generator :: loop")
-            this_metaepoch_cost = sum(
-                next(node.step_iter())
-                for node in self.get_nodes()
-            )
-            logger.debug("HGS.opulation_generator :: yield cost %d", this_metaepoch_cost)
-            yield HGS.HGSProxy(this_metaepoch_cost,
-                               self.get_nodes(include_finished=True))
-            import problems.ZDT1.problem as prob_mod
-            print("GENERATING HIERARCHY, SPR=", list(self.get_nodes(include_finished=True)))
-            #generate_hierarchy("resultdupa{:05}.png".format(next(itername)), self, 0, 100, prob_mod)
+        self.root = HGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
+        self.nodes = [self.root]
+        self.level_nodes = {
+            0: [self.root],
+            1: [],
+            2: [],
+        }
+
+        self.cost = 0
+        self.acc_cost = 0
 
     class HGSProxy(DriverGen.Proxy):
-        def __init__(self, cost, all_nodes):
-            """
-            @type cost: int
-            @type all_nodes: HGS.Node
-            :rtype: HGS.HGSProxy
-            """
-            logger = logging.getLogger(__name__)
-            logger.debug("Create HGSProxy %s", self)
+        def __init__(self, cost, driver):
             super().__init__(cost)
-            self.all_nodes = all_nodes
+            self.cost = cost
+            self.driver = driver
 
-        def assimilate_immigrants(self, emigrants):
-            raise Exception("HGS does not support migrations")
+        def finalized_population(self):
+            return self.merge_node_populations()
+
+        def current_population(self):
+            return self.merge_node_populations()
 
         def deport_emigrants(self, immigrants):
             raise Exception("HGS does not support migrations")
 
-        def current_population(self):
-            logger = logging.getLogger(__name__)
-            logger.debug("HGSProxy.current_population -> finalized_population")
-            return self.finalized_population()
+        def assimilate_immigrants(self, emigrants):
+            raise Exception("HGS does not support migrations")
 
-        def finalized_population(self):
-            logger = logging.getLogger(__name__)
-            logger.debug("HGSProxy.finalized_population")
+        def nominate_delegates(self):
+            raise Exception("HGS does not support sprouting")
+
+        def merge_node_populations(self):
+            merged_population = []
+            for node in self.driver.nodes:
+                merged_population.extend(node.population)
+            return merged_population
+
+    def population_generator(self):
+        self.acc_cost = 0
+        while True:
+            # TODO: current cost debug print
+            print("cost", self.acc_cost)
+
+            self.next_step()
+            yield HGS.HGSProxy(self.cost, self)
+            self.acc_cost += self.cost
+            self.cost = 0
+        return self.acc_cost
+
+    def next_step(self):
+        # TODO: status debug print
+        print("nodes:", len(self.nodes),
+              len([x for x in self.nodes if x.alive]),
+              len([x for x in self.nodes if x.ripe]),
+              "   zer:", len(self.level_nodes[0]),
+              len([x for x in self.level_nodes[0] if x.alive]),
+              len([x for x in self.level_nodes[0] if x.ripe]),
+              "   one:", len(self.level_nodes[1]),
+              len([x for x in self.level_nodes[1] if x.alive]),
+              len([x for x in self.level_nodes[1] if x.ripe]),
+              "   two:", len(self.level_nodes[2]),
+              len([x for x in self.level_nodes[2] if x.alive]),
+              len([x for x in self.level_nodes[2] if x.ripe]),)
+
+        self.run_metaepoch()
+        self.trim_sprouts()
+        self.release_new_sprouts()
+        self.revive_root()
+        print("Nodes:")
+        for i in range(3):
+            print("level {} : {} / {}".format(i+1, len([n for n in self.level_nodes[i] if n.ripe]), len(self.level_nodes[i])))
+
+    def run_metaepoch(self):
+        for node in self.level_nodes[2]:
+            node.run_metaepoch()
+        for node in self.level_nodes[1]:
+            node.run_metaepoch()
+        for node in self.level_nodes[0]:
+            node.run_metaepoch()
+            # _plot_node(node, 'r', [[0, 1], [0, 3]])
 
 
-            result = []
-            for n in self.all_nodes:
-                with suppress(NoMetaepochsException):
-                    for p in n.population:
-                        result.append(p)
 
-            return result
+    def trim_sprouts(self):
+        self.trim_all(self.level_nodes[2])
+        self.trim_all(self.level_nodes[1])
+        self.trim_all(self.level_nodes[0])
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def trim_all(self, nodes):
+        self.trim_not_progressing(nodes)
+        self.trim_redundant(nodes)
 
-    class Node:
+    def trim_not_progressing(self, nodes):
+        for sprout in [x for x in nodes if x.alive]:
+            if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) \
+                    and ((sprout.hypervolume / (sprout.old_hypervolume + EPSILON)) - 1.0) \
+                    < self.min_progress_ratio[sprout.level] / 2**sprout.level:
+                    #TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
+                sprout.alive = False
+                sprout.center = np.mean(sprout.population, axis=0)
+                sprout.ripe = True
+                #TODO: logging killing not progressing sprouts
+                print("   KILL NOT PROGRESSING")
 
-        def __init__(self, outer, level, population):
-            """
-            :type outer: HGS
-            :type level: int
-            :type population: list[list[float]]
-            :param outer:
-            :param level:
-            :param population: scaled population
-            :return:
-            """
-            logger = logging.getLogger(__name__)
-
-            self.outer = outer
-            self.id = next(outer.id_cnt)
-            logger.debug("Creating Node %d", self.id)
-            self.metaepochs_ran = 0
-            self.level = level
-            self.sprouts = []
-            self.reduced = False
-
-            logger.debug("Node #%d creating driver with %d indivs", self.id, len(population))
-            print("Node #{} creating driver with {} indivs".format(self.id, len(population)))
-            self.driver = outer.driver(population=population,
-                                       dims=outer.dims_per_lvl[level],
-                                       fitnesses=outer.fitnesses_per_lvl[level],
-                                       mutation_variance=outer.mutation_variance,
-                                       crossover_variance=outer.crossover_variance,
-                                       **outer.driver_kwargs_per_level[level])
-            """ :type : T <= DriverGen | DriverLegacy """
-
-            if isinstance(self.driver, DriverGen):
-                self.driver_generator = self.driver.population_generator()
-
-            if isinstance(self.driver, DriverGen):
-                self.last_proxy = None
-                """ :type : HGS.HGSProxy """
-
-        def step_iter(self):
-            logger = logging.getLogger(__name__)
-            logger.debug("Node #%d :: step_iter()", self.id)
-            if isinstance(self.driver, DriverGen):
-                while True:
-                    logger.debug("Node #%d :: step_iter loop", self.id)
-                    cost_iter = 0
-                    for self.last_proxy in take(self.outer.metaepoch_len,
-                                                self.driver_generator):
-                        logger.debug("Node #%d :: step_iter loop : driver epoch yielded %d while having %d indivs",
-                                     self.id, self.last_proxy.cost, len(self.driver.individuals))
-                        cost_iter += self.last_proxy.cost
-                    self.sprout()
-                    self.branch_reduction()
-                    self.metaepochs_ran += 1
-                    logger.debug("Node #%d :: step_iter yielding cost %d", self.id, cost_iter)
-                    yield cost_iter
-
-            elif isinstance(self.driver, DriverLegacy):
-                while True:
-                    cost = self.driver.steps(range(self.outer.metaepoch_len))
-                    self.sprout()
-                    self.branch_reduction()
-                    self.metaepochs_ran += 1
-                    yield cost
-
-        @property
-        def average(self):
-            logger = logging.getLogger(__name__)
-            res = average_indiv(self._get_driver_pop())
-            logger.debug("Node #%d :: average = %s", self.id, res)
-            return res
-
-        def _get_driver_pop(self):
-            logger = logging.getLogger(__name__)
-            if isinstance(self.driver, DriverLegacy):
-                return self.driver.population
-            elif isinstance(self.driver, DriverGen):
-                if self.last_proxy:
-                    return self.last_proxy.finalized_population()
-                else:
-                    logger.debug("Node #%d :: Wow, last_proxy=%s and someone wanted the population. self=%s",
-                                 self.id, self.last_proxy, self)
-                    raise NoMetaepochsException(
-                        "Node #{} :: Wow, last_proxy={} and someone wanted the population. self={} metaepochs_ran={}".format(
-                            self.id, self.last_proxy, self, self.metaepochs_ran))
-
-        @property
-        def population(self):
-            logger = logging.getLogger(__name__)
-            the_pop = self._get_driver_pop()
-            """ :type : list[list[float]] """
-            if HGS.node_population_returns_only_front:
-                def evaluator(x):
-                    return [f(x) for f in self.outer.fitnesses_per_lvl[self.level]]
-
-                return [self.outer.code(p, lvl=self.level)
-                        for p
-                        in next(paretofront_layers(the_pop, evaluator))]
-            else:
-                return [self.outer.code(p, lvl=self.level)
-                        for p
-                        in the_pop]
-
-        @property
-        def finished(self):
-            logger = logging.getLogger(__name__)
-            res = self.reduced or (isinstance(self.driver, DriverLegacy) and self.driver.finished)
-            if res:
-                logger.debug("Node #%d is finished", self.id)
-            return res
-
-        def sprout(self):
-            logger = logging.getLogger(__name__)
-            logger.debug("Node #%d . sprout()", self.id)
-            with suppress(AttributeError):
-                if self.driver.finished:
-                    logger.debug("Node #%d . sprout :: not sprouting (A)", self.id)
-                    return
-            if self.reduced:
-                logger.debug("Node #%d . sprout :: not sprouting (B)", self.id)
-                return
-            if 1 + self.level >= len(self.outer.population_per_level):
-                logger.debug("Node #%d . sprout :: not sprouting (C)", self.id)
-                return
-            if self.metaepochs_ran < 1:
-                logger.debug("Node #%d . sprout :: not sprouting (D)", self.id)
-                return
-
-            sproutiveness = self.outer.sproutiveness
-            if self.outer.max_children:
-                sproutiveness = min(sproutiveness,
-                                    self.outer.max_children - len(self.sprouts))
-            logger.debug("self.outer.sproutiveness = %d self.outer.max_children - len(self.sprouts) = %d = %d - %d",
-                         self.outer.sproutiveness, self.outer.max_children - len(self.sprouts),
-                         self.outer.max_children, len(self.sprouts))
-            logger.debug("  >> %d", sproutiveness)
-
-            candidates = []
-            if isinstance(self.driver, DriverLegacy):
-                candidates = iter(self.driver.get_indivs_inorder())
-            elif isinstance(self.driver, DriverGen):
-                # TODO: wykorzystać paretofront_layers <-- to będzie flagą włączane
-                candidates = iter(rank(self.last_proxy.finalized_population(),
-                                       one_fitness(self.outer.fitnesses_per_lvl[self.level])))
-
-            new_candidates = []
-            candidates = list(candidates)
-            print("SPROUT creating from", len(candidates))
-            for layer in paretofront_layers(candidates, one_fitness(self.outer.fitnesses_per_lvl[self.level])):
-                layer = layer[:]
-                random.shuffle(layer)
-                new_candidates.extend(layer)
-
-            logger.debug("%d has %d, adding %d up to %d", self.id, len(self.sprouts), sproutiveness, self.outer.max_children)
-            for i in range(sproutiveness):
-                for candidate in candidates:
-                    logger.debug("Node #%d . sprout :: candidate %s", self.id, candidate)
-
-                    scaled_candidate = self.outer.scale(candidate, lvl=self.level)
-
-                    if any(euclid_distance(s.average, scaled_candidate) < self.outer.branch_comparison
-                           for s in iter(self.sprouts)
-                           if s.metaepochs_ran > 0):
-                        # jeśli istnieje podobny sprout to bierzemy następnego kandydata
-                        logger.debug("Node #%d . sprout :: next candidate", self.id)
-                        continue
-
-                    # TODO: verify
-                    initial_population = [
-                        [
-                            min(max(a, (random.gauss(x, sigma))), b)
-                            for x, (a, b), sigma
-                            in zip(scaled_candidate,
-                                   self.outer.dims_per_lvl[self.level + 1],
-                                   self.outer.sprouting_variance)
-                        ]
-                        for _
-                        in range(self.outer.population_per_level[self.level + 1])
-                    ]
-
-                    newnode = HGS.Node(self.outer, self.level + 1, initial_population)
-                    logger.debug("Node #{a} . sprouting: {a}:{aep} -> {b}".format(a=self.id, b=newnode.id,
-                                                                                  aep=self.metaepochs_ran))
-                    self.sprouts.append(newnode)
+    def trim_redundant(self, nodes):
+        alive = [x for x in nodes if x.alive]
+        processed = []
+        dead = [x for x in nodes if not x.alive]
+        for sprout in alive:
+            to_compare = [x for x in dead]
+            to_compare.extend(processed)
+            sprout.center = np.mean(sprout.population, axis=0)
+            for another_sprout in to_compare:
+                if not sprout.alive:
                     break
+                if (another_sprout.ripe or another_sprout in processed) \
+                        and redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
+                    sprout.alive = False
+                    #TODO: logging killing redundant sprouts
+                    print("   KILL REDUNDANT")
+            processed.append(sprout)
 
-        def branch_reduction(self):
-            logger = logging.getLogger(__name__)
-            logger.debug("Node #%d . branch_reduction", self.id)
+    def release_new_sprouts(self):
+        self.root.release_new_sprouts()
 
-            if HGS.global_branch_compare:
-                comparab_sprouts = list(self.outer.get_nodes(include_finished=True))
+    def revive_root(self):
+        if len([x for x in self.nodes if x.alive]) == 0:
+            for ripe_node in [x for x in self.nodes if x.ripe]:
+                ripe_node.alive = True
+                ripe_node.ripe = False
+            for i in range(3):
+                self.min_progress_ratio[i] /= 2
+
+            #TODO: logging root revival
+            print("!!!   RESURRECTION")
+
+    def blurred_fitnesses(self, level):
+        def blurred(f):
+            def blurred_f(*args, **kwargs):
+                f_val = f(*args, **kwargs)
+                x = math.fabs(random.gauss(f_val, self.fitness_errors[level]*f_val/3.0))
+
+                # print("level: {}, normal: {} blurred: {}, diff: {}".format(level, f_val, x, math.fabs(f_val - x)/f_val))
+                return x
+            return blurred_f
+
+        return [blurred(f) for f in self.fitnesses]
+
+    class Node():
+        def __init__(self,
+                     owner,
+                     level,
+                     population):
+            self.alive = True
+            self.ripe = False
+            self.owner = owner
+            self.level = level
+            self.driver = owner.driver(population=population,
+                                       dims=owner.dims,
+                                       fitnesses=owner.blurred_fitnesses(self.level),
+                                       mutation_eta=owner.mutation_etas[self.level],
+                                       mutation_rate=owner.mutation_rates[self.level],
+                                       crossover_eta=owner.crossover_etas[self.level],
+                                       crossover_rate=owner.crossover_rates[self.level],
+                                       fitness_archive=self.owner.global_fitness_archive[self.level],
+                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[self.level]))
+            self.population = []
+            self.sprouts = []
+            self.delegates = []
+
+            self.old_average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
+            self.average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
+
+            self.relative_hypervolume = None
+            self.old_hypervolume = float('-inf')
+            self.hypervolume = float('-inf')
+
+            self.final_proxy = None
+
+        def run_metaepoch(self):
+            if self.alive:
+                iterations = 0
+                self.final_proxy = None
+                for proxy in self.driver.population_generator():
+                    # print("Level: {}, Original cost: {}, modified cost: {}".format(self.level, proxy.cost, self.owner.cost_modifiers[self.level] * proxy.cost))
+                    self.owner.cost += self.owner.cost_modifiers[self.level] * proxy.cost
+                    self.final_proxy = proxy
+                    iterations += 1
+                    if not iterations < self.owner.metaepoch_len:
+                        break
+                self.population = self.final_proxy.finalized_population()
+                self.delegates = self.final_proxy.nominate_delegates()
+                random.shuffle(self.delegates)
+                self.update_dominated_hypervolume()
+
+        def update_dominated_hypervolume(self):
+            self.old_hypervolume = self.hypervolume
+            fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
+            hv = HyperVolume(self.owner.reference_point)
+
+            if self.relative_hypervolume is None:
+                self.relative_hypervolume = hv.compute(fitness_values)
             else:
-                comparab_sprouts = self.sprouts
+                self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
 
-            comparab_sprouts = [
-                x
-                for x in comparab_sprouts
-                if not x.finished and not x.reduced and x.metaepochs_ran > 0
-            ]
+        def release_new_sprouts(self):
+            if self.ripe:
+                for sprout in self.sprouts:
+                    sprout.release_new_sprouts()
+                if self.level < self.owner.max_level and len(
+                        [x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
+                    released_sprouts = 0
+                    for delegate in self.delegates:
+                        if released_sprouts >= self.owner.sproutiveness or len(
+                                [x for x in self.sprouts if x.alive]) >= self.owner.max_sprouts_no:
+                            break
 
-            for a, b in combinations(comparab_sprouts, 2):
-                if a.level == b.level and euclid_distance(a.average, b.average) < self.outer.branch_comparison:
-                    logger.debug("Node #%d . reducing #%d", self.id, b.id)
-                    b.reduced = True
+                        if not any([redundant([delegate], [sprout.center], self.owner.min_dists[self.level + 1])
+                                    for sprout in
+                                    [x for x in self.owner.level_nodes[self.level + 1] if len(x.population) > 0]]):
+                            candidate_population = population_from_delegate(delegate,
+                                                                            self.owner.population_sizes[self.level + 1],
+                                                                            self.owner.dims,
+                                                                            self.owner.mutation_rates[self.level + 1],
+                                                                            self.owner.mutation_etas[
+                                                                                self.level + 1])
+
+                            new_sprout = HGS.Node(self.owner, self.level + 1, candidate_population)
+                            self.sprouts.append(new_sprout)
+                            self.owner.nodes.append(new_sprout)
+                            self.owner.level_nodes[self.level + 1].append(new_sprout)
+                            released_sprouts += 1
+                        else:
+                            #TODO: logging redundant candidates
+                            # print("   CANDIDATE REDUNDANT")
+                            pass
+
+
+
+def population_from_delegate(delegate, size, dims, rate, eta):
+    population = [[x for x in delegate]]
+    for _ in range(size - 1):
+        population.append(drivertools.mutate(delegate, dims, rate, eta))
+    return population
+
+
+def redundant(pop_a, pop_b, min_dist):
+    mean_pop_a = np.mean(pop_a, axis=0)
+    mean_pop_b = np.mean(pop_b, axis=0)
+
+    dist = np.linalg.norm(mean_pop_a - mean_pop_b)
+    return dist < min_dist
+
+
+def trim_vector(vector, bits_no):
+    return [trim_mantissa(x, bits_no) for x in vector]
+
+
+def trim_mantissa(value, bits_no):
+    sign, digits, exponent = floatextras.as_tuple(value)
+    digits = tuple([(d if i < bits_no else 0) for i, d in enumerate(digits)])
+    return floatextras.from_tuple((sign, digits, exponent))
+
+
+class TransformedDict(collections.MutableMapping):
+    """A dictionary that applies an arbitrary key-altering
+       function before accessing the keys"""
+
+    def __init__(self, *args, **kwargs):
+        self.store = dict()
+        self.update(dict(*args, **kwargs))  # use the free update to set keys
+
+    def __getitem__(self, key):
+        return self.store[self.__keytransform__(key)]
+
+    def __setitem__(self, key, value):
+        self.store[self.__keytransform__(key)] = value
+
+    def __delitem__(self, key):
+        del self.store[self.__keytransform__(key)]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+
+
+class ResultArchive(TransformedDict):
+    def __keytransform__(self, key):
+        return tuple(key)
+
+
+import matplotlib.pyplot as plt
+
+
+def _plot_node(node, color, dims, delegates=False):
+    if not delegates:
+        pop = node.population
+    else:
+        pop = node.delegates
+
+    if node.alive:
+        marker = 'o'
+    else:
+        marker = '+'
+    plt.scatter(
+        [x[0] for x in pop],
+        [x[1] for x in pop],
+        color=color,
+        marker=marker
+    )
+    plt.xlim(dims[0][0], dims[0][1])
+    plt.ylim(dims[1][0], dims[1][1])
+    plt.savefig('plots/debug/{}.png'.format(time.time()))
+    plt.close()

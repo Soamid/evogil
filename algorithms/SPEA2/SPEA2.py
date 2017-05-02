@@ -22,20 +22,32 @@ class SPEA2(DriverGen):
             sub_pool = random.sample(pool, self.tournament_size)
             return min(sub_pool, key=lambda x: x['fitness'])['value']
 
-    def __init__(self, population, fitnesses, dims, mutation_variance, crossover_variance, mutation_probability=0.05):
+    def __init__(self,
+                 population,
+                 fitnesses,
+                 dims,
+                 mutation_eta,
+                 mutation_rate,
+                 crossover_eta,
+                 crossover_rate,
+                 trim_function=lambda x: x,
+                 fitness_archive=None):
         super().__init__()
-        self.__population = []
 
         self.fitnesses = fitnesses
         self.dims = dims
-        self.mutation_variance = mutation_variance
-        self.mutation_probability = mutation_probability
-        self.crossover_variance = crossover_variance
-        self.population = population
+        self.mutation_eta = mutation_eta
+        self.mutation_rate = mutation_rate
+        self.crossover_eta = crossover_eta
+        self.crossover_rate = crossover_rate
+        self.trim_function = trim_function
+        self.population = [self.trim_function(x) for x in population]
 
         self.__archive_size = len(population)
         self.__archive = []
         self.select = SPEA2.Tournament()
+
+        self.fitness_archive = fitness_archive
 
     class SPEA2Proxy(DriverGen.Proxy):
 
@@ -66,6 +78,9 @@ class SPEA2(DriverGen):
         def assimilate_immigrants(self, emigrants):
             self._population.extend(emigrants)
 
+        def nominate_delegates(self):
+            return self.finalized_population()
+
     @property
     def population(self):
         return [x['value'] for x in self.__population]
@@ -81,21 +96,26 @@ class SPEA2(DriverGen):
         cost = 0
 
         while True:
-            self.calculate_fitnesses(self.__population, self.__archive)
+            cost = self.calculate_fitnesses(self.__population, self.__archive)
             self.__archive = self.environmental_selection(self.__population, self.__archive)
 
-            self.population = [mutate(crossover(self.select(self.__archive),
-                                                self.select(self.__archive)), self.dims, self.mutation_probability,
-                                      self.mutation_variance)
-                               for _ in self.__population]
-            cost = len(self.__population)
+            self.population = [self.trim_function(mutate(
+                crossover(self.select(self.__archive),
+                          self.select(self.__archive),
+                          self.dims,
+                          self.crossover_rate,
+                          self.crossover_eta),
+                self.dims,
+                self.mutation_rate,
+                self.mutation_eta))
+                for _ in self.__population]
 
             yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)
 
         return cost
 
     def calculate_fitnesses(self, population, archive):
-        self.calculate_objectives(population)
+        cost = self.calculate_objectives(population)
         union = archive + population
         self.calculate_dominated(union)
 
@@ -103,6 +123,7 @@ class SPEA2(DriverGen):
             raw_fitness = self.calculate_raw_fitness(p, union)
             density = self.calculate_density(p, union)
             p['fitness'] = raw_fitness + density
+        return cost
 
     def calculate_raw_fitness(self, p1, pop):
         return 0. + sum(y['dominates']
@@ -117,8 +138,15 @@ class SPEA2(DriverGen):
 
     def calculate_objectives(self, pop):
         for p in pop:
-            p['objectives'] = [o(p['value'])
+            if (self.fitness_archive is not None) and (p['value'] in self.fitness_archive):
+                p['objectives'] = self.fitness_archive[p['value']]
+                cost = 0
+            else:
+                p['objectives'] = [o(p['value'])
                                for o in self.fitnesses]
+                cost = len(self.population)
+        return cost
+
 
     def calculate_dominated(self, pop):
         for p in pop:
