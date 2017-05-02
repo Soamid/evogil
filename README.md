@@ -2,7 +2,7 @@
 
 Multi-Objective Evolutionary Algorithms platform written in python with support for multi-deme solutions and flexible hybridization tools.
 
-## Evolutionary tools
+## evogil contents (evolutionary tools)
 
 ### Algorithms
 evogil contains Python implementations of many popular, single-deme MOEAs:
@@ -39,6 +39,19 @@ Set of Multi-Objective problems included in evogil for testing purposes:
 - cec2009 family (UF1-UF12)
 - kursawe
 - ackley
+
+## How to use it?
+
+You can add your own solutions and easily extend evogil possibilities. In order to run evogil simulation for specific algorithm, benchmark and simulation budget, just type (in your evogil location):
+```
+python evogil.py run 500 -a nsgaii -p zdt1
+```
+It will run simulation with budget 500 with algorithm NSGAII for problem ZDT1. All simulation results (represented as values of all quality metrics for specified budget) will be stored in pickle format so that you can load them quickly with python.
+
+You can also specify multiple problems and algorithms (if options -a and -p are not specified at all, all algorithms and all problems are run) and even many budget "checkpoints" in which evogil should store outcomes:
+```
+python evogil.py run 500,1000,1200 -a nsgaii,spea2 -p zdt1,uf2,uf10
+```
 
 
 
