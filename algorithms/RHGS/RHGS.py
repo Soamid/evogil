@@ -200,8 +200,8 @@ class RHGS(DriverGen):
             for ripe_node in [x for x in self.nodes if x.ripe]:
                 ripe_node.alive = True
                 ripe_node.ripe = False
-                for i in range(3):
-                    self.min_progress_ratio[i] /= 2
+            for i in range(3):
+                self.min_progress_ratio[i] /= 2
 
             #TODO: logging root revival
             print("!!!   RESURRECTION")
