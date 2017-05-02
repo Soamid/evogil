@@ -1,22 +1,25 @@
 import collections
 import logging
 
+import sys
+
 from evotools.serialization import RunResult, RESULTS_DIR
 from evotools.stats_bootstrap import yield_analysis, validate_cost, find_acceptable_result_for_budget
 from evotools.timing import log_time, process_time
 
 DEFAULT_TOLERANCE = 0.05
-winner_tolerance = {'hypervolume': 0.005, 'igd': DEFAULT_TOLERANCE, 'avd': DEFAULT_TOLERANCE, 'spacing': DEFAULT_TOLERANCE, 'gd': DEFAULT_TOLERANCE, 'pdi': 0.005 }
+winner_tolerance = {'hypervolume': 0.005, 'igd': DEFAULT_TOLERANCE, 'ahd': DEFAULT_TOLERANCE, 'spacing': DEFAULT_TOLERANCE, 'gd': DEFAULT_TOLERANCE, 'pdi': 0.005 }
 
-metrics_order = ['avd', 'gd', 'igd', 'hypervolume', 'pdi', 'spacing']
+metrics_order = ['ahd', 'gd', 'igd', 'hypervolume', 'pdi', 'spacing']
 
-best_func = {'hypervolume': max, 'igd': min, 'avd': min, 'spacing': min, 'gd': min, 'pdi': max}
+best_func = {'hypervolume': max, 'igd': min, 'ahd': min, 'spacing': min, 'gd': min, 'pdi': max}
 
 result_dirs = ['./results_k0', './results_k1', './results_k2']
 
 
 def get_weak_winners(scoring, winner, error_rate):
-    return [(algo, score) for algo, score in scoring if algo != winner[0] and min(score, winner[1]) / max(score, winner[1]) >= (1-error_rate)]
+    eps = sys.float_info.epsilon
+    return [(algo, score) for algo, score in scoring if algo != winner[0] and (min(score, winner[1]) + eps) / (max(score, winner[1]) + eps) >= (1-error_rate)]
 
 
 def table_rank(args, queue):
@@ -54,15 +57,15 @@ def table_rank(args, queue):
                     algo_win, score = best_func[metric_name](metric_scoring, key=lambda x: x[1])
                     weak_winners = get_weak_winners(metric_scoring, (algo_win, score), winner_tolerance[metric_name])
 
-                    # Only strong
-                    if not weak_winners:
-                        results[(budget, metric_name)][result_set].update([algo_win])
+                    # # Only strong
+                    # if not weak_winners:
+                    #     results[(budget, metric_name)][result_set].update([algo_win])
 
                     # Strong = 2 points, Weak or Winner = 1 point
-                    # if not weak_winners:
-                    #     results[(budget, metric_name)][result_set].update([algo_win, algo_win])
-                    # else:
-                    #     results[(budget, metric_name)][result_set].update([algo_win] + [algo for algo, score in weak_winners])
+                    if not weak_winners:
+                        results[(budget, metric_name)][result_set].update([algo_win, algo_win])
+                    else:
+                        results[(budget, metric_name)][result_set].update([algo_win] + [algo for algo, score in weak_winners])
 
                     # print('{} {} {}'.format(budget, metric_name, scoring[(budget, metric_name)]))
                     print('*****{} {}'.format(budget, metric_name))
@@ -166,10 +169,11 @@ def rank(args, queue):
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
         for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
             for algo_name,results in algorithms:
-                max_budget_result = list(results)[-1]
-                if validate_cost(max_budget_result, boot_size):
+                max_budget_result = find_acceptable_result_for_budget(list(results), boot_size)
+                if max_budget_result:
                     for metric_name, metric_name_long, data_process in max_budget_result["analysis"]:
                         if metric_name in best_func:
+
                             data_process = list(x() for x in data_process)
                             data_analysis = yield_analysis(data_process, boot_size)
 
@@ -180,9 +184,17 @@ def rank(args, queue):
 
     print("Problem ranking\n################")
     for problem_name, metric_name in scoring:
-        algo_win, score = best_func[metric_name](scoring[(problem_name, metric_name)], key=lambda x: x[1])
+        metric_scoring = scoring[(problem_name, metric_name)]
+        algo_win, score = best_func[metric_name](metric_scoring, key=lambda x: x[1])
         print("{}, {} : {}".format(problem_name, metric_name, algo_win))
-        global_scoring[metric_name].update([algo_win])
+
+        weak_winners = get_weak_winners(metric_scoring, (algo_win, score), winner_tolerance[metric_name])
+        # if not weak_winners:
+        #     global_scoring[metric_name].update([algo_win])
+        if not weak_winners:
+            global_scoring[metric_name].update([algo_win, algo_win])
+        else:
+            global_scoring[metric_name].update([algo_win] + [algo for algo, score in weak_winners])
 
     print("\nGlobal ranking\n##############")
     for metric_name in global_scoring:

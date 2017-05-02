@@ -66,7 +66,7 @@ class RunResult:
             yield "igd", "inverse generational distance", [
                 partial(x.inverse_generational_distance, pareto=problem_mod.pareto_front)
                 for x in result_list]
-            yield "avd", "average hausdorff distance", [
+            yield "ahd", "average hausdorff distance", [
                 partial(x.average_hausdorff_distance, pareto=problem_mod.pareto_front) for x in result_list]
             yield "epsilon", "epsilon", [partial(x.epsilon, pareto=problem_mod.pareto_front)
                                          for x in result_list]
@@ -303,7 +303,7 @@ class RunResultBudget:
 
     def preload_results_for_problem(self, cache):
         problem_path = self.path.parent.parent.parent
-        # print("Loading for problem : {}".format(problem_path.name))
+        print("Loading for problem : {}".format(problem_path.name))
         for algo_path in problem_path.iterdir():
             if algo_path.is_dir():
                 runs = [run for run in algo_path.iterdir() if run.is_dir()]
@@ -317,7 +317,7 @@ class RunResultBudget:
                             budget = int(match.groupdict()["budget"])
                             population_pickle = RunResult.load_file(result_file)
 
-                            # print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
+                            print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
                             cache[(self.problem, budget, i)].append(population_pickle["fitnesses"])
                         except (AttributeError, IsADirectoryError):
                             pass
@@ -339,29 +339,29 @@ class RunResultBudget:
 
         if solutions and solutions == problem_solutions:
             pass
-            # print("Cache for problem {} does not changed, loading nondominated solutions from file...")
+            print("Cache for problem {} does not changed, loading nondominated solutions from file...")
         else:
-            # print("Cache for problem {} changed, calculating new nondominated... ")
+            print("Cache for problem {} changed, calculating new nondominated... ")
             self.clear_old_pdi_metrics()
             for key in problem_keys:
-                # print('Filtering non dominated for: ' + str(key))
+                print('Filtering non dominated for: ' + str(key))
                 solutions = cache[key]
                 problem_nondominated[key] = set(metrics.filter_not_dominated(tuple(y) for s in solutions for y in s))
 
             RunResult.save_file(problem_cache_file, (problem_solutions, problem_nondominated))
 
         cache.update(problem_nondominated)
-        # print("Cache of results -> cache of nondominated results")
+        print("Cache of results -> cache of nondominated results")
 
     def clear_old_pdi_metrics(self):
         problem_path = self.path.parent.parent.parent
 
         for filename in fnmatch.filter([str(p) for p in problem_path.iterdir()], "*{}_*".format(self.problem)):
             os.remove(filename)
-            # print("Removing file: " + filename)
+            print("Removing file: " + filename)
 
         for root, dirnames, filenames in os.walk(str(problem_path)):
             for filename in fnmatch.filter(filenames, '*.pareto_dominance_indicator.pickle'):
                 file_path = os.path.join(root, filename)
-                # print("Removing file: " + str(file_path))
+                print("Removing file: " + str(file_path))
                 os.remove(file_path)

@@ -36,8 +36,8 @@ matplotlib.rcParams.update({'font.size': 8})
 import matplotlib.pyplot as plt
 
 SPEA_LS = []  # '-'
-NSGAII_LS = [10, 2]  # '--'
-NSGAIII_LS = [30, 2]  # '-- --'
+NSGAII_LS = []  # '--'
+NSGAIII_LS = [5, 2]  # '-- --'
 IBEA_LS = [2, 2]  # '.....'
 OMOPSO_LS = [10, 2, 5, 2]  # '-.'
 JGBL_LS = [2, 10]  # ':  :  :'
@@ -60,7 +60,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IBEA': ('IBEA', IBEA_LS, IBEA_M, BARE_CL),
          'OMOPSO': ('OMOPSO', OMOPSO_LS, OMOPSO_M, BARE_CL),
          'NSGAIII': ('NSGAIII', NSGAIII_LS, NSGAIII_M, BARE_CL),
-         'JGBL': ('JGBL-NSGAII', JGBL_LS, JGBL_M, BARE_CL),
+         'JGBL': ('JGBL', JGBL_LS, JGBL_M, BARE_CL),
          'NSLS': ('NSLS', NSLS_LS, NSLS_M, BARE_CL),
 
          'IMGA+SPEA2': ('IMGA+SPEA2', SPEA_LS, SPEA_M, IMGA_CL),
@@ -68,7 +68,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IMGA+OMOPSO': ('IMGA+OMOPSO', OMOPSO_LS, OMOPSO_M, IMGA_CL),
          'IMGA+IBEA': ('IMGA+IBEA', IBEA_LS, IBEA_M, IMGA_CL),
          'IMGA+NSGAIII': ('IMGA+NSGAIII', NSGAIII_LS, NSGAIII_M, IMGA_CL),
-         'IMGA+JGBL': ('IMGA+JGBL-NSGAII', JGBL_LS, JGBL_M, IMGA_CL),
+         'IMGA+JGBL': ('IMGA+JGBL', JGBL_LS, JGBL_M, IMGA_CL),
          'IMGA+NSLS': ('IMGA+NSLS', NSLS_LS, NSLS_M, IMGA_CL),
 
          'RHGS+SPEA2': ('HGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
@@ -76,7 +76,7 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'RHGS+IBEA': ('HGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
          'RHGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
          'RHGS+NSGAIII': ('HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
-         'RHGS+JGBL' : ('HGS+JGBL-NSGAII', JGBL_LS, JGBL_M, RHGS_CL),
+         'RHGS+JGBL' : ('HGS+JGBL', JGBL_LS, JGBL_M, RHGS_CL),
          'RHGS+NSLS': ('HGS+NSLS', NSLS_LS, NSLS_M, RHGS_CL),
 }
 
@@ -305,8 +305,8 @@ def plot_legend(series):
     lgd = figlegend.legend(series, [s.get_label() for s in series], 'center', prop={'size': 15},
                      handlelength=8, borderpad=1.2, labelspacing=1, frameon=False, ncol=2)
 
-    path = PLOTS_DIR / 'plots_bnw' / 'legend.eps'
-    path2 = PLOTS_DIR / 'plots_bnw' / 'legend.pdf'
+    path = PLOTS_DIR / 'metrics' / 'figures_metrics_legend.eps'
+    path2 = PLOTS_DIR / 'metrics' / 'figures_metrics_legend.pdf'
     with suppress(FileExistsError):
         path.parent.mkdir(parents=True)
     figlegend.savefig(str(path), bbox_extra_artists=(lgd,), bbox_inches='tight')
@@ -325,10 +325,11 @@ def plot_results(results):
         yerr = []
         values = sorted(values, key=lambda x: x[0])
         for b, be, s, se in values:
-            xs.append(b)
-            xerr.append(be)
-            ys.append(s)
-            yerr.append(se)
+            if b < 5500:
+                xs.append(b)
+                xerr.append(be)
+                ys.append(s)
+                yerr.append(se)
         to_plot[(problem, metric, group)].append((algo, ((xs, xerr), (ys, yerr))))
 
     logger.debug("to_plot = %s", list(to_plot.items()))
@@ -339,29 +340,13 @@ def plot_results(results):
         ax = plt.subplot(111)
         # plt.title(plot_name)
         (problem, metric, group) = plot_name
-        if metric == 'dst':
-            metric = 'distance from Pareto front'
-            if problem == 'ackley':
-                ylim = [0.0001, 10]
-                logger.debug("plt.ylim = %s", ylim)
-                plt.ylim(ylim)
-            plt.yscale('log')
-        if metric == 'distribution':
-            if problem == 'ackley' or problem == 'ZDT2':
-                ylim = [-0.1, 1.0]
-                logger.debug("plt.ylim = %s", ylim)
-                plt.ylim(ylim)
-        if metric == 'extent':
-            if problem == 'ackley':
-                ylim = [-0.5, 4.0]
-                logger.debug("plt.ylim = %s", ylim)
-                plt.ylim(ylim)
         logger.debug("plt.ylabel = %s", metric)
         plt.xlim(500, 4500)
+        # if problem.startswith("UF"):
+        #     plt.ylim(0, 0.5)
         plt.ylabel(metric, fontsize=30)
         plt.xlabel('calls to fitness function', fontsize=25)
         plt.tick_params(axis='both', labelsize=25)
-        plt.tight_layout()
         plot_data = sorted(plot_data, key=lambda x: x[0])
         logger.debug("plot_data = %s", plot_data)
         lw = 5
@@ -394,13 +379,13 @@ def plot_results(results):
         problem_moea = problem.replace('emoa', 'moea')
         # plt.tight_layout()
         metric_short = metric.replace('distance from Pareto front', 'dst')
-        path = PLOTS_DIR / 'plots_bnw' / '{}_{}.pdf'.format(problem_moea, metric_short + str(group))
-        path2 = PLOTS_DIR / 'plots_bnw' / '{}_{}.eps'.format(problem_moea, metric_short + str(group))
+        path = PLOTS_DIR / 'metrics' / 'figures_metrics_{}_{}.pdf'.format(problem_moea, metric_short + str(group))
+        path2 = PLOTS_DIR / 'metrics' / 'figures_metrics_{}_{}.eps'.format(problem_moea, metric_short + str(group))
 
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
-        plt.savefig(str(path))
-        plt.savefig(str(path2))
+        plt.savefig(str(path), bbox_inches='tight')
+        plt.savefig(str(path2), bbox_inches='tight')
 
         plt.close()
         # plt.legend(loc='best', fontsize=6)
@@ -422,31 +407,32 @@ def pictures_from_stats(args, queue):
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
         for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
-            for algo_name, budgets in algorithms:
-                for result in budgets:
-                    _, _, cost_data = next(result["analysis"])
-                    cost_data = list(x() for x in cost_data)
-                    cost_analysis = yield_analysis(cost_data, boot_size)
+            if problem_name == 'ZDT2':
+                for algo_name, budgets in algorithms:
+                    for result in budgets:
+                        _, _, cost_data = next(result["analysis"])
+                        cost_data = list(x() for x in cost_data)
+                        cost_analysis = yield_analysis(cost_data, boot_size)
 
-                    budget = cost_analysis["btstrpd"]["metrics"]
-                    budget_err = cost_analysis["stdev"]
+                        budget = cost_analysis["btstrpd"]["metrics"]
+                        budget_err = cost_analysis["stdev"]
 
-                    for metric_name, metric_name_long, data_process in result["analysis"]:
-                        if metric_name in best_func:
-                            if metric_name == 'dst from pareto':
-                                metric_name = 'dst'
-                            data_process = list(x() for x in data_process)
+                        for metric_name, metric_name_long, data_process in result["analysis"]:
+                            if metric_name in best_func:
+                                if metric_name == 'dst from pareto':
+                                    metric_name = 'dst'
+                                data_process = list(x() for x in data_process)
 
-                            data_analysis = yield_analysis(data_process, boot_size)
+                                data_analysis = yield_analysis(data_process, boot_size)
 
-                            score = data_analysis["btstrpd"]["metrics"]
-                            score_err = data_analysis["stdev"]
+                                score = data_analysis["btstrpd"]["metrics"]
+                                score_err = data_analysis["stdev"]
 
-                            keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
-                            value = (budget, budget_err, score, score_err)
+                                keys = [(problem_name, algo_name, metric_name, group) for group in algos_groups[algo_name]]
+                                value = (budget, budget_err, score, score_err)
 
-                            for key in keys:
-                                results[key].append(value)
+                                for key in keys:
+                                    results[key].append(value)
     plot_results(results)
 
 
@@ -483,8 +469,8 @@ def plot_results_summary(problems, scoring, selected):
                 ax[0].set_dashes(lines)
         lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        path = PLOTS_DIR / 'plots_summary' / '{}.eps'.format(metric_name)
-        path2 = PLOTS_DIR / 'plots_summary' / '{}.pdf'.format(metric_name)
+        path = PLOTS_DIR / 'plots_summary' / 'figures_summary_{}.eps'.format(metric_name)
+        path2 = PLOTS_DIR / 'plots_summary' / 'figures_summary_{}.pdf'.format(metric_name)
 
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
