@@ -53,5 +53,13 @@ You can also specify multiple problems and algorithms (if options -a and -p are 
 python evogil.py run 500,1000,1200 -a nsgaii,spea2 -p zdt1,uf2,uf10
 ```
 
+Complex configurations are also possible with evogil runner - you can specify multi-deme model with subsequent single-deme "driver" by:
+```
+python evogil.py run 500 -a hgs+nsgaii, hgs+omopso -p zdt1
+```
+Here we run two HGS simulations, but in first case all HGS nodes will run NSGAII algorithm. The second one will be driven by OMOPSO driver.
+
+TODO: notes about serialization, results analysis and plotting.
+
 
 
