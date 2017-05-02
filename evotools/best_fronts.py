@@ -70,7 +70,7 @@ def plot_nondom(nondominated):
 
 
 def resolve_nondom_color(algo_name):
-    if algo_name.startswith('RHGS'):
+    if algo_name.startswith('HGS'):
         return nondom_colors['hgs']
     elif algo_name.startswith('IMGA'):
         return nondom_colors['imga']

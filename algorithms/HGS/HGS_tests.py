@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
-from algorithms.RHGS.RHGS import *
-from algorithms.RHGS.RHGS_optional import *
+from algorithms.HGS.HGS import *
+from algorithms.HGS.HGS_optional import *
 
 
 def __redundant_test():

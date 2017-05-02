@@ -64,7 +64,7 @@ class IMGA(DriverGen):
             raise Exception("IMGA does not support migrations")
 
         def nominate_delegates(self, delegates_no):
-            raise Exception("RHGS does not support sprouting")
+            raise Exception("HGS does not support sprouting")
 
     def spread_budget_info(self):
         if self.max_budget:

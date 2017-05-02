@@ -68,7 +68,7 @@ Options:
 Pictures Summary Options:
   --selected <algo_name>
         Select and highlight specified algorithms on plots.
-        [default: RHGS+SPEA2,RHGS+NSGAII,RHGS+NSGAIII,RHGS+IBEA,RHGS+OMOPSO,RHGS+SMSEMOA,RHGS+JGBL,RHGS+NSLS]
+        [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA,HGS+JGBL,HGS+NSLS]
 """
 
 import logging

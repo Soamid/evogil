@@ -103,10 +103,10 @@ def table_rank(args, queue):
             if len(algo_ranking) == 2:
                 winner = format_result(algo_ranking[0], values, 2)
                 second = format_result(algo_ranking[1], values, 1 if algo_ranking[0][1] != algo_ranking[1][1] else 2)
-                score_str += '& {}, {}'.format(winner, second).replace("RHGS", "HGS")
+                score_str += '& {}, {}'.format(winner, second)
             elif len(algo_ranking) == 1:
                 winner = format_result(algo_ranking[0], values, 2)
-                score_str += '& {}'.format(winner).replace("RHGS", "HGS")
+                score_str += '& {}'.format(winner)
             else:
                 score_str += '& '
         print("{}& {} {}\\\\".format(budget_label, metric_name, score_str))

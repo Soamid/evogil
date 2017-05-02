@@ -13,7 +13,7 @@ _drivers = [
 
 _metaalgorithms = [
     'IMGA',
-    'RHGS'
+    'HGS'
 ]
 
 algorithms = [
@@ -76,7 +76,7 @@ algo_base = {
         "local_search_sigma": 0.5,
     },
 
-    "RHGS": {
+    "HGS": {
         "fitness_errors": (0.1, 0.01, 0.0),
         "cost_modifiers": (0.1, 0.5, 1.0),
         "mutation_etas": (10.0, 12.0, 15.0),
@@ -100,7 +100,7 @@ cust_base = {
 }
 
 
-def init_alg___RHGS(algo_config, problem_mod):
+def init_alg___HGS(algo_config, problem_mod):
     reference_point = tuple(50.0
                             for _
                             in range(len(problem_mod.pareto_front[0])))

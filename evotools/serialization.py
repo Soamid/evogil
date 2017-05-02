@@ -16,7 +16,7 @@ import evotools.metrics
 from evotools import metrics
 
 
-RESULTS_DIR = './results_k1'
+RESULTS_DIR = '../results/results_k1'
 
 class RunResult:
     @staticmethod

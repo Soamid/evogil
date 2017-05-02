@@ -28,7 +28,7 @@ import problems.UF8.problem as uf8
 import problems.UF9.problem as uf9
 
 
-PLOTS_DIR = Path('plots')
+PLOTS_DIR = Path('../plots')
 
 import matplotlib
 
@@ -53,7 +53,7 @@ NSLS_M = 'x'
 
 BARE_CL = '0.8'
 IMGA_CL = '0.4'
-RHGS_CL = '0.0'
+HGS_CL = '0.0'
 
 algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'NSGAII': ('NSGAII', NSGAII_LS, NSGAII_M, BARE_CL),
@@ -71,42 +71,42 @@ algos = {'SPEA2': ('SPEA2', SPEA_LS, SPEA_M, BARE_CL),
          'IMGA+JGBL': ('IMGA+JGBL', JGBL_LS, JGBL_M, IMGA_CL),
          'IMGA+NSLS': ('IMGA+NSLS', NSLS_LS, NSLS_M, IMGA_CL),
 
-         'RHGS+SPEA2': ('HGS+SPEA2', SPEA_LS, SPEA_M, RHGS_CL),
-         'RHGS+NSGAII': ('HGS+NSGAII', NSGAII_LS, NSGAII_M, RHGS_CL),
-         'RHGS+IBEA': ('HGS+IBEA', IBEA_LS, IBEA_M, RHGS_CL),
-         'RHGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, RHGS_CL),
-         'RHGS+NSGAIII': ('HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, RHGS_CL),
-         'RHGS+JGBL' : ('HGS+JGBL', JGBL_LS, JGBL_M, RHGS_CL),
-         'RHGS+NSLS': ('HGS+NSLS', NSLS_LS, NSLS_M, RHGS_CL),
+         'HGS+SPEA2': ('HGS+SPEA2', SPEA_LS, SPEA_M, HGS_CL),
+         'HGS+NSGAII': ('HGS+NSGAII', NSGAII_LS, NSGAII_M, HGS_CL),
+         'HGS+IBEA': ('HGS+IBEA', IBEA_LS, IBEA_M, HGS_CL),
+         'HGS+OMOPSO': ('HGS+OMOPSO', OMOPSO_LS, OMOPSO_M, HGS_CL),
+         'HGS+NSGAIII': ('HGS+NSGAIII', NSGAIII_LS, NSGAIII_M, HGS_CL),
+         'HGS+JGBL' : ('HGS+JGBL', JGBL_LS, JGBL_M, HGS_CL),
+         'HGS+NSLS': ('HGS+NSLS', NSLS_LS, NSLS_M, HGS_CL),
 }
 
 algos_order = [
     'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'JGBL', 'NSLS',
      'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+JGBL', 'IMGA+NSLS',
-     'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+JGBL', 'RHGS+NSLS',
+     'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+JGBL', 'HGS+NSLS',
 ]
 
 algos_groups_configuration_all_together = {
     ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL', 'NSLS',
      'IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL', 'IMGA+NSLS',
-     'RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL', 'RHGS+NSLS',): ('',)
+     'HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA', 'HGS+JGBL', 'HGS+NSLS',): ('',)
 }
 
 algos_groups_configuration_splitted = {
     ('SPEA2', 'NSGAII', 'IBEA', 'OMOPSO', 'NSGAIII', 'SMSEMOA', 'JGBL', 'NSLS',): (0, 1),
     ('IMGA+SPEA2', 'IMGA+NSGAII', 'IMGA+IBEA', 'IMGA+OMOPSO', 'IMGA+NSGAIII', 'IMGA+SMSEMOA', 'IMGA+JGBL', 'IMGA+NSLS',): (0, 2),
-    ('RHGS+SPEA2', 'RHGS+NSGAII', 'RHGS+IBEA', 'RHGS+OMOPSO', 'RHGS+NSGAIII', 'RHGS+SMSEMOA', 'RHGS+JGBL', 'RHGS+NSLS',): (1, 2)
+    ('HGS+SPEA2', 'HGS+NSGAII', 'HGS+IBEA', 'HGS+OMOPSO', 'HGS+NSGAIII', 'HGS+SMSEMOA', 'HGS+JGBL', 'HGS+NSLS',): (1, 2)
 }
 
 algos_groups_configuration_tres_caballeros = {
-    ('SPEA2', 'IMGA+SPEA2', 'RHGS+SPEA2'): ('_spea2',),
-    ('NSGAII', 'IMGA+NSGAII', 'RHGS+NSGAII'): ('_nsgaii',),
-    ('IBEA', 'IMGA+IBEA', 'RHGS+IBEA'): ('_ibea',),
-    ('NSGAIII', 'IMGA+NSGAIII', 'RHGS+NSGAIII'): ('_nsgaiii',),
-    ('SMSEMOA', 'IMGA+SMSEMOA', 'RHGS+SMSEMOA'): ('_smsemoa',),
-    ('OMOPSO', 'IMGA+OMOPSO', 'RHGS+OMOPSO'): ('_omopso',),
-    ('JGBL', 'IMGA+JGBL', 'RHGS+JGBL'): ('_jgbl',),
-    ('NSLS', 'IMGA+NSLS', 'RHGS+NSLS'): ('_nsls',)
+    ('SPEA2', 'IMGA+SPEA2', 'HGS+SPEA2'): ('_spea2',),
+    ('NSGAII', 'IMGA+NSGAII', 'HGS+NSGAII'): ('_nsgaii',),
+    ('IBEA', 'IMGA+IBEA', 'HGS+IBEA'): ('_ibea',),
+    ('NSGAIII', 'IMGA+NSGAIII', 'HGS+NSGAIII'): ('_nsgaiii',),
+    ('SMSEMOA', 'IMGA+SMSEMOA', 'HGS+SMSEMOA'): ('_smsemoa',),
+    ('OMOPSO', 'IMGA+OMOPSO', 'HGS+OMOPSO'): ('_omopso',),
+    ('JGBL', 'IMGA+JGBL', 'HGS+JGBL'): ('_jgbl',),
+    ('NSLS', 'IMGA+NSLS', 'HGS+NSLS'): ('_nsls',)
 }
 
 problems_order = ['EWA1', 'EWA2', 'ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6', 'UF1', 'UF2', 'UF3', 'UF4', 'UF5', 'UF6',
@@ -222,9 +222,9 @@ def gen_table(results):
             get_algo_results(results, "IMGA+NSGA-II", "imga_nsga2", metric),
             get_algo_results(results, "IMGA+IBEA", "imga_ibea", metric),
 
-            get_algo_results(results, "MO-RHGS+SPEA2", "hgs_spea2", metric),
-            get_algo_results(results, "MO-RHGS+NSGA-II", "hgs_nsga2", metric),
-            get_algo_results(results, "MO-RHGS+IBEA", "hgs_ibea", metric)
+            get_algo_results(results, "MO-HGS+SPEA2", "hgs_spea2", metric),
+            get_algo_results(results, "MO-HGS+NSGA-II", "hgs_nsga2", metric),
+            get_algo_results(results, "MO-HGS+IBEA", "hgs_ibea", metric)
         ]
         mark_winner(printable_results, metrics[metric][1])
 
