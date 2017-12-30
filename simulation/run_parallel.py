@@ -12,14 +12,13 @@ from functools import partial
 from importlib import import_module
 from itertools import product, count
 
-from evotools.serialization import RunResult, RESULTS_DIR
-
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from simulation import run_config
 from simulation.run_config import NotViableConfiguration
+from simulation.serialization import RunResult, RESULTS_DIR
 from simulation.timing import log_time, process_time
 from simulation.timing import system_time
 
@@ -113,7 +112,7 @@ def run_parallel(args, queue):
               for comp_result, (test, budgets, runid, renice)
               in zip(results, order)
               if comp_result is None
-    ]
+              ]
 
     speedup = proc_times / wall_time[0]
 
@@ -125,7 +124,8 @@ def run_parallel(args, queue):
     if errors:
         logger.error("Errors encountered:")
         for (probl, algo), budgets, runid in errors:
-            logger.error("  %9s :: %14s :: runID=%d :: budgets=%s", probl, algo, runid, ','.join(str(x) for x in budgets))
+            logger.error("  %9s :: %14s :: runID=%d :: budgets=%s", probl, algo, runid,
+                         ','.join(str(x) for x in budgets))
 
     summary = collections.defaultdict(float)
     for (bench, _, _, _), subres in zip(order, results):
@@ -175,7 +175,7 @@ def worker(args):
                                                 problem,
                                                 final_driver,
                                                 drivers, driver_pos
-            )
+                                                )
 
         logger.debug("Creating the driver used to perform computation")
         driver = final_driver()
@@ -247,7 +247,6 @@ def worker(args):
         logger.debug("Finished processing. args:%s", args)
 
 
-
 def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
     logger = logging.getLogger(__name__)
     logger.debug("Starting preparation")
@@ -313,7 +312,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         with suppress(KeyError):
             key = (algo,
                    tuple(all_drivers[driver_pos + 1:])
-            )
+                   )
             logger.debug("Try algo_base[%s]", key)
             update = run_config.algo_base[key]
             logger.debug("%s %s %s %s: %s %s",
@@ -331,7 +330,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         with suppress(KeyError):
             key = (tuple(all_drivers[:driver_pos]),
                    algo
-            )
+                   )
             logger.debug("Try algo_base[%s]", key)
             update = run_config.algo_base[key]
             logger.debug("%s %s %s %s: %s %s",
@@ -350,7 +349,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
             key = (tuple(all_drivers[:driver_pos]),
                    algo,
                    tuple(all_drivers[driver_pos + 1:])
-            )
+                   )
             logger.debug("Try algo_base[%s]", key)
             update = run_config.algo_base[key]
             logger.debug("%s %s %s %s: %s %s",
@@ -369,9 +368,9 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         # example key: (IMGA, ackley)
         # example key: (IMGA, zdt1)
         with suppress(KeyError):
-            key = ( algo,
-                    problem
-            )
+            key = (algo,
+                   problem
+                   )
             logger.debug("Try cust_base[%s]", key)
             update = run_config.cust_base[key]
             logger.debug("%s %s %s %s: %s %s",
@@ -394,7 +393,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                    algo,
                    tuple(all_drivers[driver_pos + 1:]),
                    problem
-            )
+                   )
             logger.debug("Try cust_base[%s]", key)
             update = run_config.cust_base[key]
             logger.debug("%s %s %s %s: %s %s",
@@ -418,7 +417,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                          "| by algo fun:",
                          key,
                          updater
-            )
+                         )
             updater(config, problem_mod)
             logger.debug("config: %s", show_conf(config))
 
@@ -435,7 +434,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                          "| by algo fun:",
                          key,
                          updater
-            )
+                         )
             updater(config, problem_mod)
             logger.debug("config: %s", show_conf(config))
 
@@ -452,7 +451,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                          "| by algo fun:",
                          key,
                          updater
-            )
+                         )
             updater(config, problem_mod)
             logger.debug("config: %s", show_conf(config))
 
@@ -469,7 +468,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                          "| by algo fun:",
                          key,
                          updater
-            )
+                         )
             updater(config, problem_mod)
             logger.debug("config: %s", show_conf(config))
 
@@ -500,7 +499,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                          "| by prob fun:",
                          key,
                          updater
-            )
+                         )
             updater(config, problem_mod)
             logger.debug("config: %s", show_conf(config))
 
@@ -529,7 +528,7 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                          "| by cust fun:",
                          key,
                          updater
-            )
+                         )
             updater(config, problem_mod)
             logger.debug("config: %s", show_conf(config))
 
@@ -553,12 +552,12 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
                           for k, v
                           in config.items()
                           if k.startswith('__metaconfig__')
-                         })
+                          })
         config = {k: v
                   for k, v
                   in config.items()
                   if not k.startswith('__metaconfig__')
-        }
+                  }
 
         try:
             algo_class(**config)

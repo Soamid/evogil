@@ -5,7 +5,7 @@ from itertools import repeat
 from evotools.random_tools import close_and_join
 from simulation.serialization import RunResult
 from simulation.timing import process_time, log_time
-from statistics.stats_bootstrap import yield_analysis, average
+from statistic.stats_bootstrap import yield_analysis, average
 
 fields = [
     ("PROBLEM",                     [9],             "{problem_name:{0}}"),

@@ -7,7 +7,7 @@
 import math
 import random
 
-from evotools.metrics_utils import euclid_distance
+from metrics.metrics_utils import euclid_distance
 
 from algorithms.base.drivergen import DriverGen
 from algorithms.base.drivertools import crossover, mutate

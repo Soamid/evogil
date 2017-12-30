@@ -4,7 +4,7 @@ import sys
 
 from simulation.serialization import RunResult, RESULTS_DIR
 from simulation.timing import log_time, process_time
-from statistics.stats_bootstrap import yield_analysis, validate_cost, find_acceptable_result_for_budget
+from statistic.stats_bootstrap import yield_analysis, validate_cost, find_acceptable_result_for_budget
 
 DEFAULT_TOLERANCE = 0.05
 winner_tolerance = {'hypervolume': 0.005, 'igd': DEFAULT_TOLERANCE, 'ahd': DEFAULT_TOLERANCE, 'spacing': DEFAULT_TOLERANCE, 'gd': DEFAULT_TOLERANCE, 'pdi': 0.005 }

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from metrics import metrics
 
-RESULTS_DIR = '../results/results_k1'
+RESULTS_DIR = '../results_temp/results_k1'
 
 class RunResult:
     @staticmethod
@@ -51,7 +51,7 @@ class RunResult:
                 pass
 
     @staticmethod
-    def each_result(results_path='results'):
+    def each_result(results_path=RESULTS_DIR):
         cache = defaultdict(list)
         def f_metrics(result_list, problem_mod):
             """ Pierwszy *zawsze* będzie cost. To ważne.
@@ -204,7 +204,7 @@ class RunResultBudget:
         self.cost = cost
         self.population = population
         self.fitnesses = fitnesses
-        self.non_dominated_fitnesses = metrics.metrics.filter_not_dominated(fitnesses)
+        self.non_dominated_fitnesses = metrics.filter_not_dominated(fitnesses)
         self.path = path
         self.metrics = {}
 
@@ -212,7 +212,7 @@ class RunResultBudget:
         logger = logging.getLogger(__name__)
         try:
             if not metric_mod_name:
-                metric_mod_name = ["evotools", "metrics"]
+                metric_mod_name = ["metrics", "metrics"]
             if not metric_params:
                 metric_params = {}
 
