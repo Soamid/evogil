@@ -1,4 +1,6 @@
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+import rx
+
+from algorithms.base.drivergen import ImgaProxy, DriverRx
 from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'
@@ -25,7 +27,7 @@ def dominates(x, y):
     return a
 
 
-class NSGAII(DriverGen):
+class NSGAII(DriverRx):
     class NSGAIIImgaProxy(ImgaProxy):
         def __init__(self, driver, cost, individuals):
             super().__init__(driver, cost)
@@ -109,16 +111,11 @@ class NSGAII(DriverGen):
         for _ in range(steps):
             self._next_step()
 
-    def population_generator(self):
+    def run(self, stream: rx.Observable):
         while True:
             self._next_step()
-            yield NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals)
-            self.cost = 0
-        self._calculate_objectives()
-        self._nd_sort()
-        self._crowding()
-        self._environmental_selection()
-        return self.cost
+            stream.on_next(NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals))
+
 
     def finish(self):
         self._calculate_objectives()

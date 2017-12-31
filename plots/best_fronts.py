@@ -5,13 +5,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+import plots
 from evotools import ea_utils
 from metrics import metrics
 from plots.pictures import algos, algos_order
 from simulation.serialization import RunResult, RESULTS_DIR
 from statistic.stats_bootstrap import find_acceptable_result_for_budget
 
-PLOTS_DIR = Path('plots')
 PF_PLOTS_DIR = Path('fronts')
 
 metrics_name_long = "distance_from_pareto"
@@ -96,7 +96,8 @@ def plot_results(f, best_result, best_result_name, nondominated=set()):
         f.scatter(res_x_nondom, res_y_nondom, res_z_nondom, marker=markers, s=60, color=nondom_c, label=name, zorder=2)
     else:
         f.scatter(res_x, res_y, marker=markers, s=60, color=color, label=name, zorder=2)
-        f.scatter(res_x_nondom, res_y_nondom, marker=markers, s=60, color=nondom_c, label=name, zorder=2)
+        if res_x_nondom and res_y_nondom:
+            f.scatter(res_x_nondom, res_y_nondom, marker=markers, s=60, color=nondom_c, label=name, zorder=2)
 
 
 def save_plot(ax, f, d_problem):
@@ -113,14 +114,16 @@ def save_plot(ax, f, d_problem):
     with suppress(FileExistsError):
         path_pdf.parent.mkdir(parents=True)
 
+    plt.show()
     plt.savefig(str(path_pdf), bbox_inches='tight')
     plt.savefig(str(path_eps), bbox_inches='tight')
     plt.close(f)
 
 
 def get_path(ext, problem_name):
-    return Path(PLOTS_DIR) / PF_PLOTS_DIR / 'figures_metrics_{}.{}'.format(problem_name.name.replace('emoa', 'moea'),
-                                                                           ext)
+    return Path(plots.pictures.PLOTS_DIR) / PF_PLOTS_DIR / 'figures_metrics_{}.{}'.format(
+        problem_name.name.replace('emoa', 'moea'),
+        ext)
 
 
 def best_fronts_color_nondom(args, queue):
@@ -150,17 +153,17 @@ def best_fronts_color_nondom(args, queue):
 def best_fronts(args, queue):
     boot_size = int(args['--bootstrap'])
     for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
-        if problem_name in ['ZDT1', 'ZDT2', 'ZDT3', 'ZDT4', 'ZDT6']:
-            original_front = problem_mod.pareto_front
-            ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
+        original_front = problem_mod.pareto_front
+        ax, f = plot_problem_front(original_front, multimodal=problem_name == 'ZDT3')
 
-            for algo_name, results in algorithms:
-                best_result = find_acceptable_result_for_budget(list(results), boot_size)
-                """:type: RunResultBudget """
+        for algo_name, results in algorithms:
+            best_result = find_acceptable_result_for_budget(list(results), boot_size)
+            """:type: RunResultBudget """
 
-                if best_result and algo_name in algos:
-                    plot_results(ax, best_result['results'][0], algo_name)
-            save_plot(ax, f, problem_mod)
+            if best_result and algo_name in algos:
+                plot_results(ax, best_result['results'][0], algo_name)
+        save_plot(ax, f, problem_mod)
+
 
 if __name__ == '__main__':
-    best_fronts_color_nondom({"--bootstrap":10000}, None)
+    best_fronts({"--bootstrap": 10000}, None)

@@ -1,7 +1,33 @@
-class DriverGen:
+import rx
+
+
+class Driver:
     max_budget = None
 
     def __init__(self):
+        self.finished = False
+
+
+class DriverRx(Driver):
+    def __init__(self):
+        super().__init__()
+        self._stream = rx.Observable.create(self.run).publish()
+
+    def start(self):
+        self._stream.connect()
+
+    def steps(self) -> rx.Observable:
+        return self._stream
+
+    def run(self, stream: rx.Observable):
+        raise NotImplementedError
+
+
+class DriverGen(Driver):
+    max_budget = None
+
+    def __init__(self):
+        super().__init__()
         self.finished = False
 
     def population_generator(self):
@@ -21,13 +47,13 @@ class DriverGen:
 
 
 class DriverProxy:
-    def __init__(self, driver: DriverGen, cost: int):
+    def __init__(self, driver: Driver, cost: int):
         self.cost = cost
         self.driver = driver
 
 
 class ImgaProxy(DriverProxy):
-    def __init__(self, driver: DriverGen, cost: int):
+    def __init__(self, driver: Driver, cost: int):
         super().__init__(driver, cost)
 
     def finalized_population(self):
