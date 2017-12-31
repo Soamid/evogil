@@ -19,39 +19,46 @@ class DriverGen:
         """
         raise NotImplementedError
 
-    class Proxy:
-        def __init__(self, cost):
-            self.cost = cost
 
-        def finalized_population(self):
-            """
-            :return: Returns finalized population
-            """
-            raise NotImplementedError
+class DriverProxy:
+    def __init__(self, driver: DriverGen, cost: int):
+        self.cost = cost
+        self.driver = driver
 
-        def current_population(self):
-            """
-            :return: Returns individuals selected from the current population.
-            """
-            raise NotImplementedError
 
-        def deport_emigrants(self, immigrants):
-            """
-            :param immigrants: Individuals that shall be removed from the population.
-            :return: Immigrants objects removed from the population. Objects should be equal to immigrants,
-            but they may be expressed in driver-specific model form.
-            """
-            raise NotImplementedError
+class ImgaProxy(DriverProxy):
+    def __init__(self, driver: DriverGen, cost: int):
+        super().__init__(driver, cost)
 
-        def assimilate_immigrants(self, emigrants):
-            """
-            :param emigrants: Individuals that shall be assimilated into the population, expressed in driver-specific model form.
-            :return: Does not return. This Proxy object shall be passed back to the generator.
-            """
-            raise NotImplementedError
+    def finalized_population(self):
+        """
+        :return: Returns finalized population
+        """
+        raise NotImplementedError
 
-        def nominate_delegates(self):
-            """
-            :return: returns a reasonable number of delegates - best individuals that the population is able to provide.
-            """
-            raise NotImplementedError
+    def current_population(self):
+        """
+        :return: Returns individuals selected from the current population.
+        """
+        raise NotImplementedError
+
+    def deport_emigrants(self, immigrants):
+        """
+        :param immigrants: Individuals that shall be removed from the population.
+        :return: Immigrants objects removed from the population. Objects should be equal to immigrants,
+        but they may be expressed in driver-specific model form.
+        """
+        raise NotImplementedError
+
+    def assimilate_immigrants(self, emigrants):
+        """
+        :param emigrants: Individuals that shall be assimilated into the population, expressed in driver-specific model form.
+        :return: Does not return. This Proxy object shall be passed back to the generator.
+        """
+        raise NotImplementedError
+
+    def nominate_delegates(self):
+        """
+        :return: returns a reasonable number of delegates - best individuals that the population is able to provide.
+        """
+        raise NotImplementedError

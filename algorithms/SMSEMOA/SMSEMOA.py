@@ -1,8 +1,8 @@
+import collections
 import logging
 import random
-import collections
 
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils
@@ -36,10 +36,9 @@ class SMSEMOA(DriverGen):
 
         self.fitness_archive = fitness_archive
 
-    class SMSEMOAProxy(DriverGen.Proxy):
-        def __init__(self, cost, population):
-            super().__init__(cost)
-            self.cost = cost
+    class SMSEMOAImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost, population):
+            super().__init__(driver, cost)
             self.population = population
 
         def finalized_population(self):
@@ -68,7 +67,6 @@ class SMSEMOA(DriverGen):
         def nominate_delegates(self):
             return [i.value for i in nd_sort(self.population)[1]]
 
-
     @property
     def population(self):
         return [x.value for x in self.__population]
@@ -77,9 +75,7 @@ class SMSEMOA(DriverGen):
     def population(self, pop):
         self.__population = [Individual(x) for x in pop]
 
-
     def population_generator(self):
-
         logger = logging.getLogger(__name__)
         cost = self.calculate_objectives(self.__population)
         total_cost = cost
@@ -91,10 +87,8 @@ class SMSEMOA(DriverGen):
                 total_cost += cost
                 self.__population = self.reduce_population(self.__population + [new_indiv])
 
-            yield SMSEMOA.SMSEMOAProxy(cost, self.__population)
+            yield SMSEMOA.SMSEMOAImgaProxy(self, cost, self.__population)
             cost = 0
-
-        return total_cost
 
     def calculate_objectives(self, pop):
         for p in pop:
@@ -116,9 +110,9 @@ class SMSEMOA(DriverGen):
                           self.crossover_eta)
 
         return Individual(self.trim_function(mutate(child,
-                                 self.dims,
-                                 self.mutation_rate,
-                                 self.mutation_eta)))
+                                                    self.dims,
+                                                    self.mutation_rate,
+                                                    self.mutation_eta)))
 
     def reduce_population(self, pop):
         sorted_pop = nd_sort(pop)
@@ -137,6 +131,7 @@ class SMSEMOA(DriverGen):
         hv_global = hv.compute(results)
 
         return [(pop[i], hv_global - hv.compute(results[:i] + results[i + 1:])) for i in range(len(results))]
+
 
 def nd_sort(pop):
     dominated_by = collections.defaultdict(set)

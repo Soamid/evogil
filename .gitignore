@@ -32,12 +32,6 @@ docs/evocomplex14/*.cls
 *.sublime-project
 *.sublime-workspace
 *.bib.bak
-plots_violin/*
-!plots_violin/.gitignore
-plots/pareto_fronts/
-plots/plots_violin/
-plots/plots_bnw/
-plots/
 run_all.bat
 run_queue.bat
 *.rar

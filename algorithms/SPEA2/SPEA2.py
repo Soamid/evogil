@@ -7,12 +7,43 @@
 import math
 import random
 
-from metrics.metrics_utils import euclid_distance
-
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from algorithms.base.drivertools import crossover, mutate
 from evotools import ea_utils
+from metrics.metrics_utils import euclid_distance
 
+
+class SPEA2ImgaProxy(ImgaProxy):
+
+    def __init__(self, driver, archive, population, cost):
+        super().__init__(driver, cost)
+        self._archive = archive
+        self._population = population
+
+    def current_population(self):
+        return [x['value'] for x in self._population]
+
+    def finalized_population(self):
+        return [x['value'] for x in self._archive]
+
+    def deport_emigrants(self, immigrants):
+        immigrants_cp = list(immigrants)
+        to_remove = []
+
+        for p in self._population:
+            if p['value'] in immigrants_cp:
+                to_remove.append(p)
+                immigrants_cp.remove(p['value'])
+
+        for p in to_remove:
+            self._population.remove(p)
+        return to_remove
+
+    def assimilate_immigrants(self, emigrants):
+        self._population.extend(emigrants)
+
+    def nominate_delegates(self):
+        return self.finalized_population()
 
 class SPEA2(DriverGen):
     class Tournament:
@@ -50,38 +81,6 @@ class SPEA2(DriverGen):
 
         self.fitness_archive = fitness_archive
 
-    class SPEA2Proxy(DriverGen.Proxy):
-
-        def __init__(self, archive, population, cost):
-            super().__init__(cost)
-            self._archive = archive
-            self._population = population
-
-        def current_population(self):
-            return [x['value'] for x in self._population]
-
-        def finalized_population(self):
-            return [x['value'] for x in self._archive]
-
-        def deport_emigrants(self, immigrants):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self._population:
-                if p['value'] in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p['value'])
-
-            for p in to_remove:
-                self._population.remove(p)
-            return to_remove
-
-        def assimilate_immigrants(self, emigrants):
-            self._population.extend(emigrants)
-
-        def nominate_delegates(self):
-            return self.finalized_population()
-
     @property
     def population(self):
         return [x['value'] for x in self.__population]
@@ -111,9 +110,7 @@ class SPEA2(DriverGen):
                 self.mutation_eta))
                 for _ in self.__population]
 
-            yield SPEA2.SPEA2Proxy(self.__archive, self.__population, cost)
-
-        return cost
+            yield SPEA2ImgaProxy(self, self.__archive, self.__population, cost)
 
     def calculate_fitnesses(self, population, archive):
         cost = self.calculate_objectives(population)
@@ -144,10 +141,9 @@ class SPEA2(DriverGen):
                 cost = 0
             else:
                 p['objectives'] = [o(p['value'])
-                               for o in self.fitnesses]
+                                   for o in self.fitnesses]
                 cost = len(self.population)
         return cost
-
 
     def calculate_dominated(self, pop):
         for p in pop:

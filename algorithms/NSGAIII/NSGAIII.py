@@ -4,7 +4,8 @@ import random
 
 import numpy
 import numpy.linalg
-from algorithms.base.drivergen import DriverGen
+
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 
 EPSILON = numpy.finfo(float).eps
 
@@ -12,9 +13,9 @@ import matplotlib.pyplot as plt
 
 
 class NSGAIII(DriverGen):
-    class NSGAIIIProxy(DriverGen.Proxy):
-        def __init__(self, cost, fronts, individuals):
-            super().__init__(cost)
+    class NSGAIIIImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost, fronts, individuals):
+            super().__init__(driver, cost)
             self.individuals = individuals
             self.fronts = fronts
 
@@ -130,9 +131,8 @@ class NSGAIII(DriverGen):
     def population_generator(self):
         while True:
             fronts = self.next_step()
-            yield NSGAIII.NSGAIIIProxy(self.cost, fronts, self.individuals)
+            yield NSGAIII.NSGAIIIImgaProxy(self, self.cost, fronts, self.individuals)
             self.cost = 0
-        return self.cost
 
     def next_step(self):
         offspring_inds = self.make_offspring_individuals()

@@ -1,19 +1,14 @@
 import collections
-import random
-
-import floatextras
 import math
-import numpy as np
+import random
 import time
 
-from algorithms.base.drivergen import DriverGen
-from evotools import random_tools
-
-
+import floatextras
+import numpy as np
 
 from algorithms.base import drivertools
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from algorithms.base.hv import HyperVolume
-
 
 EPSILON = np.finfo(float).eps
 class HGS(DriverGen):
@@ -80,11 +75,9 @@ class HGS(DriverGen):
         self.cost = 0
         self.acc_cost = 0
 
-    class HGSProxy(DriverGen.Proxy):
-        def __init__(self, cost, driver):
-            super().__init__(cost)
-            self.cost = cost
-            self.driver = driver
+    class HGSImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost):
+            super().__init__(driver, cost)
 
         def finalized_population(self):
             return self.merge_node_populations()
@@ -114,7 +107,7 @@ class HGS(DriverGen):
             print("cost", self.acc_cost)
 
             self.next_step()
-            yield HGS.HGSProxy(self.cost, self)
+            yield HGS.HGSImgaProxy(self, self.cost)
             self.acc_cost += self.cost
             self.cost = 0
         return self.acc_cost

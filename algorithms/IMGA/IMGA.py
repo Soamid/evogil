@@ -2,7 +2,7 @@ import logging
 import random
 
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
 
@@ -41,10 +41,9 @@ class IMGA(DriverGen):
 
         Topology.print(self.topology)
 
-    class IMGAProxy(DriverGen.Proxy):
-        def __init__(self, cost, islands):
-            super().__init__(cost)
-            self.cost = cost
+    class IMGAImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost, islands):
+            super().__init__(driver, cost)
             self.islands = islands
 
         def finalized_population(self):
@@ -63,8 +62,8 @@ class IMGA(DriverGen):
         def assimilate_immigrants(self, emigrants):
             raise Exception("IMGA does not support migrations")
 
-        def nominate_delegates(self, delegates_no):
-            raise Exception("HGS does not support sprouting")
+        def nominate_delegates(self):
+            raise Exception("IMGA does not support migrations")
 
     def spread_budget_info(self):
         if self.max_budget:
@@ -83,7 +82,7 @@ class IMGA(DriverGen):
             cost = self.epoch()
             self.total_cost += cost
 
-            yield IMGA.IMGAProxy(cost, self.islands)
+            yield IMGA.IMGAImgaProxy(self, cost, self.islands)
 
         return self.total_cost
 
@@ -100,7 +99,6 @@ class IMGA(DriverGen):
             island.assimilate()
 
         return epoch_cost
-
 
     def create_islands(self, init_population):
         logger = logging.getLogger(__name__)
@@ -188,7 +186,6 @@ class IMGA(DriverGen):
                 self.driver.population = current_population
                 return refugees
 
-
         def immigrate(self, migrants):
             self.visa_office.extend(migrants)
 
@@ -210,4 +207,3 @@ class IMGA(DriverGen):
 
             self.all_refugees.clear()
             self.visa_office.clear()
-

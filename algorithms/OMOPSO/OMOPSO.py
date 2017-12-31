@@ -2,16 +2,15 @@ import copy
 import logging
 import random
 
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 
 
 class OMOPSO(DriverGen):
     ETA = 0.0075
 
-    class OMOPSOProxy(DriverGen.Proxy):
-        def __init__(self, cost, archive, population):
-            super().__init__(cost)
-            self.cost = cost
+    class OMOPSOImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost, archive, population):
+            super().__init__(driver, cost)
             self.archive = archive
             self.population = population
 
@@ -112,7 +111,7 @@ class OMOPSO(DriverGen):
             logger.debug("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
             gen_no += 1
 
-            yield OMOPSO.OMOPSOProxy(cost, self.archive, self.population)
+            yield OMOPSO.OMOPSOImgaProxy(self, cost, self.archive, self.population)
             cost = 0
 
         return total_cost
@@ -335,4 +334,3 @@ class LeaderArchive(Archive):
                     self.archive[j].crowd_val += dist
                 else:
                     self.archive[j].crowd_val = float('inf')
-

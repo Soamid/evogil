@@ -1,6 +1,6 @@
 import random
 
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from evotools.ea_utils import dominates
 
 
@@ -10,22 +10,22 @@ class Individual:
         self.fit = [f(self.v) for f in fitnesses]
 
 
-class BOGOProxy(DriverGen.Proxy):
-            def __init__(self, cost, archive):
-                super().__init__(cost)
-                self.archive = archive
+class BOGOImgaProxy(ImgaProxy):
+    def __init__(self, driver, cost, archive):
+        super().__init__(driver, cost)
+        self.archive = archive
 
-            def finalized_population(self):
-                return [x.v for x in self.archive]
+    def finalized_population(self):
+        return [x.v for x in self.archive]
 
-            def current_population(self):
-                return [x.v for x in self.archive]
+    def current_population(self):
+        return [x.v for x in self.archive]
 
-            def deport_emigrants(self, immigrants):
-                pass
+    def deport_emigrants(self, immigrants):
+        pass
 
-            def assimilate_immigrants(self, emigrants):
-                pass
+    def assimilate_immigrants(self, emigrants):
+        pass
 
 
 class BOGO(DriverGen):
@@ -61,7 +61,7 @@ class BOGO(DriverGen):
         while True:
             self.next_step()
             print("cost", self.cost, "archive", len(self.archive))
-            yield BOGOProxy(self.cost, self.archive)
+            yield BOGOImgaProxy(self, self.cost, self.archive)
             self.cost = 0
         return self.cost
 

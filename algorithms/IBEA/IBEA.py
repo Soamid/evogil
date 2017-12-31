@@ -4,17 +4,16 @@ import math
 import random
 import sys
 
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from algorithms.base.drivertools import rank, mutate, crossover
 from evotools.ea_utils import paretofront_layers
 
 
 class IBEA(DriverGen):
-    class IBEAProxy(DriverGen.Proxy):
-        def __init__(self, cost, individuals, driver):
-            super().__init__(cost)
+    class IBEAImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost, individuals):
+            super().__init__(driver, cost)
             self.individuals = individuals
-            self.driver = driver
 
         def finalized_population(self):
             return self.driver.finish()
@@ -87,7 +86,7 @@ class IBEA(DriverGen):
     def population_generator(self):
         while True:
             self._next_step()
-            yield IBEA.IBEAProxy(self.cost, self.individuals, self)
+            yield IBEA.IBEAImgaProxy(self, self.cost, self.individuals)
             self.cost = 0
         self._scale_objectives()
         self._calculate_fitness()

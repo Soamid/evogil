@@ -1,4 +1,4 @@
-from algorithms.base.drivergen import DriverGen
+from algorithms.base.drivergen import DriverGen, ImgaProxy
 from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'
@@ -26,11 +26,10 @@ def dominates(x, y):
 
 
 class NSGAII(DriverGen):
-    class NSGAIIProxy(DriverGen.Proxy):
-        def __init__(self, cost, individuals, driver):
-            super().__init__(cost)
+    class NSGAIIImgaProxy(ImgaProxy):
+        def __init__(self, driver, cost, individuals):
+            super().__init__(driver, cost)
             self.individuals = individuals
-            self.driver = driver
 
         def finalized_population(self):
             return self.driver.finish()
@@ -113,7 +112,7 @@ class NSGAII(DriverGen):
     def population_generator(self):
         while True:
             self._next_step()
-            yield NSGAII.NSGAIIProxy(self.cost, self.individuals, self)
+            yield NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals)
             self.cost = 0
         self._calculate_objectives()
         self._nd_sort()
@@ -194,7 +193,7 @@ class NSGAII(DriverGen):
                     min_r = inds[0].objectives[objective]
                     self.dist[inds[0]] = float('inf')
                     self.dist[inds[-1]] += 2 * (inds[-1].objectives[objective] - inds[-2].objectives[objective]) / (
-                        max_r - min_r + sys.float_info.epsilon)
+                            max_r - min_r + sys.float_info.epsilon)
                     for k in range(1, len(inds) - 1):
                         self.dist[inds[k]] += (inds[k + 1].objectives[objective] - inds[k - 1].objectives[
                             objective]) / (max_r - min_r + sys.float_info.epsilon)
