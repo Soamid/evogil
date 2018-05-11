@@ -1,6 +1,6 @@
 import random
 
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, Driver
 from evotools.ea_utils import dominates
 
 
@@ -28,7 +28,7 @@ class BOGOImgaProxy(ImgaProxy):
         pass
 
 
-class BOGO(DriverGen):
+class BOGO(Driver):
     def __init__(self,
                  population,
                  dims,
@@ -57,13 +57,10 @@ class BOGO(DriverGen):
             new_archive.append(individual)
         self.archive = new_archive
 
-    def population_generator(self):
-        while True:
-            self.next_step()
-            print("cost", self.cost, "archive", len(self.archive))
-            yield BOGOImgaProxy(self, self.cost, self.archive)
-            self.cost = 0
-        return self.cost
+    def step(self):
+        self.next_step()
+        print("cost", self.cost, "archive", len(self.archive))
+        return BOGOImgaProxy(self, self.cost, self.archive)
 
     def next_step(self):
         vector = [random.uniform(a, b) for (a, b) in self.dims]

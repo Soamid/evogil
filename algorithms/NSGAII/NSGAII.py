@@ -1,6 +1,4 @@
-import rx
-
-from algorithms.base.drivergen import ImgaProxy, DriverRx, Driver
+from algorithms.base.drivergen import ImgaProxy, Driver
 from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'

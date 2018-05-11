@@ -1,15 +1,14 @@
-import collections
 import itertools
 import math
 import random
 import sys
 
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, Driver
 from algorithms.base.drivertools import rank, mutate, crossover
 from evotools.ea_utils import paretofront_layers
 
 
-class IBEA(DriverGen):
+class IBEA(Driver):
     class IBEAImgaProxy(ImgaProxy):
         def __init__(self, driver, cost, individuals):
             super().__init__(driver, cost)
@@ -80,18 +79,8 @@ class IBEA(DriverGen):
         self.fitness_archive = fitness_archive
 
     def step(self, steps=1):
-        for _ in range(steps):
-            self._next_step()
-
-    def population_generator(self):
-        while True:
-            self._next_step()
-            yield IBEA.IBEAImgaProxy(self, self.cost, self.individuals)
-            self.cost = 0
-        self._scale_objectives()
-        self._calculate_fitness()
-        self._environmental_selection()
-        return self.cost
+        self._next_step()
+        return IBEA.IBEAImgaProxy(self, self.cost, self.individuals)
 
     def get_indivs_inorder(self):
         return rank(self.population, self.calculate_objectives)

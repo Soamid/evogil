@@ -2,13 +2,13 @@ import collections
 import logging
 import random
 
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, Driver
 from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils
 
 
-class SMSEMOA(DriverGen):
+class SMSEMOA(Driver):
     def __init__(self,
                  population,
                  fitnesses,
@@ -35,6 +35,9 @@ class SMSEMOA(DriverGen):
         self.reference_point = reference_point
 
         self.fitness_archive = fitness_archive
+
+        self.logger = logging.getLogger(__name__)
+        self.cost = self.calculate_objectives(self.__population)
 
     class SMSEMOAImgaProxy(ImgaProxy):
         def __init__(self, driver, cost, population):
@@ -75,31 +78,25 @@ class SMSEMOA(DriverGen):
     def population(self, pop):
         self.__population = [Individual(x) for x in pop]
 
-    def population_generator(self):
-        logger = logging.getLogger(__name__)
-        cost = self.calculate_objectives(self.__population)
-        total_cost = cost
+    def step(self):
+        for _ in range(self.epoch_length):
+            new_indiv = self.generate(self.__population)
+            self.cost += self.calculate_objectives([new_indiv])
+            self.__population = self.reduce_population(self.__population + [new_indiv])
 
-        while True:
-            for _ in range(self.epoch_length):
-                new_indiv = self.generate(self.__population)
-                cost += self.calculate_objectives([new_indiv])
-                total_cost += cost
-                self.__population = self.reduce_population(self.__population + [new_indiv])
-
-            yield SMSEMOA.SMSEMOAImgaProxy(self, cost, self.__population)
-            cost = 0
+        return SMSEMOA.SMSEMOAImgaProxy(self, self.cost, self.__population)
 
     def calculate_objectives(self, pop):
+        objectives_cost = 0
         for p in pop:
             if (self.fitness_archive is not None) and (p.value in self.fitness_archive):
                 p.objectives = self.fitness_archive[p.value]
-                cost = 0
+                objectives_cost = 0
             else:
                 p.objectives = [o(p.value)
                                 for o in self.fitnesses]
-                cost = len(self.population)
-        return cost
+                objectives_cost = len(self.population)
+        return objectives_cost
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]

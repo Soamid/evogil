@@ -2,10 +2,10 @@ import copy
 import logging
 import random
 
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, Driver
 
 
-class OMOPSO(DriverGen):
+class OMOPSO(Driver):
     ETA = 0.0075
 
     class OMOPSOImgaProxy(ImgaProxy):
@@ -69,57 +69,51 @@ class OMOPSO(DriverGen):
         self.leader_archive = LeaderArchive(self.leaders_size)
         self.fitness_archive = fitness_archive
 
+        self.init()
+
     def init_personal_best(self):
         for p in self.population:
             p.best_val = copy.deepcopy(p)
 
-    def population_generator(self):
-        logger = logging.getLogger(__name__)
-
-        cost = 0
-        gen_no = 0
-
-        cost += self.calculate_objectives()
-        total_cost = cost
-
+    def init(self):
+        self.logger = logging.getLogger(__name__)
+        self.cost = 0
+        self.gen_no = 0
+        self.cost += self.calculate_objectives()
         self.init_leaders()
         self.init_personal_best()
         self.leader_archive.crowding()
-
-        # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
-
-        while True:
-            self.compute_speed()
-            self.move()
-
-            # dirty hack for unknown evolution length
-
-            progress = min(1.0, total_cost / self.max_budget) if self.max_budget else None
-            self.mopso_mutation(progress)
-
-            for x in self.population:
-                x.value = self.trim_function(x.value)
-
-            cost += self.calculate_objectives()
-            total_cost += self.calculate_objectives()
-
-            self.update_leaders()
-            self.update_personal_best()
-
-            self.leader_archive.crowding()
-
-            logger.debug("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
-            gen_no += 1
-
-            yield OMOPSO.OMOPSOImgaProxy(self, cost, self.archive, self.population)
-            cost = 0
-
-        return total_cost
 
     def init_leaders(self):
         for p in self.population:
             if self.leader_archive.add(copy.deepcopy(p)):
                 self.archive.add(copy.deepcopy(p))
+
+    def step(self):
+        # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
+
+        self.compute_speed()
+        self.move()
+
+        # dirty hack for unknown evolution length
+
+        progress = min(1.0, self.cost / self.max_budget) if self.max_budget else None
+        self.mopso_mutation(progress)
+
+        for x in self.population:
+            x.value = self.trim_function(x.value)
+
+        self.cost += self.calculate_objectives()
+
+        self.update_leaders()
+        self.update_personal_best()
+
+        self.leader_archive.crowding()
+
+        self.logger.debug("{}: {} : {}".format(self.gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
+        self.gen_no += 1
+
+        return OMOPSO.OMOPSOImgaProxy(self, self.cost, self.archive, self.population)
 
     def update_personal_best(self):
         for p in self.population:
@@ -135,15 +129,16 @@ class OMOPSO(DriverGen):
                 self.archive.add(copy.deepcopy(p))
 
     def calculate_objectives(self):
+        objectives_cost = 0
         for p in self.population:
             if (self.fitness_archive is not None) and (p.value in self.fitness_archive):
                 p.objectives = self.fitness_archive[p.value]
-                cost = 0
+                objectives_cost = 0
             else:
                 p.objectives = [o(p.value)
                                 for o in self.fitnesses]
-                cost = len(self.population)
-        return cost
+                objectives_cost = len(self.population)
+        return objectives_cost
 
     def move(self):
         for p in self.population:

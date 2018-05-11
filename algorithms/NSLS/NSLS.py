@@ -4,10 +4,10 @@ import random
 from scipy.spatial import distance
 
 from algorithms.NSGAII import NSGAII
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import DriverGen, ImgaProxy, Driver
 
 
-class NSLS(DriverGen):
+class NSLS(Driver):
     class NSLSImgaProxy(ImgaProxy):
         def __init__(self, driver, cost, fronts, individuals):
             super().__init__(driver, cost)
@@ -84,11 +84,9 @@ class NSLS(DriverGen):
         self.individuals = [Individual(x) for x in pop]
         self.population_size = len(self.individuals)
 
-    def population_generator(self):
-        while True:
-            self.next_step()
-            yield NSLS.NSLSImgaProxy(self, self.cost, self.front, self.individuals)
-            self.cost = 0
+    def step(self):
+        self.next_step()
+        return NSLS.NSLSImgaProxy(self, self.cost, self.front, self.individuals)
 
     def calculate_objectives(self, individuals):
         for ind in individuals:

@@ -7,7 +7,7 @@
 import math
 import random
 
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, Driver
 from algorithms.base.drivertools import crossover, mutate
 from evotools import ea_utils
 from metrics.metrics_utils import euclid_distance
@@ -45,7 +45,7 @@ class SPEA2ImgaProxy(ImgaProxy):
     def nominate_delegates(self):
         return self.finalized_population()
 
-class SPEA2(DriverGen):
+class SPEA2(Driver):
     class Tournament:
         def __init__(self):
             self.tournament_size = 2
@@ -92,28 +92,25 @@ class SPEA2(DriverGen):
     def finish(self):
         return [x['value'] for x in self.__archive]
 
-    def population_generator(self):
-        cost = 0
+    def step(self):
+        self.cost += self.calculate_fitnesses(self.__population, self.__archive)
+        self.__archive = self.environmental_selection(self.__population, self.__archive)
 
-        while True:
-            cost = self.calculate_fitnesses(self.__population, self.__archive)
-            self.__archive = self.environmental_selection(self.__population, self.__archive)
+        self.population = [self.trim_function(mutate(
+            crossover(self.select(self.__archive),
+                      self.select(self.__archive),
+                      self.dims,
+                      self.crossover_rate,
+                      self.crossover_eta),
+            self.dims,
+            self.mutation_rate,
+            self.mutation_eta))
+            for _ in self.__population]
 
-            self.population = [self.trim_function(mutate(
-                crossover(self.select(self.__archive),
-                          self.select(self.__archive),
-                          self.dims,
-                          self.crossover_rate,
-                          self.crossover_eta),
-                self.dims,
-                self.mutation_rate,
-                self.mutation_eta))
-                for _ in self.__population]
-
-            yield SPEA2ImgaProxy(self, self.__archive, self.__population, cost)
+        return SPEA2ImgaProxy(self, self.__archive, self.__population, self.cost)
 
     def calculate_fitnesses(self, population, archive):
-        cost = self.calculate_objectives(population)
+        objectives_cost = self.calculate_objectives(population)
         union = archive + population
         self.calculate_dominated(union)
 
@@ -121,7 +118,7 @@ class SPEA2(DriverGen):
             raw_fitness = self.calculate_raw_fitness(p, union)
             density = self.calculate_density(p, union)
             p['fitness'] = raw_fitness + density
-        return cost
+        return objectives_cost
 
     def calculate_raw_fitness(self, p1, pop):
         return 0. + sum(y['dominates']
@@ -135,15 +132,16 @@ class SPEA2(DriverGen):
         return 1.0 / (distances[k] + 2.0)
 
     def calculate_objectives(self, pop):
+        objectives_cost = 0
         for p in pop:
             if (self.fitness_archive is not None) and (p['value'] in self.fitness_archive):
                 p['objectives'] = self.fitness_archive[p['value']]
-                cost = 0
+                objectives_cost = 0
             else:
                 p['objectives'] = [o(p['value'])
                                    for o in self.fitnesses]
-                cost = len(self.population)
-        return cost
+                objectives_cost = len(self.population)
+        return objectives_cost
 
     def calculate_dominated(self, pop):
         for p in pop:

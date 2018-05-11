@@ -10,10 +10,9 @@ from contextlib import suppress
 from datetime import datetime
 from functools import partial
 from importlib import import_module
-from itertools import product, count
+from itertools import product
 
-from algorithms.base.drivergen import DriverGen, DriverRx, DriverProxy, Driver, BudgetBoundedDriver
-from algorithms.base.driverlegacy import DriverLegacy
+from algorithms.base.drivergen import DriverGen, DriverProxy, Driver, BudgetBoundedDriver
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from simulation import run_config
@@ -212,22 +211,6 @@ def worker(args):
 
                 logger.debug("End loop, total_cost:%d", total_cost)
                 logger.debug("Final population: %s", proxy.finalized_population())
-
-            elif isinstance(driver, DriverLegacy):
-                logger.debug("The driver %s is DriverLegacy-based", show_partial(driver))
-                with log_time(process_time, logger, "All iterations in {time_res}s CPU time"):
-                    for budget in budgets:
-                        logger.debug("Re-creating the driver used to perform computation")
-                        driver = final_driver()
-                        driver.budget = budget
-                        with log_time(process_time, logger,
-                                      "Iteration with budget {0} in {{time_res}}s CPU time".format(budget)):
-                            logger.debug("Running with budget=%d", budget)
-                            total_cost = driver.steps(count(), budget)
-                        finalpop = driver.finish()
-                        finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                        runres.store(budget, total_cost, finalpop, finalpop_fit)
-                        results.append((budget, finalpop))
             elif isinstance(driver, Driver):
 
                 class BudgetIterator:
