@@ -1,4 +1,17 @@
 import rx
+from rx.subjects import Subject
+
+
+class DriverProxy:
+    def __init__(self, driver: 'Driver', cost: int):
+        self.cost = cost
+        self.driver = driver
+
+    def finalized_population(self):
+        """
+        :return: Returns finalized population
+        """
+        raise NotImplementedError
 
 
 class Driver:
@@ -6,20 +19,9 @@ class Driver:
 
     def __init__(self):
         self.finished = False
+        self.cost = 0
 
-
-class DriverRx(Driver):
-    def __init__(self):
-        super().__init__()
-        self._stream = rx.Observable.create(self.run).publish()
-
-    def start(self):
-        self._stream.connect()
-
-    def steps(self) -> rx.Observable:
-        return self._stream
-
-    def run(self, stream: rx.Observable):
+    def step(self) -> DriverProxy:
         raise NotImplementedError
 
 
@@ -46,21 +48,35 @@ class DriverGen(Driver):
         raise NotImplementedError
 
 
-class DriverProxy:
-    def __init__(self, driver: Driver, cost: int):
-        self.cost = cost
+class DriverRx(Driver):
+
+    def __init__(self, driver: Driver):
+        super().__init__()
         self.driver = driver
+        self.stream = Subject()
+
+    def start(self):
+        raise NotImplementedError
+
+    def steps(self) -> rx.Observable:
+        return self.stream
+
+
+class BudgetBoundedDriver(DriverRx):
+
+    def __init__(self, driver: Driver, budget: int):
+        super().__init__(driver)
+        self.budget = budget
+
+    def start(self):
+        while self.driver.cost < self.budget:
+            proxy = self.driver.step()
+            self.stream.on_next(proxy)
 
 
 class ImgaProxy(DriverProxy):
     def __init__(self, driver: Driver, cost: int):
         super().__init__(driver, cost)
-
-    def finalized_population(self):
-        """
-        :return: Returns finalized population
-        """
-        raise NotImplementedError
 
     def current_population(self):
         """

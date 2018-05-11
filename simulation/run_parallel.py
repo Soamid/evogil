@@ -12,7 +12,7 @@ from functools import partial
 from importlib import import_module
 from itertools import product, count
 
-from algorithms.base.drivergen import DriverGen, DriverRx, DriverProxy
+from algorithms.base.drivergen import DriverGen, DriverRx, DriverProxy, Driver, BudgetBoundedDriver
 from algorithms.base.driverlegacy import DriverLegacy
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf, close_and_join
@@ -186,38 +186,7 @@ def worker(args):
 
         logger.debug("Beginning processing of %s, args: %s", driver, args)
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
-            if isinstance(driver, DriverRx):
-                driver.max_budget = budgets[-1]
-
-                class BudgetIterator:
-                    i = 0
-                    def current(self):
-                        return budgets[self.i]
-                    def next(self):
-                        self.i +=1
-                    def has_next(self):
-                        return self.i < len(budgets)
-
-                budgetIter = BudgetIterator()
-
-
-                def process_proxy(proxy: DriverProxy):
-                    # logger.debug("Cost %d equals/overpasses next budget step %d. Storing finalized population",
-                    #              total_cost,
-                    #              budget)
-                    finalpop = proxy.finalized_population()
-                    finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                    runres.store(budgetIter.current(), proxy.cost, finalpop, finalpop_fit)
-                    results.append((proxy.cost, finalpop))
-                    budgetIter.next()
-
-                driver.steps() \
-                    .take_while(lambda proxy: budgetIter.has_next()) \
-                    .filter(lambda proxy: proxy.cost > budgetIter.current()) \
-                    .subscribe(process_proxy)
-
-                driver.start()
-            elif isinstance(driver, DriverGen):
+            if isinstance(driver, DriverGen):
                 logger.debug("The driver %s is DriverGen-based", show_partial(driver))
                 driver.max_budget = budgets[-1]
                 gen = driver.population_generator()
@@ -259,6 +228,42 @@ def worker(args):
                         finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
                         runres.store(budget, total_cost, finalpop, finalpop_fit)
                         results.append((budget, finalpop))
+            elif isinstance(driver, Driver):
+
+                class BudgetIterator:
+                    i = 0
+
+                    def current(self):
+                        return budgets[self.i]
+
+                    def next(self):
+                        self.i += 1
+
+                    def has_next(self):
+                        return self.i + 1 < len(budgets)
+
+                budget_it = BudgetIterator()
+
+                def get_budget_stage(proxy):
+                    if proxy.cost >= budget_it.current() and budget_it.has_next():
+                        budget_it.next()
+                    return budget_it.current(), proxy
+
+                def process_proxy(budget: int, proxy: DriverProxy):
+                    finalpop = proxy.finalized_population()
+                    finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+                    runres.store(budget, proxy.cost, finalpop, finalpop_fit)
+                    results.append((proxy.cost, finalpop))
+
+                rx_driver = BudgetBoundedDriver(driver, budgets[-1])
+
+                rx_driver.steps() \
+                    .map(get_budget_stage) \
+                    .subscribe(lambda proxy_data: process_proxy(*proxy_data))
+
+                driver.max_budget = budgets[-1]
+
+                rx_driver.start()
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)

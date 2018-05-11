@@ -1,6 +1,6 @@
 import rx
 
-from algorithms.base.drivergen import ImgaProxy, DriverRx
+from algorithms.base.drivergen import ImgaProxy, DriverRx, Driver
 from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'
@@ -27,7 +27,7 @@ def dominates(x, y):
     return a
 
 
-class NSGAII(DriverRx):
+class NSGAII(Driver):
     class NSGAIIImgaProxy(ImgaProxy):
         def __init__(self, driver, cost, individuals):
             super().__init__(driver, cost)
@@ -107,15 +107,9 @@ class NSGAII(DriverRx):
         self.population_size = len(self.individuals)
         self.mating_size = int(self.mating_size_c * self.population_size)
 
-    def step(self, steps=1):
-        for _ in range(steps):
-            self._next_step()
-
-    def run(self, stream: rx.Observable):
-        while True:
-            self._next_step()
-            stream.on_next(NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals))
-
+    def step(self):
+        self._next_step()
+        return NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals)
 
     def finish(self):
         self._calculate_objectives()
