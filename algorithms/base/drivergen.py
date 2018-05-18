@@ -20,7 +20,16 @@ class Driver:
     def __init__(self):
         self.finished = False
         self.cost = 0
+        self.step_no = 0
 
+    def next_generation(self, f):
+        def wrapper(self):
+            f()
+            self.step_no += 1
+
+        return wrapper
+
+    @next_generation
     def step(self) -> DriverProxy:
         raise NotImplementedError
 
@@ -48,6 +57,30 @@ class DriverGen(Driver):
         raise NotImplementedError
 
 
+class DriverRun:
+
+    def start(self, driver: Driver):
+        raise NotImplementedError
+
+
+class BudgetRun(DriverRun):
+    def __init__(self, budget: int):
+        self.budget = budget
+
+    def start(self, driver: Driver):
+        while driver.cost < self.budget:
+            driver.step()
+
+
+class StepsRun(DriverRun):
+    def __init__(self, steps: int):
+        self.steps = steps
+
+    def start(self, driver: Driver):
+        for i in range(self.steps):
+            driver.step()
+
+
 class DriverRx(Driver):
 
     def __init__(self, driver: Driver):
@@ -55,23 +88,12 @@ class DriverRx(Driver):
         self.driver = driver
         self.stream = Subject()
 
-    def start(self):
-        raise NotImplementedError
+    def step(self):
+        proxy = self.driver.step()
+        self.stream.on_next(proxy)
 
     def steps(self) -> rx.Observable:
         return self.stream
-
-
-class BudgetBoundedDriver(DriverRx):
-
-    def __init__(self, driver: Driver, budget: int):
-        super().__init__(driver)
-        self.budget = budget
-
-    def start(self):
-        while self.driver.cost < self.budget:
-            proxy = self.driver.step()
-            self.stream.on_next(proxy)
 
 
 class ImgaProxy(DriverProxy):

@@ -2,12 +2,12 @@ import logging
 import random
 
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import DriverGen, ImgaProxy, Driver, StepsRun, DriverRx
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
 
 
-class IMGA(DriverGen):
+class IMGA(Driver):
     def __init__(self,
                  population,
                  dims,
@@ -41,6 +41,10 @@ class IMGA(DriverGen):
 
         Topology.print(self.topology)
 
+        self.logger = logging.getLogger(__name__)
+
+        self.spread_budget_info()
+
     class IMGAImgaProxy(ImgaProxy):
         def __init__(self, driver, cost, islands):
             super().__init__(driver, cost)
@@ -70,24 +74,8 @@ class IMGA(DriverGen):
             for island in self.islands:
                 island.driver.max_budget = self.max_budget
 
-    def population_generator(self):
-        logger = logging.getLogger(__name__)
-
-        self.spread_budget_info()
-
-        while True:
-            logger.debug(self.epoch_no)
-            self.epoch_no += 1
-
-            cost = self.epoch()
-            self.total_cost += cost
-
-            yield IMGA.IMGAImgaProxy(self, cost, self.islands)
-
-        return self.total_cost
-
-    def epoch(self):
-        epoch_cost = sum([island.epoch(self.epoch_length) for island in self.islands])
+    def step(self):
+        self.cost = sum([island.epoch(self.epoch_length) for island in self.islands])
 
         for i in range(len(self.islands)):
             island = self.islands[i]
@@ -98,7 +86,7 @@ class IMGA(DriverGen):
         for island in self.islands:
             island.assimilate()
 
-        return epoch_cost
+        return IMGA.IMGAImgaProxy(self, self.cost, self.islands)
 
     def create_islands(self, init_population):
         logger = logging.getLogger(__name__)
@@ -123,13 +111,13 @@ class IMGA(DriverGen):
             self.outer = outer
             self.population = population
 
-            self.driver = outer.driver(population=population,
+            self.driver = DriverRx(outer.driver(population=population,
                                        dims=outer.dims,
                                        fitnesses=outer.fitnesses,
                                        mutation_rate=outer.mutation_rate,
                                        mutation_eta=outer.mutation_eta,
                                        crossover_rate=outer.crossover_rate,
-                                       crossover_eta=outer.crossover_eta)
+                                       crossover_eta=outer.crossover_eta))
             if isinstance(self.driver, DriverGen):
                 self.driver_gen = self.driver.population_generator()
                 self.last_proxy = None
@@ -137,6 +125,9 @@ class IMGA(DriverGen):
             self.all_refugees = []
 
         def epoch(self, epoch_length):
+            steps_run = StepsRun(epoch_length)
+
+
             if isinstance(self.driver, DriverGen):
                 cost = 0
                 for _ in range(epoch_length):

@@ -12,7 +12,7 @@ from functools import partial
 from importlib import import_module
 from itertools import product
 
-from algorithms.base.drivergen import DriverGen, DriverProxy, Driver, BudgetBoundedDriver
+from algorithms.base.drivergen import DriverGen, DriverProxy, Driver, BudgetBoundedDriver, DriverRx, BudgetRun
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from simulation import run_config
@@ -238,7 +238,7 @@ def worker(args):
                     runres.store(budget, proxy.cost, finalpop, finalpop_fit)
                     results.append((proxy.cost, finalpop))
 
-                rx_driver = BudgetBoundedDriver(driver, budgets[-1])
+                rx_driver = DriverRx(driver)
 
                 rx_driver.steps() \
                     .map(get_budget_stage) \
@@ -246,7 +246,8 @@ def worker(args):
 
                 driver.max_budget = budgets[-1]
 
-                rx_driver.start()
+                budget_run = BudgetRun(budgets[-1])
+                budget_run.start(rx_driver)
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)
