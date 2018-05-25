@@ -5,6 +5,7 @@ from rx.subjects import Subject
 class DriverProxy:
     def __init__(self, driver: 'Driver', cost: int):
         self.cost = cost
+        self.step_no = driver.step_no
         self.driver = driver
 
     def finalized_population(self):
@@ -14,7 +15,19 @@ class DriverProxy:
         raise NotImplementedError
 
 
-class Driver:
+class StepCountingDriver(type):
+    def __init__(cls, name, bases, clsdict):
+        step_function = 'step'
+        if step_function in clsdict:
+            def counting_step(self):
+                proxy = clsdict[step_function](self)
+                self.step_no += 1
+                return proxy
+
+            setattr(cls, step_function, counting_step)
+
+
+class Driver(object, metaclass=StepCountingDriver):
     max_budget = None
 
     def __init__(self):
@@ -22,14 +35,6 @@ class Driver:
         self.cost = 0
         self.step_no = 0
 
-    def next_generation(self, f):
-        def wrapper(self):
-            f()
-            self.step_no += 1
-
-        return wrapper
-
-    @next_generation
     def step(self) -> DriverProxy:
         raise NotImplementedError
 
@@ -82,6 +87,11 @@ class StepsRun(DriverRun):
 
 
 class DriverRx(Driver):
+    def steps(self) -> rx.Observable:
+        raise NotImplementedError
+
+
+class DriverRxWrapper(DriverRx):
 
     def __init__(self, driver: Driver):
         super().__init__()
@@ -91,6 +101,7 @@ class DriverRx(Driver):
     def step(self):
         proxy = self.driver.step()
         self.stream.on_next(proxy)
+        return proxy
 
     def steps(self) -> rx.Observable:
         return self.stream

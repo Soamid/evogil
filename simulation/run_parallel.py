@@ -12,7 +12,8 @@ from functools import partial
 from importlib import import_module
 from itertools import product
 
-from algorithms.base.drivergen import DriverGen, DriverProxy, Driver, BudgetBoundedDriver, DriverRx, BudgetRun
+from algorithms.base.drivergen import DriverGen, DriverProxy, Driver, DriverRxWrapper, BudgetRun, \
+    DriverRx
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from simulation import run_config
@@ -238,7 +239,7 @@ def worker(args):
                     runres.store(budget, proxy.cost, finalpop, finalpop_fit)
                     results.append((proxy.cost, finalpop))
 
-                rx_driver = DriverRx(driver)
+                rx_driver = driver if isinstance(driver, DriverRx) else DriverRxWrapper(driver)
 
                 rx_driver.steps() \
                     .map(get_budget_stage) \
