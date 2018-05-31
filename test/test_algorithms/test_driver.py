@@ -1,7 +1,5 @@
 import unittest
 
-from rx import Observable
-
 from algorithms.base.drivergen import Driver
 
 
