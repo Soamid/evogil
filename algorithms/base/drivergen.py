@@ -1,4 +1,5 @@
 import rx
+from rx import Observable, Observer
 from rx.subjects import Subject
 
 
@@ -64,7 +65,7 @@ class DriverGen(Driver):
 
 class DriverRun:
 
-    def start(self, driver: Driver):
+    def create_job(self, driver: Driver) -> Observable:
         raise NotImplementedError
 
 
@@ -72,18 +73,22 @@ class BudgetRun(DriverRun):
     def __init__(self, budget: int):
         self.budget = budget
 
-    def start(self, driver: Driver):
+    def create_job(self, driver: Driver) -> Observable:
+        return Observable.create(lambda observer: self._start(driver, observer))
+
+    def _start(self, driver: Driver, observer: Observer):
         while driver.cost < self.budget:
-            driver.step()
+            observer.on_next(driver.step())
+        observer.on_completed()
 
 
 class StepsRun(DriverRun):
     def __init__(self, steps: int):
         self.steps = steps
 
-    def start(self, driver: Driver):
-        for i in range(self.steps):
-            driver.step()
+    def create_job(self, driver: Driver):
+        return Observable.range(0, self.steps) \
+            .map(lambda _: driver.step())
 
 
 class DriverRx(Driver):

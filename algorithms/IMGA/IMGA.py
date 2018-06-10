@@ -10,7 +10,7 @@ from evotools import ea_utils
 from evotools.random_tools import weighted_choice
 
 
-class IMGA(DriverRx):
+class IMGA(Driver):
     def __init__(self,
                  population,
                  dims,
@@ -73,23 +73,17 @@ class IMGA(DriverRx):
             for island in self.islands:
                 island.driver.max_budget = self.max_budget
 
-    def steps(self):
-        return Observable.merge([island.steps() for island in self.islands]) \
-            .filter(lambda proxy: proxy.step_no % self.epoch_length == 0) \
-            .buffer_with_count(len(self.islands)) \
-            .do_action(lambda _: self.migration()) \
-            .map(self.create_proxy)
-
     def create_proxy(self, island_proxies):
         self.cost = sum(proxy.cost for proxy in island_proxies)
         all_results = itertools.chain(*(proxy.finalized_population() for proxy in island_proxies))
         return IMGA.IMGAImgaProxy(self, self.cost, list(all_results))
 
     def step(self):
-        for island in self.islands:
-            island.epoch(self.epoch_length)
-            # TODO return hot observable results
-
+        return Observable.from_iterable(self.islands)\
+            .flat_map(lambda island: island.epoch(self.epoch_length)) \
+            .buffer_with_count(len(self.islands)) \
+            .do_action(lambda _: self.migration()) \
+            .map(self.create_proxy)
 
     def migration(self):
         for i in range(len(self.islands)):
@@ -115,7 +109,7 @@ class IMGA(DriverRx):
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    class Island(DriverRx):
+    class Island:
 
         def __init__(self,
                      outer,
@@ -130,23 +124,17 @@ class IMGA(DriverRx):
                                                        mutation_eta=outer.mutation_eta,
                                                        crossover_rate=outer.crossover_rate,
                                                        crossover_eta=outer.crossover_eta)
-            self.driver_rx = DriverRxWrapper(self.driver)
-
             if isinstance(self.driver, DriverGen):
                 self.driver_gen = self.driver.population_generator()
                 self.last_proxy = None
             self.visa_office = []
             self.all_refugees = []
 
-        def steps(self):
-            return self.driver_rx.steps()
-
-        def step(self):
-            return self.driver_rx.step()
-
         def epoch(self, epoch_length):
             steps_run = StepsRun(epoch_length)
-            steps_run.start(self.driver_rx)
+            return steps_run\
+                .create_job(self.driver)\
+                .last()
 
         def finish(self):
             if isinstance(self.driver, DriverGen):

@@ -239,16 +239,12 @@ def worker(args):
                     runres.store(budget, proxy.cost, finalpop, finalpop_fit)
                     results.append((proxy.cost, finalpop))
 
-                rx_driver = driver if isinstance(driver, DriverRx) else DriverRxWrapper(driver)
-
-                rx_driver.steps() \
-                    .map(get_budget_stage) \
-                    .subscribe(lambda proxy_data: process_proxy(*proxy_data))
-
                 driver.max_budget = budgets[-1]
 
                 budget_run = BudgetRun(budgets[-1])
-                budget_run.start(rx_driver)
+                budget_run.create_job(driver) \
+                    .map(get_budget_stage) \
+                    .subscribe(lambda proxy_data: process_proxy(*proxy_data))
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)

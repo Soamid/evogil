@@ -4,14 +4,14 @@ from algorithms.base.drivergen import StepsRun
 from simulation.run_parallel import prepare
 
 
-class ImgaTest(unittest.TestCase):
+class HGSTest(unittest.TestCase):
 
-    def test_imga(self):
+    def test_steps(self):
         internal_driver, _ = prepare("NSGAII", "ZDT1")
-        final_driver, problem_mod = prepare("IMGA", "ZDT1", internal_driver)
+        final_driver, problem_mod = prepare("HGS", "ZDT1", internal_driver)
         print(final_driver())
 
-        imga = final_driver()
+        hgs = final_driver()
 
         steps = [0, 1, 3]
 
@@ -20,7 +20,7 @@ class ImgaTest(unittest.TestCase):
                 steps_run = StepsRun(steps_no)
 
                 results = []
-                steps_run.create_job(imga)\
+                steps_run.create_job(hgs)\
                     .subscribe(lambda proxy: results.append(proxy))
 
                 self.assertEqual(len(results), steps_no)
