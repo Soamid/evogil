@@ -89,6 +89,9 @@ class OMOPSO(Driver):
             if self.leader_archive.add(copy.deepcopy(p)):
                 self.archive.add(copy.deepcopy(p))
 
+    def finalized_population(self):
+        return [x.value for x in self.archive]
+
     def step(self):
         # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
 
@@ -113,7 +116,7 @@ class OMOPSO(Driver):
         self.logger.debug("{}: {} : {}".format(self.gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
         self.gen_no += 1
 
-        return OMOPSO.OMOPSOImgaProxy(self, self.cost, self.archive, self.population)
+        return self.emit_next_proxy()
 
     def update_personal_best(self):
         for p in self.population:

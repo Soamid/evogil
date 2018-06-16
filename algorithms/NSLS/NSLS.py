@@ -84,9 +84,12 @@ class NSLS(Driver):
         self.individuals = [Individual(x) for x in pop]
         self.population_size = len(self.individuals)
 
+    def finalized_population(self):
+        return [x.v for x in self.individuals]
+
     def step(self):
         self.next_step()
-        return NSLS.NSLSImgaProxy(self, self.cost, self.front, self.individuals)
+        return self.emit_next_proxy()
 
     def calculate_objectives(self, individuals):
         for ind in individuals:

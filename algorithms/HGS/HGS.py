@@ -103,6 +103,12 @@ class HGS(Driver):
                 merged_population.extend(node.population)
             return merged_population
 
+    def finalized_population(self):
+        merged_population = []
+        for node in self.driver.nodes:
+            merged_population.extend(node.population)
+        return merged_population
+
     def step(self):
         # TODO: status debug print
         print("nodes:", len(self.nodes),
@@ -126,7 +132,7 @@ class HGS(Driver):
         for i in range(3):
             print("level {} : {} / {}".format(i + 1, len([n for n in self.level_nodes[i] if n.ripe]),
                                               len(self.level_nodes[i])))
-        return HGS.HGSImgaProxy(self, self.cost)
+        return self.emit_next_proxy()
 
     def run_metaepoch(self):
         node_jobs = []

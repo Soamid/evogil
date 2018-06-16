@@ -78,13 +78,16 @@ class SMSEMOA(Driver):
     def population(self, pop):
         self.__population = [Individual(x) for x in pop]
 
+    def finalized_population(self):
+        return [x.value for x in self.population]
+
     def step(self):
         for _ in range(self.epoch_length):
             new_indiv = self.generate(self.__population)
             self.cost += self.calculate_objectives([new_indiv])
             self.__population = self.reduce_population(self.__population + [new_indiv])
 
-        return SMSEMOA.SMSEMOAImgaProxy(self, self.cost, self.__population)
+        return self.emit_next_proxy()
 
     def calculate_objectives(self, pop):
         objectives_cost = 0

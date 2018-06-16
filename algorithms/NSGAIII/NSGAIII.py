@@ -128,9 +128,12 @@ class NSGAIII(Driver):
                 if self.ideal_point[i] > objective:
                     self.ideal_point[i] = objective
 
+    def finalized_population(self):
+        return [x.v for x in self.individuals]
+
     def step(self):
         fronts = self.next_step()
-        return NSGAIII.NSGAIIIImgaProxy(self, self.cost, fronts, self.individuals)
+        return self.emit_next_proxy()
 
     def next_step(self):
         offspring_inds = self.make_offspring_individuals()

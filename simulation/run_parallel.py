@@ -12,8 +12,7 @@ from functools import partial
 from importlib import import_module
 from itertools import product
 
-from algorithms.base.drivergen import DriverGen, DriverProxy, Driver, DriverRxWrapper, BudgetRun, \
-    DriverRx
+from algorithms.base.drivergen import DriverGen, Driver, BudgetRun
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf, close_and_join
 from simulation import run_config
@@ -213,38 +212,21 @@ def worker(args):
                 logger.debug("End loop, total_cost:%d", total_cost)
                 logger.debug("Final population: %s", proxy.finalized_population())
             elif isinstance(driver, Driver):
-
-                class BudgetIterator:
-                    i = 0
-
-                    def current(self):
-                        return budgets[self.i]
-
-                    def next(self):
-                        self.i += 1
-
-                    def has_next(self):
-                        return self.i + 1 < len(budgets)
-
-                budget_it = BudgetIterator()
-
-                def get_budget_stage(proxy):
-                    if proxy.cost >= budget_it.current() and budget_it.has_next():
-                        budget_it.next()
-                    return budget_it.current(), proxy
-
-                def process_proxy(budget: int, proxy: DriverProxy):
-                    finalpop = proxy.finalized_population()
+                def process_results(budget: int):
+                    finalpop = driver.finalized_population()
                     finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                    runres.store(budget, proxy.cost, finalpop, finalpop_fit)
-                    results.append((proxy.cost, finalpop))
+                    runres.store(budget, driver.cost, finalpop, finalpop_fit)
+                    results.append((driver.cost, finalpop))
 
                 driver.max_budget = budgets[-1]
 
-                budget_run = BudgetRun(budgets[-1])
-                budget_run.create_job(driver) \
-                    .map(get_budget_stage) \
-                    .subscribe(lambda proxy_data: process_proxy(*proxy_data))
+                for budget in budgets:
+                    budget_run = BudgetRun(budget)
+                    budget_run.create_job(driver) \
+                        .do_action(on_completed=lambda: process_results(budget)) \
+                        .subscribe(lambda proxy: print(
+                        "Driver progress: budget={}, current cost={}, driver step={}".format(budget, proxy.cost,
+                                                                                             proxy.step_no)))
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)

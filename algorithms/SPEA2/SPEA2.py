@@ -89,6 +89,9 @@ class SPEA2(Driver):
     def population(self, pop):
         self.__population = [{'value': x} for x in pop]
 
+    def finalized_population(self):
+        return [x['value'] for x in self._archive]
+
     def finish(self):
         return [x['value'] for x in self.__archive]
 
@@ -107,7 +110,7 @@ class SPEA2(Driver):
             self.mutation_eta))
             for _ in self.__population]
 
-        return SPEA2ImgaProxy(self, self.__archive, self.__population, self.cost)
+        return self.emit_next_proxy()
 
     def calculate_fitnesses(self, population, archive):
         objectives_cost = self.calculate_objectives(population)

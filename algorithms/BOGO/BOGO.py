@@ -57,10 +57,13 @@ class BOGO(Driver):
             new_archive.append(individual)
         self.archive = new_archive
 
+    def finalized_population(self):
+        return [x.v for x in self.archive]
+
     def step(self):
         self.next_step()
         print("cost", self.cost, "archive", len(self.archive))
-        return BOGOImgaProxy(self, self.cost, self.archive)
+        return self.emit_next_proxy()
 
     def next_step(self):
         vector = [random.uniform(a, b) for (a, b) in self.dims]

@@ -79,11 +79,12 @@ class IMGA(Driver):
         return IMGA.IMGAImgaProxy(self, self.cost, list(all_results))
 
     def step(self):
-        return Observable.from_iterable(self.islands)\
+        Observable.from_iterable(self.islands)\
             .flat_map(lambda island: island.epoch(self.epoch_length)) \
             .buffer_with_count(len(self.islands)) \
             .do_action(lambda _: self.migration()) \
-            .map(self.create_proxy)
+            .subscribe()
+        return self.emit_next_proxy()
 
     def migration(self):
         for i in range(len(self.islands)):

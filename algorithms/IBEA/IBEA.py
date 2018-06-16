@@ -78,9 +78,12 @@ class IBEA(Driver):
 
         self.fitness_archive = fitness_archive
 
+    def finalized_population(self):
+        return self.finish()
+
     def step(self, steps=1):
         self._next_step()
-        return IBEA.IBEAImgaProxy(self, self.cost, self.individuals)
+        return self.emit_next_proxy()
 
     def get_indivs_inorder(self):
         return rank(self.population, self.calculate_objectives)

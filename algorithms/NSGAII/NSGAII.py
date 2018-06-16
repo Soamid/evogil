@@ -99,6 +99,9 @@ class NSGAII(Driver):
     def population(self):
         return [x.v for x in self.individuals]
 
+    def finalized_population(self):
+        return self.finish()
+
     @population.setter
     def population(self, pop):
         self.individuals = [self.Individual(x) for x in pop]
@@ -107,7 +110,7 @@ class NSGAII(Driver):
 
     def step(self):
         self._next_step()
-        return NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals)
+        return self.emit_next_proxy()
 
     def finish(self):
         self._calculate_objectives()
