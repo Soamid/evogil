@@ -70,8 +70,10 @@ class NSGAII(Driver):
                  mutation_rate,
                  crossover_rate,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
-        super().__init__()
+                 fitness_archive=None,
+                 *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.dims = dims
 
@@ -104,7 +106,7 @@ class NSGAII(Driver):
 
     @population.setter
     def population(self, pop):
-        self.individuals = [self.Individual(x) for x in pop]
+        self.individuals = [Individual(x) for x in pop]
         self.population_size = len(self.individuals)
         self.mating_size = int(self.mating_size_c * self.population_size)
 
@@ -210,13 +212,13 @@ class NSGAII(Driver):
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
+            Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
             self.mating_individuals]
 
-    class Individual:
-        def __init__(self, vector):
-            self.v = vector
-            self.objectives = None
+class Individual:
+    def __init__(self, vector):
+        self.v = vector
+        self.objectives = None
 
 
 if __name__ == "__main__":

@@ -1,32 +1,10 @@
+
+
 import rx
 from rx import Observable, Observer
 from rx.subjects import Subject
 
-
-class ProgressDriverProxy:
-    def __init__(self, step_no: int, cost: int):
-        self.cost = cost
-        self.step_no = step_no
-
-
-class ProxyAdapter:
-
-    def __init__(self, driver: 'Driver'):
-        self.driver = driver
-
-    def receive_proxy(self):
-        raise NotImplementedError
-
-    def emit_proxy(self):
-        raise NotImplementedError
-
-class ProgressProxyAdapter(ProxyAdapter):
-
-    def __init__(self, driver: 'Driver'):
-        super().__init__(driver)
-
-    def emit_proxy(self):
-        return ProgressDriverProxy(self.driver.step_no, self.driver.cost)
+from algorithms.base.model import ProgressMessageAdapter, ProgressMessage
 
 
 class StepCountingDriver(type):
@@ -43,21 +21,21 @@ class StepCountingDriver(type):
 
 class Driver(object, metaclass=StepCountingDriver):
 
-    def __init__(self, proxy_adapter_factory=ProgressProxyAdapter):
+    def __init__(self, message_adapter_factory=ProgressMessageAdapter):
         self.max_budget = None
         self.finished = False
         self.cost = 0
         self.step_no = 0
-        self.proxy_adapter = proxy_adapter_factory(self)
+        self.message_adapter = message_adapter_factory(self)
 
     def finalized_population(self):
         raise NotImplementedError
 
-    def step(self) -> ProgressDriverProxy:
+    def step(self) -> ProgressMessage:
         raise NotImplementedError
 
     def emit_next_proxy(self):
-        return self.proxy_adapter.emit_proxy()
+        return self.message_adapter.emit_proxy()
 
 
 class DriverGen(Driver):
@@ -132,7 +110,7 @@ class DriverRxWrapper(DriverRx):
         return self.stream
 
 
-class ImgaProxy(ProgressDriverProxy):
+class ImgaProxy(ProgressMessage):
     def __init__(self, driver: Driver, cost: int):
         super().__init__(driver, cost)
 

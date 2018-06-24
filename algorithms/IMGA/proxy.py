@@ -1,6 +1,10 @@
-from algorithms.base.drivergen import ProgressDriverProxy
+from algorithms.base.model import PopulationMessageAdapter, SubPopulation
 
 
-class IMGAMigrantProxy(ProgressDriverProxy):
-    def __init__(self, migrants):
-        self.migrants = migrants
+class IMGAMessageAdapter(PopulationMessageAdapter):
+
+    def emigrate(self, migrants: SubPopulation):
+        raise NotImplementedError
+
+    def immigrate(self, migrants: SubPopulation):
+        raise NotImplementedError

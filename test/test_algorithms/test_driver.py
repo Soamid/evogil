@@ -1,6 +1,6 @@
 import unittest
 
-from algorithms.base.drivergen import Driver, ProgressDriverProxy
+from algorithms.base.drivergen import Driver, ProgressMessage
 from simulation.run_parallel import prepare
 
 
@@ -27,6 +27,6 @@ class DriverTest(unittest.TestCase):
         for _ in range(3):
             with self.subTest():
                 proxy = driver.step()
-                self.assertIsInstance(proxy, ProgressDriverProxy)
+                self.assertIsInstance(proxy, ProgressMessage)
                 self.assertEqual(proxy.step_no, driver.step_no - 1)
                 self.assertEqual(proxy.cost, driver.cost)
