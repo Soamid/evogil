@@ -5,7 +5,7 @@ import random
 from rx import Observable
 
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.NSGAII.proxy import ImgaProxyAdapter
+from algorithms.NSGAII.message import NSGAIIImgaMessageAdapter
 from algorithms.base.drivergen import DriverGen, ImgaProxy, Driver, StepsRun
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
@@ -40,7 +40,7 @@ class IMGA(Driver):
         self.driver = driver
         self.total_cost = 0
         
-        self.island_message_adapter_factory = ImgaProxyAdapter # TODO hardcoded NSGAII, change when new run_parallel is ready
+        self.island_message_adapter_factory = NSGAIIImgaMessageAdapter # TODO hardcoded NSGAII, change when new run_parallel is ready
 
         self.islands = self.create_islands(population)
         self.epoch_no = 0

@@ -8,6 +8,7 @@ import numpy as np
 from rx import Observable
 from rx.subjects import Subject
 
+from algorithms.NSGAII.message import NSGAIIHGSMessageAdapter
 from algorithms.base import drivertools
 from algorithms.base.drivergen import DriverGen, ImgaProxy, DriverRx, DriverRxWrapper, StepsRun, Driver
 from algorithms.base.hv import HyperVolume
@@ -68,6 +69,9 @@ class HGS(Driver):
         self.mantissa_bits = mantissa_bits
         self.global_fitness_archive = [ResultArchive() for _ in range(3)]
 
+        self.node_message_adapter_factory = NSGAIIHGSMessageAdapter  # TODO hardcoded NSGAII, change when new run_parallel is ready
+        # TODO add preconditions checking if message adapter is HGS message adapter
+
         self.root = HGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
         self.level_nodes = {
@@ -77,6 +81,9 @@ class HGS(Driver):
         }
 
         self.cost = 0
+
+
+
 
     class HGSImgaProxy(ImgaProxy):
         def __init__(self, driver, cost):
@@ -143,8 +150,8 @@ class HGS(Driver):
         for node in self.level_nodes[0]:
             node_jobs.append(node.run_metaepoch())
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
-        Observable.merge(node_jobs)\
-            .to_blocking()\
+        Observable.merge(node_jobs) \
+            .to_blocking() \
             .subscribe()
 
     def trim_sprouts(self):
@@ -222,16 +229,17 @@ class HGS(Driver):
             self.ripe = False
             self.owner = owner
             self.level = level
-            self.driver = DriverRxWrapper(owner.driver(population=population,
-                                                       dims=owner.dims,
-                                                       fitnesses=owner.blurred_fitnesses(self.level),
-                                                       mutation_eta=owner.mutation_etas[self.level],
-                                                       mutation_rate=owner.mutation_rates[self.level],
-                                                       crossover_eta=owner.crossover_etas[self.level],
-                                                       crossover_rate=owner.crossover_rates[self.level],
-                                                       fitness_archive=self.owner.global_fitness_archive[self.level],
-                                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[
-                                                           self.level])))
+            self.driver = owner.driver(population=population,
+                                       dims=owner.dims,
+                                       fitnesses=owner.blurred_fitnesses(self.level),
+                                       mutation_eta=owner.mutation_etas[self.level],
+                                       mutation_rate=owner.mutation_rates[self.level],
+                                       crossover_eta=owner.crossover_etas[self.level],
+                                       crossover_rate=owner.crossover_rates[self.level],
+                                       fitness_archive=self.owner.global_fitness_archive[self.level],
+                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[
+                                           self.level]),
+                                       message_adapter_factory=owner.node_message_adapter_factory)
             self.population = []
             self.sprouts = []
             self.delegates = []
@@ -243,27 +251,20 @@ class HGS(Driver):
             self.old_hypervolume = float('-inf')
             self.hypervolume = float('-inf')
 
-            self.final_proxy = None
-            self.proxy_emitter = Subject()
-
-            self.driver.steps()\
-                .do_action(on_next=lambda proxy: self._after_step(proxy))\
-                .subscribe()
-
-        def _after_step(self, proxy):
-            self.final_proxy = proxy
-            self.owner.cost += self.owner.cost_modifiers[self.level] * proxy.cost
+        def _after_step(self, message):
+            self.owner.cost += self.owner.cost_modifiers[self.level] * message.cost
 
         def run_metaepoch(self) -> Observable:
             if self.alive:
                 epoch_job = StepsRun(self.owner.metaepoch_len)
-                return epoch_job.create_job(self.driver)\
+                return epoch_job.create_job(self.driver) \
+                    .do_action(on_next=lambda message: self._after_step(message)) \
                     .do_action(on_completed=lambda: self._after_metaepoch())
             return Observable.empty()
 
         def _after_metaepoch(self):
-            self.population = self.final_proxy.finalized_population()
-            self.delegates = self.final_proxy.nominate_delegates()
+            self.population = self.driver.finalized_population()
+            self.delegates = self.driver.message_adapter.nominate_delegates()
             random.shuffle(self.delegates)
             self.update_dominated_hypervolume()
 

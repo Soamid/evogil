@@ -1,12 +1,12 @@
-from algorithms.IMGA.proxy import IMGAMessageAdapter
-from algorithms.NSGAII import NSGAII
+from algorithms.HGS.message import HGSMessageAdapter
+from algorithms.IMGA.message import IMGAMessageAdapter
 from algorithms.base.model import PopulationMessage, SubPopulation
 
 
-class ImgaProxyAdapter(IMGAMessageAdapter):
+class NSGAIIImgaMessageAdapter(IMGAMessageAdapter):
 
-    def emit_proxy(self):
-        return PopulationMessage([x.v for x in self.driver.individuals])
+    def get_population(self):
+        return [x.v for x in self.driver.individuals]
 
     def immigrate(self, migrants):
         self.driver.individuals.extend(migrants)
@@ -23,3 +23,12 @@ class ImgaProxyAdapter(IMGAMessageAdapter):
         for p in to_remove:
             self.driver.individuals.remove(p)
         return to_remove
+
+class NSGAIIHGSMessageAdapter(HGSMessageAdapter):
+
+    def get_population(self):
+        return [x.v for x in self.driver.individuals]
+
+    def nominate_delegates(self):
+        self.driver.finish()
+        return [x.v for x in self.driver.front[1]]
