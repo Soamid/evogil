@@ -6,6 +6,7 @@ import time
 import floatextras
 import numpy as np
 from rx import Observable
+from rx.concurrency import NewThreadScheduler
 from rx.subjects import Subject
 
 from algorithms.NSGAII.message import NSGAIIHGSMessageAdapter
@@ -82,9 +83,6 @@ class HGS(Driver):
 
         self.cost = 0
 
-
-
-
     class HGSImgaProxy(ImgaProxy):
         def __init__(self, driver, cost):
             super().__init__(driver, cost)
@@ -150,9 +148,14 @@ class HGS(Driver):
         for node in self.level_nodes[0]:
             node_jobs.append(node.run_metaepoch())
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
-        Observable.merge(node_jobs) \
-            .to_blocking() \
-            .subscribe()
+        list(Observable.merge(node_jobs) \
+            .subscribe_on(NewThreadScheduler())
+            .do_action(on_next=lambda message: self._update_cost(message)) \
+            .to_blocking())
+
+    def _update_cost(self, message):
+        print("update cost")
+        self.cost += self.cost_modifiers[message.level] * message.epoch_cost
 
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
@@ -220,7 +223,7 @@ class HGS(Driver):
 
         return [blurred(f) for f in self.fitnesses]
 
-    class Node(DriverRx):
+    class Node:
         def __init__(self,
                      owner,
                      level,
@@ -229,6 +232,7 @@ class HGS(Driver):
             self.ripe = False
             self.owner = owner
             self.level = level
+            self.current_cost = 0
             self.driver = owner.driver(population=population,
                                        dims=owner.dims,
                                        fitnesses=owner.blurred_fitnesses(self.level),
@@ -240,6 +244,7 @@ class HGS(Driver):
                                        trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[
                                            self.level]),
                                        message_adapter_factory=owner.node_message_adapter_factory)
+
             self.population = []
             self.sprouts = []
             self.delegates = []
@@ -251,16 +256,22 @@ class HGS(Driver):
             self.old_hypervolume = float('-inf')
             self.hypervolume = float('-inf')
 
-        def _after_step(self, message):
-            self.owner.cost += self.owner.cost_modifiers[self.level] * message.cost
-
         def run_metaepoch(self) -> Observable:
             if self.alive:
                 epoch_job = StepsRun(self.owner.metaepoch_len)
                 return epoch_job.create_job(self.driver) \
-                    .do_action(on_next=lambda message: self._after_step(message)) \
+                    .map(lambda message : self.fill_node_info(message)) \
+                    .do_action(lambda message: self.update_current_cost(message)) \
                     .do_action(on_completed=lambda: self._after_metaepoch())
             return Observable.empty()
+
+        def fill_node_info(self, driver_message):
+            driver_message.level = self.level
+            driver_message.epoch_cost = driver_message.cost - self.current_cost
+            return driver_message
+
+        def update_current_cost(self, driver_message):
+            self.current_cost = driver_message.cost
 
         def _after_metaepoch(self):
             self.population = self.driver.finalized_population()

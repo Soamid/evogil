@@ -11,7 +11,7 @@ def init_listener():
 
     # console
     h = StreamHandler()
-    h.setLevel(logging.INFO)
+    h.setLevel(logging.DEBUG)
     f = logging.Formatter('%(asctime)s %(name)s %(levelname)s: %(message)s',
                           datefmt='%Y-%m-%d %H:%M:%S')
     h.setFormatter(f)
