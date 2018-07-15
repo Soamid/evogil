@@ -1,7 +1,7 @@
 import unittest
 
 from algorithms.base.drivergen import Driver, ProgressMessage
-from simulation.run_parallel import prepare
+from simulation.factory import prepare
 
 
 class DriverTest(unittest.TestCase):

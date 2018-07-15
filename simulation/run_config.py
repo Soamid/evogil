@@ -91,14 +91,9 @@ algo_base = {
     },
 }
 
-prob_base = {
-
-}
-
 cust_base = {
 
 }
-
 
 def init_alg___HGS(algo_config, problem_mod):
     reference_point = tuple(50.0
