@@ -7,17 +7,15 @@ import floatextras
 import numpy as np
 from rx import Observable
 from rx.concurrency import NewThreadScheduler
-from rx.subjects import Subject
 
-from algorithms.NSGAII.message import NSGAIIHGSMessageAdapter
 from algorithms.base import drivertools
-from algorithms.base.drivergen import DriverGen, ImgaProxy, DriverRx, DriverRxWrapper, StepsRun, Driver
+from algorithms.base.drivergen import ImgaProxy, StepsRun, ComplexDriver
 from algorithms.base.hv import HyperVolume
 
 EPSILON = np.finfo(float).eps
 
 
-class HGS(Driver):
+class HGS(ComplexDriver):
 
     def __init__(self,
                  population,
@@ -38,8 +36,9 @@ class HGS(Driver):
                  max_sprouts_no=20,
                  sproutiveness=1,
                  comparison_multipliers=(1.0, 0.1, 0.01),
-                 population_sizes=(64, 16, 4)):
-        super().__init__()
+                 population_sizes=(64, 16, 4),
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.driver = driver
 
@@ -70,7 +69,6 @@ class HGS(Driver):
         self.mantissa_bits = mantissa_bits
         self.global_fitness_archive = [ResultArchive() for _ in range(3)]
 
-        self.node_message_adapter_factory = NSGAIIHGSMessageAdapter  # TODO hardcoded NSGAII, change when new run_parallel is ready
         # TODO add preconditions checking if message adapter is HGS message adapter
 
         self.root = HGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
@@ -243,7 +241,7 @@ class HGS(Driver):
                                        fitness_archive=self.owner.global_fitness_archive[self.level],
                                        trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[
                                            self.level]),
-                                       message_adapter_factory=owner.node_message_adapter_factory)
+                                       message_adapter_factory=owner.driver_message_adapter_factory)
 
             self.population = []
             self.sprouts = []

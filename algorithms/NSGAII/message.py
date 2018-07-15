@@ -1,9 +1,9 @@
 from algorithms.HGS.message import HGSMessageAdapter
 from algorithms.IMGA.message import IMGAMessageAdapter
-from algorithms.base.model import PopulationMessage, SubPopulation
+from algorithms.base.model import SubPopulation
 
 
-class NSGAIIImgaMessageAdapter(IMGAMessageAdapter):
+class NSGAIIIMGAMessageAdapter(IMGAMessageAdapter):
 
     def get_population(self):
         return [x.v for x in self.driver.individuals]

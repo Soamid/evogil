@@ -113,25 +113,14 @@ def worker(args):
         random_seed = int(time.time() * 256 + os.getpid())  # that's not enough for MT, but will have to do for now.
     random.seed(random_seed)
 
-    drivers = algo.split('+')
-
     runres = RunResult(algo, problem, runid=runid, results_path=RESULTS_DIR)
 
     try:
-        final_driver, problem_mod = None, None
-        for driver_pos, driver in list(enumerate(drivers))[::-1]:
-            final_driver, problem_mod = factory.prepare(driver,
-                                                        problem,
-                                                        final_driver,
-                                                        drivers, driver_pos
-                                                        )
+        final_driver, problem_mod = factory.prepare(algo, problem)
 
         logger.debug("Creating the driver used to perform computation")
 
-        population = final_driver.keywords["population"] if "population" not in final_driver.keywords \
-            else gen_population(64, problem_mod.dims)
-
-        driver = final_driver(population=population)
+        driver = final_driver()
         total_cost, result = 0, None
 
         proc_time = []

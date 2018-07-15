@@ -39,7 +39,7 @@ problems = [
     'UF9'
 ]
 
-metaconfig_populationsize = 100
+DEFAULT_POPULATION_SIZE = 64
 metaconfig_budgets = list(range(500, 9500, 1000))
 
 

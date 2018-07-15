@@ -13,8 +13,7 @@ class ImgaTest(unittest.TestCase):
 
         for steps_no in steps:
             with self.subTest(steps_no=steps_no):
-                internal_driver, _ = prepare("NSGAII", "ZDT1")
-                final_driver, problem_mod = prepare("IMGA", "ZDT1", internal_driver)
+                final_driver, problem_mod = prepare("IMGA+NSGAII", "ZDT1")
                 print(final_driver())
 
                 imga = final_driver()
@@ -28,8 +27,7 @@ class ImgaTest(unittest.TestCase):
                 self.assertEqual(len(results), steps_no)
 
     def test_imga_cost_calculation(self):
-        internal_driver, _ = prepare("NSGAII", "ZDT1")
-        final_driver, problem_mod = prepare("IMGA", "ZDT1", internal_driver)
+        final_driver, problem_mod = prepare("IMGA+NSGAII", "ZDT1")
 
         imga = final_driver()
 

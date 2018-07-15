@@ -37,6 +37,12 @@ class Driver(object, metaclass=StepCountingDriver):
     def emit_next_proxy(self):
         return self.message_adapter.emit_proxy()
 
+class ComplexDriver(Driver):
+
+    def __init__(self, driver_message_adapter_factory, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.driver_message_adapter_factory = driver_message_adapter_factory
+
 
 class DriverGen(Driver):
     max_budget = None

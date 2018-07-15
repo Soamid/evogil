@@ -1,11 +1,11 @@
+import logging
 from contextlib import suppress
 from functools import partial
 from importlib import import_module
 from itertools import product
 from typing import List, Dict
 
-from pip._internal.utils import logging
-
+from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf
 from simulation import run_config
 from simulation.run_config import NotViableConfiguration
@@ -47,7 +47,6 @@ def create_simulation(args):
         for run_id in range(int(args['-N']))
     ]
 
-
 def parse_problems(args):
     problems = []
     if args['--problem']:
@@ -82,7 +81,15 @@ def parse_budgets(args):
     return sorted([int(budget) for budget in args['<budget>'].split(',')])
 
 
-def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
+def prepare(algo: str, problem: str):
+    drivers = algo.split('+')
+    final_driver, problem_mod = None, None
+    for driver_pos, driver in list(enumerate(drivers))[::-1]:
+        final_driver, problem_mod = prepare_with_driver(driver, problem, final_driver, drivers, driver_pos)
+    return final_driver, problem_mod
+
+
+def prepare_with_driver(algo: str, problem: str, driver=None, all_drivers: List[str] = None, driver_pos: int = 0):
     logger.debug("Starting preparation")
 
     if not all_drivers:
@@ -98,7 +105,6 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
 
         config = {}
 
-        load_meta_config(config)
         load_obligatory_problem_parameters(config, problem_mod)
 
         if driver:
@@ -109,86 +115,20 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
             logger.debug("config: %s", show_conf(config))
 
             message_adapter_factory = prepare_message_adapter_class(algo, all_drivers, driver_pos)
-            config.update({"message_adapter_factory": message_adapter_factory})
+            config.update({"driver_message_adapter_factory": message_adapter_factory})
 
         load_algorithm_config(algo, config)
-
-        ################################################################################
-        # ALGORITHM + SUBDRIVERS CONFIG
-        #
-        # example key: (SPEA2, ()          )
-        # example key: (HGS,   (SPEA2)     )
-        # example key: (IMGA,  (HGS, SPEA2))
         load_algorithm_with_subdrivers_config(algo, all_drivers, driver_pos, config)
 
-        ################################################################################
-        # ALGORITHM + PROBLEM CONFIG
-        #
-        # example key: (SPEA2, ackley)
-        # example key: (SPEA2, zdt1)
-        # example key: (HGS, ackley)
-        # example key: (HGS, zdt1)
-        # example key: (IMGA, ackley)
-        # example key: (IMGA, zdt1)
         load_problem_config(algo, problem, config)
-
-        ################################################################################
-        # ALGORITHM WITH SUBDRIVERS + PROBLEM CONFIG
-        #
-        # example key: (HGS, SPEA2,           ackley)
-        # example key: (IMGA, HGS, SPEA2,           ackley)
-        # example key: (IMGA, HGS, SPEA2,           zdt1)
         load_problem_config(algo, problem, config, all_drivers, driver_pos)
 
-        ################################################################################
-        # CUSTOM INITIALIZATION FOR ALGORITHM
-        #
-        # example fun: init_alg___SPEA2
-        # example fun: init_alg___HGS
-        # example fun: init_alg___IMGA
         custom_init(algo, problem_mod, config)
-
-        ################################################################################
-        # CUSTOM INITIALIZATION FOR ALGORITHM WITH SUBDRIVERS
-        #
-        # example fun: init_alg___HGS__SPEA2
-        # example fun: init_alg___IMGA__HGS_SPEA2
         custom_init(algo, problem_mod, config, all_drivers, driver_pos)
-
-        ################################################################################
-        # CUSTOM INITIALIZATION FOR ALGORITHM AND PROBLEM
-        #
-        # example fun: init_alg___SPEA2____ackley
-        # example fun: init_alg___HGS____zdt1
         custom_init(algo, problem_mod, config, problem=problem)
-
-        ################################################################################
-        # CUSTOM INITIALIZATION FOR ALGORITHM WITH SUBDRIVERS AND PROBLEM
-        #
-        # example fun: init_cust___SPEA2____ackley  # configure SPEA2 for ackley
-        # example fun: init_cust___SPEA2____zdt1
-        # example fun: init_cust_IMGA_HGS___SPEA2____ackley  # configure SPEA2 for ackley when under IMGA+HGS
-        # example fun: init_cust_IMGA_HGS___SPEA2____zdt1
-        # example fun: init_cust_IMGA___HGS__SPEA2____ackley  # configure HGS for ackley when under IMGA w/ SPEA2 driver
-        # example fun: init_cust_IMGA___HGS__SPEA2____zdt1
-        # example fun: init_cust___IMGA__HGS_SPEA2____ackley  # configure IMGA for ackley w/ HGS+SPEA2 driver
-        # example fun: init_cust___IMGA__HGS_SPEA2____zdt1
         custom_init(algo, problem_mod, config, all_drivers, driver_pos, problem)
 
-        ################################################################################
-        # DROPPING TRASH
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("dropping trash from config: %s",
-                         {k: v
-                          for k, v
-                          in config.items()
-                          if k.startswith('__metaconfig__')
-                          })
-        config = {k: v
-                  for k, v
-                  in config.items()
-                  if not k.startswith('__metaconfig__')
-                  }
+        load_init_population(problem_mod, config)
 
         try:
             algo_class(**config)
@@ -227,7 +167,28 @@ def prepare(algo, problem, driver=None, all_drivers=None, driver_pos=0):
         raise e
 
 
-def custom_init(algo, problem_mod, config, all_drivers=None, driver_pos=None, problem=None):
+def load_init_population(problem_mod, config: Dict[str, str]):
+    if 'population' not in config:
+        config.update({'population': gen_population(run_config.DEFAULT_POPULATION_SIZE, problem_mod.dims)})
+
+
+def custom_init(algo: str, problem_mod: str, config: Dict[str, str], all_drivers: List[str] = None,
+                driver_pos: int = None, problem: str = None):
+    """
+    Custom initialization functions for algorithm (and optional sub-drivers or problems)
+        example fun: init_alg___SPEA2
+        example fun: init_alg___HGS
+        example fun: init_alg___IMGA
+
+        example fun: init_alg___HGS__SPEA2
+        example fun: init_alg___IMGA__HGS_SPEA2
+
+        example fun: init_alg___SPEA2____ackley
+        example fun: init_alg___HGS____zdt1
+
+        example fun: init_alg___HGS__SPEA2____ackley
+        example fun: init_alg___IMGA__HGS_SPEA2____zdt1
+    """
     with suppress(AttributeError):
         key = "init_alg___" + algo
         if all_drivers:
@@ -245,7 +206,21 @@ def custom_init(algo, problem_mod, config, all_drivers=None, driver_pos=None, pr
         logger.debug("config: %s", show_conf(config))
 
 
-def load_problem_config(algo, problem, config, all_drivers=None, driver_pos=0):
+def load_problem_config(algo: str, problem: str, config: Dict[str, str], all_drivers: List[str] = None,
+                        driver_pos: int = 0):
+    """
+    Algorithm (with optional sub-drivers) + problem config
+        example key: (SPEA2, ackley)
+        example key: (SPEA2, zdt1)
+        example key: (HGS, ackley)
+        example key: (HGS, zdt1)
+        example key: (IMGA, ackley)
+        example key: (IMGA, zdt1)
+        example key: (HGS, SPEA2,           ackley)
+
+        example key: (IMGA, HGS, SPEA2,           ackley)
+        example key: (IMGA, HGS, SPEA2,           zdt1)
+    """
     all_drivers = [] if all_drivers is None else all_drivers
     with suppress(KeyError):
         key = (algo,
@@ -261,7 +236,13 @@ def load_problem_config(algo, problem, config, all_drivers=None, driver_pos=0):
         logger.debug("config: %s", show_conf(config))
 
 
-def load_algorithm_with_subdrivers_config(algo, all_drivers, driver_pos, config):
+def load_algorithm_with_subdrivers_config(algo: str, all_drivers: List[str], driver_pos: int, config: Dict[str, str]):
+    """
+    Algorithm + sub-drivers config
+        example key: (SPEA2, ()          )
+        example key: (HGS,   (SPEA2)     )
+        example key: (IMGA,  (HGS, SPEA2))
+    """
     with suppress(KeyError):
         key = (algo,
                tuple(all_drivers[driver_pos + 1:])
@@ -292,26 +273,20 @@ def load_algorithm_config(algo: str, config: Dict[str, str]):
         logger.debug("config: %s", show_conf(config))
 
 
-def load_obligatory_problem_parameters(config, problem_mod):
+def load_obligatory_problem_parameters(config: Dict[str, str], problem_mod):
     update = {"dims": problem_mod.dims, "fitnesses": problem_mod.fitnesses}
     logger.debug("Per-problem config: %s", update)
     config.update(update)
     logger.debug("config: %s", show_conf(config))
 
 
-def load_meta_config(config):
-    logger.debug("Starting with config containing meta-parameters")
-    config.update({"__metaconfig__populationsize": run_config.metaconfig_populationsize})
-    logger.debug("config: %s", show_conf(config))
-
-
-def prepare_problem_class(problem):
+def prepare_problem_class(problem: str):
     problem_mod = '.'.join(['problems', problem, 'problem'])
     problem_mod = import_module(problem_mod)
     return problem_mod
 
 
-def prepare_algorithm_class(algo):
+def prepare_algorithm_class(algo: str):
     algo_mod = '.'.join(['algorithms', algo, algo])
     algo_mod = import_module(algo_mod)
     algo_class = getattr(algo_mod, algo)
@@ -321,7 +296,11 @@ def prepare_algorithm_class(algo):
 def prepare_message_adapter_class(algo: str, all_drivers: List[str], driver_pos: int):
     driver_algo = all_drivers[driver_pos + 1]
     try:
-        message_mod = import_module("algorithms.{}.message".format(driver_algo))
-        return getattr(message_mod, "{}{}MessageAdapter".format(algo, driver_algo))
+        message_mod_name = "algorithms.{}.message".format(driver_algo)
+        adapter_class_name = "{}{}MessageAdapter".format(driver_algo, algo)
+
+        logger.debug("Searching for message adapter in... {}.{}", message_mod_name, adapter_class_name)
+        message_mod = import_module(message_mod_name)
+        return getattr(message_mod, adapter_class_name)
     except:
         raise NotViableConfiguration()

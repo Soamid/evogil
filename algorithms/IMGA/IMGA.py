@@ -6,13 +6,12 @@ from rx import Observable
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.NSGAII.message import NSGAIIImgaMessageAdapter
-from algorithms.base.drivergen import DriverGen, ImgaProxy, Driver, StepsRun
+from algorithms.base.drivergen import DriverGen, ImgaProxy, StepsRun, ComplexDriver
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
 
 
-class IMGA(Driver):
+class IMGA(ComplexDriver):
     def __init__(self,
                  population,
                  dims,
@@ -25,8 +24,9 @@ class IMGA(Driver):
                  crossover_eta,
                  mutation_rate,
                  crossover_rate,
-                 topology=TorusTopology(4)):
-        super().__init__()
+                 topology=TorusTopology(4),
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fitnesses = fitnesses
         self.dims = dims
         self.mutation_eta = mutation_eta
@@ -40,8 +40,6 @@ class IMGA(Driver):
         self.topology = topology.create(islands_number)
         self.driver = driver
         self.total_cost = 0
-
-        self.island_message_adapter_factory = NSGAIIImgaMessageAdapter  # TODO hardcoded NSGAII, change when new run_parallel is ready
 
         self.islands = self.create_islands(population)
         self.epoch_no = 0
@@ -136,7 +134,7 @@ class IMGA(Driver):
                                        mutation_eta=outer.mutation_eta,
                                        crossover_rate=outer.crossover_rate,
                                        crossover_eta=outer.crossover_eta,
-                                       message_adapter_factory=outer.island_message_adapter_factory
+                                       message_adapter_factory=outer.driver_message_adapter_factory
                                        )
             if isinstance(self.driver, DriverGen):
                 self.driver_gen = self.driver.population_generator()
