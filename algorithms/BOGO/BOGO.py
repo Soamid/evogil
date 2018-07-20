@@ -9,32 +9,16 @@ class Individual:
         self.v = vector
         self.fit = [f(self.v) for f in fitnesses]
 
-
-class BOGOImgaProxy(ImgaProxy):
-    def __init__(self, driver, cost, archive):
-        super().__init__(driver, cost)
-        self.archive = archive
-
-    def finalized_population(self):
-        return [x.v for x in self.archive]
-
-    def current_population(self):
-        return [x.v for x in self.archive]
-
-    def deport_emigrants(self, immigrants):
-        pass
-
-    def assimilate_immigrants(self, emigrants):
-        pass
-
-
 class BOGO(Driver):
     def __init__(self,
                  population,
                  dims,
                  fitnesses,
                  mutation_variance,
-                 crossover_variance):
+                 crossover_variance,
+                 *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
         self.archive = []
         self.fitnesses = fitnesses
         self.dims = dims
@@ -61,12 +45,8 @@ class BOGO(Driver):
         return [x.v for x in self.archive]
 
     def step(self):
-        self.next_step()
-        print("cost", self.cost, "archive", len(self.archive))
-        return self.emit_next_proxy()
-
-    def next_step(self):
         vector = [random.uniform(a, b) for (a, b) in self.dims]
         self.cost += 1
         ind = Individual(vector, self.fitnesses)
         self.refresh_archive(ind)
+        print("cost", self.cost, "archive", len(self.archive))

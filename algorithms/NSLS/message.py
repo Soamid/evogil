@@ -3,11 +3,9 @@ from algorithms.IMGA.message import IMGAMessageAdapter, DefaultIMGAMessageAdapte
 from algorithms.base.model import SubPopulation
 
 
-def NSGAIIIMGAMessageAdapter(driver):
+def NSLSIMGAMessageAdapter(driver):
     return DefaultIMGAMessageAdapter(driver)
 
 
-class NSGAIIHGSMessageAdapter(DefaultHGSMessageAdapter):
-    def nominate_delegates(self):
-        self.driver.finish()
-        return super().nominate_delegates()
+def NSLSHGSMessageAdapter(driver):
+    return DefaultHGSMessageAdapter(driver)

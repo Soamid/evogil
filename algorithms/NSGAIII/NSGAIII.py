@@ -1,11 +1,11 @@
-import collections
 import math
 import random
 
+import collections
 import numpy
 import numpy.linalg
 
-from algorithms.base.drivergen import ImgaProxy, Driver
+from algorithms.base.drivergen import Driver
 
 EPSILON = numpy.finfo(float).eps
 
@@ -13,36 +13,6 @@ import matplotlib.pyplot as plt
 
 
 class NSGAIII(Driver):
-    class NSGAIIIImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, fronts, individuals):
-            super().__init__(driver, cost)
-            self.individuals = individuals
-            self.fronts = fronts
-
-        def finalized_population(self):
-            return [x.v for x in self.individuals]
-
-        def current_population(self):
-            return [x.v for x in self.individuals]
-
-        def deport_emigrants(self, immigrants):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self.individuals:
-                if p.v in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p.v)
-
-            for p in to_remove:
-                self.individuals.remove(p)
-            return to_remove
-
-        def assimilate_immigrants(self, emigrants):
-            self.individuals.extend(emigrants)
-
-        def nominate_delegates(self):
-            return [x.v for x in self.fronts[1]]
 
     def __init__(self,
                  population,
@@ -54,8 +24,9 @@ class NSGAIII(Driver):
                  crossover_rate=0.9,
                  theta=5,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
-        super().__init__()
+                 fitness_archive=None,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.fitness_archive = fitness_archive
         self.theta = theta
@@ -92,6 +63,7 @@ class NSGAIII(Driver):
         # plt.show()
 
         self.clusters = [[] for _ in self.reference_points]
+        self.front = []
 
     def generate_reference_points(self):
         return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
@@ -132,10 +104,6 @@ class NSGAIII(Driver):
         return [x.v for x in self.individuals]
 
     def step(self):
-        fronts = self.next_step()
-        return self.emit_next_proxy()
-
-    def next_step(self):
         offspring_inds = self.make_offspring_individuals()
         for ind in offspring_inds:
             ind.v = self.trim_function(ind.v)
@@ -224,7 +192,7 @@ class NSGAIII(Driver):
         # plt.show()
 
         self.create_final_population(fronts)
-        return fronts
+        self.front = fronts
 
     def make_offspring_individuals(self):
         offspring_inds = []

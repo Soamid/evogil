@@ -26,40 +26,6 @@ def dominates(x, y):
 
 
 class NSGAII(Driver):
-    class NSGAIIImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, individuals):
-            super().__init__(driver, cost)
-            self.individuals = individuals
-
-        def finalized_population(self):
-            return self.driver.finish()
-
-        def current_population(self):
-            return [x.v for x in self.individuals]
-
-        def deport_emigrants(self, immigrants, remove=True):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self.individuals:
-                if p.v in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p.v)
-
-            if remove:
-                for p in to_remove:
-                    self.individuals.remove(p)
-                return to_remove
-            else:
-                return [NSGAII.Individual([vec for vec in x.v]) for x in to_remove]
-
-        def assimilate_immigrants(self, emigrants):
-            self.individuals.extend(emigrants)
-
-        def nominate_delegates(self):
-            self.driver.finish()
-            return [x.v for x in self.driver.front[1]]
-
     def __init__(self,
                  population,
                  dims,
@@ -110,10 +76,6 @@ class NSGAII(Driver):
         self.population_size = len(self.individuals)
         self.mating_size = int(self.mating_size_c * self.population_size)
 
-    def step(self):
-        self._next_step()
-        return self.emit_next_proxy()
-
     def finish(self):
         self._calculate_objectives()
         self._nd_sort()
@@ -121,7 +83,7 @@ class NSGAII(Driver):
         self._environmental_selection()
         return [x.v for x in self.individuals]
 
-    def _next_step(self):
+    def step(self):
         self._nd_sort()
         self._crowding()
         self._environmental_selection()

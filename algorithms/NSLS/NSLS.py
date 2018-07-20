@@ -1,43 +1,13 @@
-import collections
 import random
 
+import collections
 from scipy.spatial import distance
 
 from algorithms.NSGAII import NSGAII
-from algorithms.base.drivergen import DriverGen, ImgaProxy, Driver
+from algorithms.base.drivergen import Driver
 
 
 class NSLS(Driver):
-    class NSLSImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, fronts, individuals):
-            super().__init__(driver, cost)
-            self.individuals = individuals
-            self.fronts = fronts
-
-        def finalized_population(self):
-            return [x.v for x in self.individuals]
-
-        def current_population(self):
-            return [x.v for x in self.individuals]
-
-        def deport_emigrants(self, immigrants):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self.individuals:
-                if p.v in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p.v)
-
-            for p in to_remove:
-                self.individuals.remove(p)
-            return to_remove
-
-        def assimilate_immigrants(self, emigrants):
-            self.individuals.extend(emigrants)
-
-        def nominate_delegates(self):
-            return [x.v for x in self.fronts[1]]
 
     def __init__(self,
                  population,
@@ -50,8 +20,9 @@ class NSLS(Driver):
                  trim_function=lambda x: x,
                  fitness_archive=None,
                  local_search_mu=0.5,
-                 local_search_sigma=0.5):
-        super().__init__()
+                 local_search_sigma=0.5,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.trim_function = trim_function
         self.fitness_archive = fitness_archive
@@ -87,10 +58,6 @@ class NSLS(Driver):
     def finalized_population(self):
         return [x.v for x in self.individuals]
 
-    def step(self):
-        self.next_step()
-        return self.emit_next_proxy()
-
     def calculate_objectives(self, individuals):
         for ind in individuals:
             if ind.objectives is None:
@@ -103,7 +70,7 @@ class NSLS(Driver):
                         self.fitness_archive[ind.v] = fitnesses
                 ind.objectives = {objective: fitness for objective, fitness in zip(self.objectives, fitnesses)}
 
-    def next_step(self):
+    def step(self):
         self.calculate_objectives(self.individuals)
         self.local_search()
         self.nd_sort()

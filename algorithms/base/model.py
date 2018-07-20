@@ -30,7 +30,7 @@ class MessageAdapter:
     def __init__(self, driver: 'Driver'):
         self.driver = driver
 
-    def emit_proxy(self):
+    def emit_result(self):
         raise NotImplementedError
 
 
@@ -39,14 +39,14 @@ class ProgressMessageAdapter(MessageAdapter):
     def __init__(self, driver: 'Driver'):
         super().__init__(driver)
 
-    def emit_proxy(self):
+    def emit_result(self):
         return ProgressMessage(self.driver.step_no, self.driver.cost)
 
 
 class PopulationMessageAdapter(ProgressMessageAdapter):
 
-    def emit_proxy(self) -> PopulationMessage:
-        return PopulationMessage(self.get_population(), super().emit_proxy())
+    def emit_result(self) -> PopulationMessage:
+        return PopulationMessage(self.get_population(), super().emit_result())
 
     def get_population(self):
         raise NotImplementedError

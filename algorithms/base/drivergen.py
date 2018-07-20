@@ -1,5 +1,3 @@
-
-
 import rx
 from rx import Observable, Observer
 from rx.subjects import Subject
@@ -9,7 +7,7 @@ from algorithms.base.model import ProgressMessageAdapter, ProgressMessage
 
 class StepCountingDriver(type):
     def __init__(cls, name, bases, clsdict):
-        step_function = 'step'
+        step_function = 'next_step'
         if step_function in clsdict:
             def counting_step(self):
                 proxy = clsdict[step_function](self)
@@ -31,11 +29,13 @@ class Driver(object, metaclass=StepCountingDriver):
     def finalized_population(self):
         raise NotImplementedError
 
-    def step(self) -> ProgressMessage:
+    def next_step(self) -> ProgressMessage:
+        self.step()
+        return self.message_adapter.emit_result()
+
+    def step(self):
         raise NotImplementedError
 
-    def emit_next_proxy(self):
-        return self.message_adapter.emit_proxy()
 
 class ComplexDriver(Driver):
 
@@ -82,7 +82,7 @@ class BudgetRun(DriverRun):
 
     def _start(self, driver: Driver, observer: Observer):
         while driver.cost < self.budget:
-            observer.on_next(driver.step())
+            observer.on_next(driver.next_step())
         observer.on_completed()
 
 
@@ -92,28 +92,12 @@ class StepsRun(DriverRun):
 
     def create_job(self, driver: Driver):
         return Observable.range(0, self.steps) \
-            .map(lambda _: driver.step())
+            .map(lambda _: driver.next_step())
 
 
 class DriverRx(Driver):
     def steps(self) -> rx.Observable:
         raise NotImplementedError
-
-
-class DriverRxWrapper(DriverRx):
-
-    def __init__(self, driver: Driver):
-        super().__init__()
-        self.driver = driver
-        self.stream = Subject()
-
-    def step(self):
-        proxy = self.driver.step()
-        self.stream.on_next(proxy)
-        return proxy
-
-    def steps(self) -> rx.Observable:
-        return self.stream
 
 
 class ImgaProxy(ProgressMessage):

@@ -1,8 +1,9 @@
-import collections
 import logging
 import random
 
-from algorithms.base.drivergen import ImgaProxy, Driver
+import collections
+
+from algorithms.base.drivergen import Driver
 from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils
@@ -20,8 +21,9 @@ class SMSEMOA(Driver):
                  reference_point,
                  epoch_length_multiplier=0.5,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
-        super().__init__()
+                 fitness_archive=None,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fitnesses = fitnesses
         self.dims = dims
         self.mutation_eta = mutation_eta
@@ -31,63 +33,30 @@ class SMSEMOA(Driver):
 
         self.trim_function = trim_function
         self.population = [self.trim_function(x) for x in population]
-        self.epoch_length = int(len(self.__population) * epoch_length_multiplier)
+        self.epoch_length = int(len(self.individuals) * epoch_length_multiplier)
         self.reference_point = reference_point
 
         self.fitness_archive = fitness_archive
 
         self.logger = logging.getLogger(__name__)
-        self.cost = self.calculate_objectives(self.__population)
-
-    class SMSEMOAImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, population):
-            super().__init__(driver, cost)
-            self.population = population
-
-        def finalized_population(self):
-            return [x.value for x in self.population]
-
-        def current_population(self):
-            return self.finalized_population()
-
-        def deport_emigrants(self, immigrants):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self.population:
-                if p.value in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p.value)
-
-            for p in to_remove:
-                self.population.remove(p)
-            return to_remove
-
-        def assimilate_immigrants(self, emigrants):
-            for e in emigrants:
-                self.population.append(e)
-
-        def nominate_delegates(self):
-            return [i.value for i in nd_sort(self.population)[1]]
+        self.cost = self.calculate_objectives(self.individuals)
 
     @property
     def population(self):
-        return [x.value for x in self.__population]
+        return [x.value for x in self.individuals]
 
     @population.setter
     def population(self, pop):
-        self.__population = [Individual(x) for x in pop]
+        self.individuals = [Individual(x) for x in pop]
 
     def finalized_population(self):
-        return [x.value for x in self.population]
+        return [x.value for x in self.individuals]
 
     def step(self):
         for _ in range(self.epoch_length):
-            new_indiv = self.generate(self.__population)
+            new_indiv = self.generate(self.individuals)
             self.cost += self.calculate_objectives([new_indiv])
-            self.__population = self.reduce_population(self.__population + [new_indiv])
-
-        return self.emit_next_proxy()
+            self.individuals = self.reduce_population(self.individuals + [new_indiv])
 
     def calculate_objectives(self, pop):
         objectives_cost = 0

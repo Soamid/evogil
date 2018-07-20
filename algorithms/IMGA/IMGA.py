@@ -90,7 +90,6 @@ class IMGA(ComplexDriver):
             .to_blocking())
         self.migration()
         self.update_cost(results[-1])
-        return self.emit_next_proxy()
 
     def update_cost(self, results):
         self.cost = sum(result.cost for result in results)

@@ -16,7 +16,9 @@ class JGBL(NSGAII):
                  jumping_rate,
                  jumping_percentage,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
+                 fitness_archive=None,
+                 *args,
+                 **kwargs):
         super().__init__(population,
                          dims,
                          fitnesses,
@@ -24,13 +26,14 @@ class JGBL(NSGAII):
                          mutation_eta,
                          crossover_eta,
                          mutation_rate,
-                         crossover_rate, trim_function, fitness_archive)
+                         crossover_rate, trim_function, fitness_archive,
+                         *args, **kwargs)
         self.jumping_rate = jumping_rate
         self.jumping_percentage = jumping_percentage
 
-    def _next_step(self):
+    def step(self):
         old_pop = list(self.individuals)
-        super()._next_step()
+        super().step()
         new_pop = list(self.individuals)
 
         self.individuals = set(old_pop + new_pop)

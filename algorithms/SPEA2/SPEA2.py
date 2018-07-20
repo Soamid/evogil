@@ -13,38 +13,6 @@ from evotools import ea_utils
 from metrics.metrics_utils import euclid_distance
 
 
-class SPEA2ImgaProxy(ImgaProxy):
-
-    def __init__(self, driver, archive, population, cost):
-        super().__init__(driver, cost)
-        self._archive = archive
-        self._population = population
-
-    def current_population(self):
-        return [x['value'] for x in self._population]
-
-    def finalized_population(self):
-        return [x['value'] for x in self._archive]
-
-    def deport_emigrants(self, immigrants):
-        immigrants_cp = list(immigrants)
-        to_remove = []
-
-        for p in self._population:
-            if p['value'] in immigrants_cp:
-                to_remove.append(p)
-                immigrants_cp.remove(p['value'])
-
-        for p in to_remove:
-            self._population.remove(p)
-        return to_remove
-
-    def assimilate_immigrants(self, emigrants):
-        self._population.extend(emigrants)
-
-    def nominate_delegates(self):
-        return self.finalized_population()
-
 class SPEA2(Driver):
     class Tournament:
         def __init__(self):
@@ -63,8 +31,9 @@ class SPEA2(Driver):
                  crossover_eta,
                  crossover_rate,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
-        super().__init__()
+                 fitness_archive=None,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.fitnesses = fitnesses
         self.dims = dims
@@ -76,41 +45,39 @@ class SPEA2(Driver):
         self.population = [self.trim_function(x) for x in population]
 
         self.__archive_size = len(population)
-        self.__archive = []
+        self.archive = []
         self.select = SPEA2.Tournament()
 
         self.fitness_archive = fitness_archive
 
     @property
     def population(self):
-        return [x['value'] for x in self.__population]
+        return [x['value'] for x in self.individuals]
 
     @population.setter
     def population(self, pop):
-        self.__population = [{'value': x} for x in pop]
+        self.individuals = [{'value': x} for x in pop]
 
     def finalized_population(self):
-        return [x['value'] for x in self._archive]
+        return [x['value'] for x in self.archive]
 
     def finish(self):
-        return [x['value'] for x in self.__archive]
+        return [x['value'] for x in self.archive]
 
     def step(self):
-        self.cost += self.calculate_fitnesses(self.__population, self.__archive)
-        self.__archive = self.environmental_selection(self.__population, self.__archive)
+        self.cost += self.calculate_fitnesses(self.individuals, self.archive)
+        self.archive = self.environmental_selection(self.individuals, self.archive)
 
         self.population = [self.trim_function(mutate(
-            crossover(self.select(self.__archive),
-                      self.select(self.__archive),
+            crossover(self.select(self.archive),
+                      self.select(self.archive),
                       self.dims,
                       self.crossover_rate,
                       self.crossover_eta),
             self.dims,
             self.mutation_rate,
             self.mutation_eta))
-            for _ in self.__population]
-
-        return self.emit_next_proxy()
+            for _ in self.individuals]
 
     def calculate_fitnesses(self, population, archive):
         objectives_cost = self.calculate_objectives(population)

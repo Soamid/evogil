@@ -1,5 +1,8 @@
 import unittest
 
+import rx
+from rx.concurrency import NewThreadScheduler
+
 from algorithms.base.drivergen import StepsRun
 from simulation.factory import prepare
 
@@ -20,7 +23,7 @@ class HGSTest(unittest.TestCase):
 
                 results = []
                 steps_run.create_job(hgs)\
-                    .subscribe(lambda proxy: results.append(proxy))
+                    .subscribe(lambda result: results.append(result))
 
                 self.assertEqual(len(results), steps_no)
 
