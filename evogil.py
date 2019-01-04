@@ -64,6 +64,9 @@ Options:
         [default: 1]
   --renice <increment>
         Renice workers. Works on UNIX & derivatives.
+  -d <results_dir>, --dir <results_dir>
+        Directory where simulation results will be stored. If not specified, serialization.RESULTS_DIR is set.
+
 
 Pictures Summary Options:
   --selected <algo_name>

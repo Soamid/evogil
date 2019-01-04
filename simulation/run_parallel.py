@@ -33,8 +33,9 @@ def run_parallel(args, queue):
         wall_time = []
         start_time = datetime.now()
         results = []
+        logger.debug("cases: %s", simulation_cases)
         with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
-            for i, subres in enumerate(p.imap(worker, simulation_cases, chunksize=1)):
+            for i, subres in enumerate(p.map(worker, simulation_cases, chunksize=1)):
                 results.append(subres)
 
                 current_time = datetime.now()
@@ -57,8 +58,8 @@ def run_parallel(args, queue):
                      for subres
                      in results
                      if subres is not None)
-    errors = [(test, budgets, runid)
-              for comp_result, (test, budgets, runid, renice)
+    errors = [(simulation.config, simulation.budgets, simulation.run_id)
+              for comp_result, simulation
               in zip(results, simulation_cases)
               if comp_result is None
               ]
@@ -77,9 +78,9 @@ def run_parallel(args, queue):
                          ','.join(str(x) for x in budgets))
 
     summary = collections.defaultdict(float)
-    for (bench, _, _, _), subres in zip(simulation_cases, results):
+    for simulation, subres in zip(simulation_cases, results):
         if subres:
-            summary[bench] += subres[1]
+            summary[simulation.config] += subres[1]
 
     if logger.isEnabledFor(logging.INFO):
         logger.info("Running time:")
@@ -93,15 +94,14 @@ def run_parallel(args, queue):
             logger.info("  prob:{prob_show:16} algo:{alg_show:16}) time:{avg_time:>8.3f}s".format(**locals()))
 
 
-def worker(args):
+def worker(simulation):
     logger = logging.getLogger(__name__)
 
-    logger.debug("Starting the worker. args:%s", args)
-    (problem, algo), budgets, runid, renice = args
+    logger.debug("Starting the worker. simulation case:%s", simulation)
 
-    if renice:
-        logger.debug("Renice the process PID:%s by %s", os.getpid(), renice)
-        os.nice(int(renice))
+    if simulation.renice:
+        logger.debug("Renice the process PID:%s by %s", os.getpid(), simulation)
+        os.nice(int(simulation.renice))
 
     logger.debug("Getting random seed")
     # basically we duplicate the code of https://github.com/python/cpython/blob/master/Lib/random.py#L111 because
@@ -113,10 +113,11 @@ def worker(args):
         random_seed = int(time.time() * 256 + os.getpid())  # that's not enough for MT, but will have to do for now.
     random.seed(random_seed)
 
-    runres = RunResult(algo, problem, runid=runid, results_path=RESULTS_DIR)
+    runres = RunResult(simulation.algorithm_name, simulation.problem_name, runid=simulation.run_id,
+                       results_path=simulation.results_dir)
 
     try:
-        final_driver, problem_mod = factory.prepare(algo, problem)
+        final_driver, problem_mod = factory.prepare(simulation.algorithm_name, simulation.problem_name)
 
         logger.debug("Creating the driver used to perform computation")
 
@@ -126,7 +127,7 @@ def worker(args):
         proc_time = []
         results = []
 
-        logger.debug("Beginning processing of %s, args: %s", driver, args)
+        logger.debug("Beginning processing of %s, simulation: %s", driver, simulation)
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
             if isinstance(driver, Driver):
                 def process_results(budget: int):
@@ -135,9 +136,9 @@ def worker(args):
                     runres.store(budget, driver.cost, finalpop, finalpop_fit)
                     results.append((driver.cost, finalpop))
 
-                driver.max_budget = budgets[-1]
+                driver.max_budget = simulation.budgets[-1]
 
-                for budget in budgets:
+                for budget in simulation.budgets:
                     budget_run = BudgetRun(budget)
                     budget_run.create_job(driver) \
                         .do_action(on_completed=lambda: process_results(budget)) \
@@ -153,11 +154,12 @@ def worker(args):
 
     except NotViableConfiguration as e:
         reason = inspect.trace()[-1]
-        logger.info("Configuartion disabled by %s:%d:%s. args:%s", reason[1], reason[2], reason[3], args)
+        logger.info("Configuartion disabled by %s:%d:%s. simulation case:%s", reason[1], reason[2], reason[3],
+                    simulation)
         logger.debug("Configuration disabled args:%s. Stack:", exc_info=e)
 
     except Exception as e:
         logger.exception("Some error", exc_info=e)
 
     finally:
-        logger.debug("Finished processing. args:%s", args)
+        logger.debug("Finished processing. simulation case:%s", simulation)

@@ -7,19 +7,31 @@ from typing import List, Dict
 
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf
-from simulation import run_config
+from simulation import run_config, serialization
 from simulation.run_config import NotViableConfiguration
 
 logger = logging.getLogger(__name__)
 
 
 class SimulationCase:
-    def __init__(self, problem_name: str, algorithm_name: str, budgets: List[int], run_id: int, renice: str):
+    def __init__(self, problem_name: str, algorithm_name: str, budgets: List[int], run_id: int, renice: str,
+                 results_dir: str):
         self.problem_name = problem_name
         self.algorithm_name = algorithm_name
         self.budgets = budgets
         self.run_id = run_id
         self.renice = renice
+        self.results_dir = results_dir
+
+    @property
+    def config(self):
+        return self.problem_name, self.algorithm_name
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return 'Simulation:' + str(vars(self))
 
 
 def create_simulation(args):
@@ -42,10 +54,12 @@ def create_simulation(args):
 
     logger.debug("Duplicating problems (-N flag)")
     return [
-        SimulationCase(simulation_case[0], simulation_case[1], budgets, run_id, args["--renice"])
+        SimulationCase(simulation_case[0], simulation_case[1], budgets, run_id, args["--renice"],
+                       resolve_results_dir(args))
         for simulation_case in order
         for run_id in range(int(args['-N']))
     ]
+
 
 def parse_problems(args):
     problems = []
@@ -304,3 +318,7 @@ def prepare_message_adapter_class(algo: str, all_drivers: List[str], driver_pos:
         return getattr(message_mod, adapter_class_name)
     except:
         raise NotViableConfiguration()
+
+
+def resolve_results_dir(args):
+    return args["--dir"] or serialization.RESULTS_DIR

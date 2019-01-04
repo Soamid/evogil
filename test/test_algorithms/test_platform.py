@@ -1,10 +1,15 @@
+import glob
+import os
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.base.drivergen import StepsRun
 from algorithms.base.model import ProgressMessage
-from simulation import run_config
+from simulation import run_config, serialization
 from simulation.factory import prepare
 
 
@@ -21,3 +26,15 @@ class DriverTest(unittest.TestCase):
                 result = list(simple_simulation.create_job(algorithm).subscribe_on(NewThreadScheduler()).to_blocking())
                 self.assertEqual(1, len(result))
                 self.assertIsInstance(result[0], ProgressMessage)
+
+    def test_smoke(self):
+        with(tempfile.TemporaryDirectory(prefix='evogil_smoke_')) as temp_dir:
+            python = sys.executable
+            os.system(f'{python} evogil.py run 50,100 -a NSGAII -p zdt1 -d {temp_dir}')
+
+            results = list(glob.glob(f'{temp_dir}/ZDT1/NSGAII/*/*.pickle'))
+            self.assertTrue(results)
+            for result_file in results:
+                print("Found result file: " + result_file)
+                loaded_result = serialization.RunResult.load_file(Path(result_file))
+                self.assertIsNotNone(loaded_result)
