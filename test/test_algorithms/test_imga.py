@@ -1,5 +1,6 @@
 import unittest
 
+import rx.operators as ops
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.base.drivergen import StepsRun
@@ -35,8 +36,14 @@ class ImgaTest(unittest.TestCase):
 
         total_costs = []
         islands_costs = []
-        for result in steps_run.create_job(imga).subscribe_on(NewThreadScheduler()).to_blocking():
+
+        def on_imga_result(result):
             total_costs.append(result.cost),
             islands_costs.append(sum([island.driver.cost for island in imga.islands]))
+
+        steps_run.create_job(imga).pipe(
+            ops.subscribe_on(NewThreadScheduler()),
+            ops.do_action(on_next=on_imga_result)
+        ).run()
 
         self.assertListEqual(total_costs, islands_costs)

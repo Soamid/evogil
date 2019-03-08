@@ -2,7 +2,8 @@ import itertools
 import logging
 import random
 
-from rx import Observable
+import rx
+import rx.operators as ops
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.IMGA.topology import TorusTopology, Topology
@@ -84,12 +85,13 @@ class IMGA(ComplexDriver):
         return itertools.chain(*(island.driver.finalized_population() for island in self.islands))
 
     def step(self):
-        results = list(Observable.from_iterable(self.islands, scheduler=NewThreadScheduler()) \
-            .flat_map(lambda island: island.epoch(self.epoch_length).last()) \
-            .buffer_with_count(len(self.islands)) \
-            .to_blocking())
+        last_result = rx.from_iterable(self.islands).pipe(
+            ops.subscribe_on(NewThreadScheduler()),
+            ops.flat_map(lambda island: island.epoch(self.epoch_length).pipe(ops.last())),
+            ops.buffer_with_count(len(self.islands))
+        ).run()
         self.migration()
-        self.update_cost(results[-1])
+        self.update_cost(last_result)
 
     def update_cost(self, results):
         self.cost = sum(result.cost for result in results)

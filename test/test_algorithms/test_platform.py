@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import rx.operators as ops
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.base.drivergen import StepsRun
@@ -23,7 +24,10 @@ class DriverTest(unittest.TestCase):
                 algorithm = algo_factory()
 
                 simple_simulation = StepsRun(1)
-                result = list(simple_simulation.create_job(algorithm).subscribe_on(NewThreadScheduler()).to_blocking())
+                result = list(simple_simulation.create_job(algorithm).pipe(
+                    ops.subscribe_on(NewThreadScheduler()),
+                    ops.to_iterable()
+                ).run())
                 self.assertEqual(1, len(result))
                 self.assertIsInstance(result[0], ProgressMessage)
 

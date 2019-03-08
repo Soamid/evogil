@@ -1,5 +1,7 @@
 import rx
-from rx import Observable, Observer
+from rx import operators as ops
+from rx import Observable
+from rx.core.typing import Observer, Disposable
 from rx.subjects import Subject
 
 from algorithms.base.model import ProgressMessageAdapter, ProgressMessage
@@ -78,21 +80,21 @@ class BudgetRun(DriverRun):
         self.budget = budget
 
     def create_job(self, driver: Driver) -> Observable:
-        return Observable.create(lambda observer: self._start(driver, observer))
+        return rx.create(lambda observer, scheduler=None: self._start(driver, observer))
 
     def _start(self, driver: Driver, observer: Observer):
         while driver.cost < self.budget:
             observer.on_next(driver.next_step())
         observer.on_completed()
 
-
 class StepsRun(DriverRun):
     def __init__(self, steps: int):
         self.steps = steps
 
     def create_job(self, driver: Driver):
-        return Observable.range(0, self.steps) \
-            .map(lambda _: driver.next_step())
+        return rx.range(0, self.steps).pipe(
+            ops.map(lambda _: driver.next_step())
+        )
 
 
 class DriverRx(Driver):

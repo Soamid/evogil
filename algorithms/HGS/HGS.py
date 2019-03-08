@@ -5,6 +5,8 @@ import time
 
 import floatextras
 import numpy as np
+import rx
+import rx.operators as ops
 from rx import Observable
 from rx.concurrency import NewThreadScheduler
 
@@ -145,10 +147,10 @@ class HGS(ComplexDriver):
         for node in self.level_nodes[0]:
             node_jobs.append(node.run_metaepoch())
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
-        list(Observable.merge(node_jobs) \
-            .subscribe_on(NewThreadScheduler())
-            .do_action(on_next=lambda message: self._update_cost(message)) \
-            .to_blocking())
+        rx.merge(*node_jobs).pipe(
+             ops.subscribe_on(NewThreadScheduler()),
+             ops.do_action(on_next=lambda message: self._update_cost(message))
+        ).run()
 
     def _update_cost(self, message):
         print("update cost")
@@ -256,11 +258,12 @@ class HGS(ComplexDriver):
         def run_metaepoch(self) -> Observable:
             if self.alive:
                 epoch_job = StepsRun(self.owner.metaepoch_len)
-                return epoch_job.create_job(self.driver) \
-                    .map(lambda message : self.fill_node_info(message)) \
-                    .do_action(lambda message: self.update_current_cost(message)) \
-                    .do_action(on_completed=lambda: self._after_metaepoch())
-            return Observable.empty()
+                return epoch_job.create_job(self.driver).pipe(
+                    ops.map(lambda message: self.fill_node_info(message)),
+                    ops.do_action(lambda message: self.update_current_cost(message)),
+                    ops.do_action(on_completed=lambda: self._after_metaepoch())
+                )
+            return rx.empty()
 
         def fill_node_info(self, driver_message):
             driver_message.level = self.level

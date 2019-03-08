@@ -8,16 +8,37 @@ import random
 import time
 from datetime import datetime
 
+import rx
+from rx import operators as ops
+
 from algorithms.base.drivergen import Driver, BudgetRun
-from evotools.ea_utils import gen_population
-from evotools.random_tools import show_partial, close_and_join
+from evotools import rxtools
+from evotools.random_tools import show_partial
 from simulation import factory
 from simulation.run_config import NotViableConfiguration
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation.serialization import RunResult
 from simulation.timing import log_time, process_time
 from simulation.timing import system_time
 
 logger = logging.getLogger(__name__)
+
+
+def log_simulation_stats(start_time, simulation_id, simultations_count):
+    current_time = datetime.now()
+    diff_time = current_time - start_time
+    ratio = simulation_id * 1. / simultations_count
+    try:
+        est_delivery_time = start_time + diff_time / ratio
+        time_to_delivery = est_delivery_time - current_time
+        logging.info("Job queue progress: %.3f%%. Est. finish in %02d:%02d:%02d (at %s)",
+                     ratio * 100,
+                     time_to_delivery.days * 24 + time_to_delivery.seconds // 3600,
+                     time_to_delivery.seconds // 60,
+                     time_to_delivery.seconds % 60,
+                     est_delivery_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+                     )
+    except ZeroDivisionError:
+        logging.info("Job queue progress: %.3f%%. Est. finish: unknown yet", ratio)
 
 
 def run_parallel(args, queue):
@@ -28,31 +49,29 @@ def run_parallel(args, queue):
 
     logger.debug("Creating the pool")
 
-    with close_and_join(multiprocessing.Pool(int(args['-j']))) as p:
+    processes_no = int(args['-j'])
+    rxtools.configure_default_executor(processes_no)
 
-        wall_time = []
-        start_time = datetime.now()
-        results = []
-        logger.debug("cases: %s", simulation_cases)
-        with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
-            for i, subres in enumerate(p.map(worker, simulation_cases, chunksize=1)):
-                results.append(subres)
+    wall_time = []
+    start_time = datetime.now()
+    results = []
+    logger.debug("cases: %s", simulation_cases)
 
-                current_time = datetime.now()
-                diff_time = current_time - start_time
-                ratio = i * 1. / len(simulation_cases)
-                try:
-                    est_delivery_time = start_time + diff_time / ratio
-                    time_to_delivery = est_delivery_time - current_time
-                    logging.info("Job queue progress: %.3f%%. Est. finish in %02d:%02d:%02d (at %s)",
-                                 ratio * 100,
-                                 time_to_delivery.days * 24 + time_to_delivery.seconds // 3600,
-                                 time_to_delivery.seconds // 60,
-                                 time_to_delivery.seconds % 60,
-                                 est_delivery_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-                                 )
-                except ZeroDivisionError:
-                    logging.info("Job queue progress: %.3f%%. Est. finish: unknown yet", ratio)
+    print(multiprocessing.current_process().pid)
+    print(processes_no)
+
+    with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
+        def process_result(subres):
+            results.append(subres)
+            log_simulation_stats(start_time, subres[-1], len(simulation_cases))
+
+        simulations = rx.from_iterable(range(len(simulation_cases))).pipe(
+            ops.flat_map(lambda i: rxtools.from_process(worker, simulation_cases[i], i))
+        ).pipe(
+            ops.do_action(on_next=process_result)
+        ).run()
+
+    print(simulation_cases)
 
     proc_times = sum(subres[1]
                      for subres
@@ -91,10 +110,11 @@ def run_parallel(args, queue):
             prob_show = "'" + prob + "'"
             alg_show = "'" + alg + "'"
             avg_time = timesum / float(args['-N'])
-            logger.info("  prob:{prob_show:16} algo:{alg_show:16}) time:{avg_time:>8.3f}s".format(**locals()))
+            print("  prob:{prob_show:16} algo:{alg_show:16}) time:{avg_time:>8.3f}s".format(**locals()))
 
 
-def worker(simulation):
+def worker(simulation, simulation_id):
+    print("process: " + str(os.getpid()))
     logger = logging.getLogger(__name__)
 
     logger.debug("Starting the worker. simulation case:%s", simulation)
@@ -140,17 +160,18 @@ def worker(simulation):
 
                 for budget in simulation.budgets:
                     budget_run = BudgetRun(budget)
-                    budget_run.create_job(driver) \
-                        .do_action(on_completed=lambda: process_results(budget)) \
-                        .subscribe(lambda proxy: print(
-                        "Driver progress: budget={}, current cost={}, driver step={}".format(budget, proxy.cost,
-                                                                                             proxy.step_no)))
+                    budget_run.create_job(driver).pipe(
+                        ops.do_action(on_completed=lambda: process_results(budget))
+                    ).subscribe(lambda proxy: print(
+                        "{}{} : Driver progress: budget={}, current cost={}, driver step={}".format(
+                            simulation.algorithm_name, simulation.problem_name, budget, proxy.cost,
+                            proxy.step_no)))
             else:
                 e = NotImplementedError()
                 logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)
                 raise e
 
-        return results, proc_time[-1]
+        return results, proc_time[-1], simulation_id
 
     except NotViableConfiguration as e:
         reason = inspect.trace()[-1]
