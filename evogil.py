@@ -100,7 +100,6 @@ def all_algos_problems(*args, **kwargs):
 
 
 def main_worker():
-    # logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
     logger.debug("Starting the evogil. Parsing arguments.")
     with log_time(system_time, logger, "Parsing done in {time_res}s"):
