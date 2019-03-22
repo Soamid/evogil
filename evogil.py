@@ -125,15 +125,13 @@ def main_worker():
         logger.debug("run_dict: k,v = %s,%s", k, v)
         if argv[k]:
             logger.debug("run_dict match. argv[k]=%s", argv[k])
-            v(argv, None)
+            v(argv)
             break
 
-def main():
-    log_helper.init_listener()
-    main_worker()
-
-
 if __name__ == '__main__':
+    log_helper.init()
+    logger = logging.getLogger(__name__)
+
     t = time.time()
-    main()
-    print("time: " + str(time.time() - t))
+    main_worker()
+    logger.debug("Execution time: " + str(time.time() - t))

@@ -14,13 +14,44 @@ from rx import operators as ops
 from algorithms.base.drivergen import Driver, BudgetRun
 from evotools import rxtools
 from evotools.random_tools import show_partial
-from simulation import factory
+from simulation import factory, log_helper
 from simulation.run_config import NotViableConfiguration
 from simulation.serialization import RunResult
 from simulation.timing import log_time, process_time
 from simulation.timing import system_time
 
 logger = logging.getLogger(__name__)
+
+
+def run_parallel(args):
+    simulation_cases = factory.create_simulation(args)
+
+    logger.debug("Shuffling the job queue")
+    random.shuffle(simulation_cases)
+
+    logger.debug("Creating the pool")
+
+    processes_no = int(args['-j'])
+    rxtools.configure_default_executor(processes_no)
+
+    wall_time = []
+    start_time = datetime.now()
+    results = []
+    logger.debug("Simulation cases: %s", simulation_cases)
+    logger.debug("Work will be divided into %d processes", processes_no)
+
+    with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
+        def process_result(subres):
+            results.append(subres)
+            log_simulation_stats(start_time, subres[-1], len(simulation_cases))
+
+        rx.from_iterable(range(len(simulation_cases))).pipe(
+            ops.flat_map(lambda i: rxtools.from_process(worker, simulation_cases[i], i))
+        ).pipe(
+            ops.do_action(on_next=process_result)
+        ).run()
+    log_summary(args, results, simulation_cases, wall_time)
+    rxtools.shutdown_default_executor()
 
 
 def log_simulation_stats(start_time, simulation_id, simultations_count):
@@ -41,38 +72,7 @@ def log_simulation_stats(start_time, simulation_id, simultations_count):
         logging.info("Job queue progress: %.3f%%. Est. finish: unknown yet", ratio)
 
 
-def run_parallel(args, queue):
-    simulation_cases = factory.create_simulation(args)
-
-    logger.debug("Shuffling the job queue")
-    random.shuffle(simulation_cases)
-
-    logger.debug("Creating the pool")
-
-    processes_no = int(args['-j'])
-    rxtools.configure_default_executor(processes_no)
-
-    wall_time = []
-    start_time = datetime.now()
-    results = []
-    logger.debug("cases: %s", simulation_cases)
-
-    print(multiprocessing.current_process().pid)
-    print(processes_no)
-
-    with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
-        def process_result(subres):
-            results.append(subres)
-            log_simulation_stats(start_time, subres[-1], len(simulation_cases))
-
-        simulations = rx.from_iterable(range(len(simulation_cases))).pipe(
-            ops.flat_map(lambda i: rxtools.from_process(worker, simulation_cases[i], i))
-        ).pipe(
-            ops.do_action(on_next=process_result)
-        ).run()
-
-    print(simulation_cases)
-
+def log_summary(args, results, simulation_cases, wall_time):
     proc_times = sum(subres[1]
                      for subres
                      in results
@@ -82,25 +82,20 @@ def run_parallel(args, queue):
               in zip(results, simulation_cases)
               if comp_result is None
               ]
-
     speedup = proc_times / wall_time[0]
-
     logger.info("SUMMARY:")
     logger.info("  wall time:     %7.3f", wall_time[0])
     logger.info("  CPU+user time: %7.3f", proc_times)
     logger.info("  est. speedup:  %7.3f", speedup)
-
     if errors:
         logger.error("Errors encountered:")
         for (probl, algo), budgets, runid in errors:
             logger.error("  %9s :: %14s :: runID=%d :: budgets=%s", probl, algo, runid,
                          ','.join(str(x) for x in budgets))
-
     summary = collections.defaultdict(float)
     for simulation, subres in zip(simulation_cases, results):
         if subres:
             summary[simulation.config] += subres[1]
-
     if logger.isEnabledFor(logging.INFO):
         logger.info("Running time:")
         res = []
@@ -110,14 +105,13 @@ def run_parallel(args, queue):
             prob_show = "'" + prob + "'"
             alg_show = "'" + alg + "'"
             avg_time = timesum / float(args['-N'])
-            print("  prob:{prob_show:16} algo:{alg_show:16}) time:{avg_time:>8.3f}s".format(**locals()))
+            logger.debug("  prob:{prob_show:16} algo:{alg_show:16}) time:{avg_time:>8.3f}s".format(**locals()))
 
 
 def worker(simulation, simulation_id):
-    print("process: " + str(os.getpid()))
+    log_helper.init()
     logger = logging.getLogger(__name__)
-
-    logger.debug("Starting the worker. simulation case:%s", simulation)
+    logger.debug("Starting the worker. PID: %d, simulation case: %s", os.getpid(), simulation)
 
     if simulation.renice:
         logger.debug("Renice the process PID:%s by %s", os.getpid(), simulation)
@@ -162,7 +156,7 @@ def worker(simulation, simulation_id):
                     budget_run = BudgetRun(budget)
                     budget_run.create_job(driver).pipe(
                         ops.do_action(on_completed=lambda: process_results(budget))
-                    ).subscribe(lambda proxy: print(
+                    ).subscribe(lambda proxy: logger.debug(
                         "{}{} : Driver progress: budget={}, current cost={}, driver step={}".format(
                             simulation.algorithm_name, simulation.problem_name, budget, proxy.cost,
                             proxy.step_no)))

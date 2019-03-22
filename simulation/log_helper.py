@@ -1,10 +1,10 @@
-from logging import StreamHandler
 import logging
-from logging.handlers import QueueHandler
+from logging import StreamHandler
 
 LOG_PATH = 'evogil.log'
 
-def init_listener():
+
+def init():
     root = logging.getLogger()
 
     # console
@@ -21,19 +21,3 @@ def init_listener():
                           datefmt='%Y-%m-%d %H:%M:%S')
     h.setFormatter(f)
     root.addHandler(h)
-
-
-def listener(queue, configurer):
-    configurer()
-    while True:
-        record = queue.get()
-        if record is None:
-            break
-        logger = logging.getLogger(record.name)
-        logger.handle(record)
-
-def init_worker(queue):
-    h = QueueHandler(queue)
-    root = logging.getLogger()
-    root.addHandler(h)
-    root.setLevel(logging.DEBUG)
