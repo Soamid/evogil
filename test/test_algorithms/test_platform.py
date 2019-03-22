@@ -8,7 +8,7 @@ from pathlib import Path
 import rx.operators as ops
 from rx.concurrency import NewThreadScheduler
 
-from algorithms.base.drivergen import StepsRun
+from algorithms.base.driver import StepsRun
 from algorithms.base.model import ProgressMessage
 from simulation import run_config, serialization
 from simulation.factory import prepare

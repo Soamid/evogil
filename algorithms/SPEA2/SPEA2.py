@@ -7,7 +7,7 @@
 import math
 import random
 
-from algorithms.base.drivergen import ImgaProxy, Driver
+from algorithms.base.driver import Driver
 from algorithms.base.drivertools import crossover, mutate
 from evotools import ea_utils
 from metrics.metrics_utils import euclid_distance

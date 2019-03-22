@@ -1,6 +1,6 @@
 import unittest
 
-from algorithms.base.drivergen import Driver, ProgressMessage
+from algorithms.base.driver import Driver, ProgressMessage
 from simulation.factory import prepare
 
 

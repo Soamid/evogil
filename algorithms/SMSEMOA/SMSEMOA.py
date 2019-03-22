@@ -3,7 +3,7 @@ import random
 
 import collections
 
-from algorithms.base.drivergen import Driver
+from algorithms.base.driver import Driver
 from algorithms.base.drivertools import crossover, mutate
 from algorithms.base.hv import HyperVolume
 from evotools import ea_utils

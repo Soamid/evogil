@@ -1,7 +1,6 @@
 import collections
 import inspect
 import logging
-import multiprocessing
 import operator
 import os
 import random
@@ -11,7 +10,7 @@ from datetime import datetime
 import rx
 from rx import operators as ops
 
-from algorithms.base.drivergen import Driver, BudgetRun
+from algorithms.base.driver import Driver, BudgetRun
 from evotools import rxtools
 from evotools.random_tools import show_partial
 from simulation import factory, log_helper

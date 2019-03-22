@@ -11,7 +11,7 @@ from rx import Observable
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.base import drivertools
-from algorithms.base.drivergen import ImgaProxy, StepsRun, ComplexDriver
+from algorithms.base.driver import StepsRun, ComplexDriver
 from algorithms.base.hv import HyperVolume
 
 EPSILON = np.finfo(float).eps
@@ -82,31 +82,6 @@ class HGS(ComplexDriver):
         }
 
         self.cost = 0
-
-    class HGSImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost):
-            super().__init__(driver, cost)
-
-        def finalized_population(self):
-            return self.merge_node_populations()
-
-        def current_population(self):
-            return self.merge_node_populations()
-
-        def deport_emigrants(self, immigrants):
-            raise Exception("HGS does not support migrations")
-
-        def assimilate_immigrants(self, emigrants):
-            raise Exception("HGS does not support migrations")
-
-        def nominate_delegates(self):
-            raise Exception("HGS does not support sprouting")
-
-        def merge_node_populations(self):
-            merged_population = []
-            for node in self.driver.nodes:
-                merged_population.extend(node.population)
-            return merged_population
 
     def finalized_population(self):
         merged_population = []

@@ -1,6 +1,6 @@
 import random
 
-from algorithms.base.drivergen import ImgaProxy, Driver
+from algorithms.base.driver import Driver
 from evotools.ea_utils import dominates
 
 

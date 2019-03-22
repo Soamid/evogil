@@ -5,7 +5,7 @@ import collections
 import numpy
 import numpy.linalg
 
-from algorithms.base.drivergen import Driver
+from algorithms.base.driver import Driver
 
 EPSILON = numpy.finfo(float).eps
 

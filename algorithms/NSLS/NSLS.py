@@ -4,7 +4,7 @@ import collections
 from scipy.spatial import distance
 
 from algorithms.NSGAII import NSGAII
-from algorithms.base.drivergen import Driver
+from algorithms.base.driver import Driver
 
 
 class NSLS(Driver):
