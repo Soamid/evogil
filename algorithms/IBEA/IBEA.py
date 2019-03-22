@@ -1,46 +1,12 @@
-import collections
 import itertools
 import math
 import random
 import sys
 
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import Driver
 from algorithms.base.drivertools import rank, mutate, crossover
-from evotools.ea_utils import paretofront_layers
 
-
-class IBEA(DriverGen):
-    class IBEAImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, individuals):
-            super().__init__(driver, cost)
-            self.individuals = individuals
-
-        def finalized_population(self):
-            return self.driver.finish()
-
-        def current_population(self):
-            return [x.v for x in self.individuals]
-
-        def deport_emigrants(self, immigrants):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self.individuals:
-                if p.v in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p.v)
-
-            for p in to_remove:
-                self.individuals.remove(p)
-            return to_remove
-
-        def assimilate_immigrants(self, emigrants):
-            self.individuals.extend(emigrants)
-
-        def nominate_delegates(self):
-            return [x.v for x in
-                list(paretofront_layers(self.individuals, lambda indv: self.driver.calculate_objectives(indv)))[
-                0]]
+class IBEA(Driver):
 
     def __init__(self,
                  population,
@@ -53,8 +19,10 @@ class IBEA(DriverGen):
                  mutation_rate,
                  crossover_rate,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
-        super().__init__()
+                 fitness_archive=None,
+                 *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.individuals = []
         self.population_size = 0
@@ -79,19 +47,8 @@ class IBEA(DriverGen):
 
         self.fitness_archive = fitness_archive
 
-    def step(self, steps=1):
-        for _ in range(steps):
-            self._next_step()
-
-    def population_generator(self):
-        while True:
-            self._next_step()
-            yield IBEA.IBEAImgaProxy(self, self.cost, self.individuals)
-            self.cost = 0
-        self._scale_objectives()
-        self._calculate_fitness()
-        self._environmental_selection()
-        return self.cost
+    def finalized_population(self):
+        return self.finish()
 
     def get_indivs_inorder(self):
         return rank(self.population, self.calculate_objectives)
@@ -102,7 +59,7 @@ class IBEA(DriverGen):
         self._environmental_selection()
         return [x.v for x in self.individuals]
 
-    def _next_step(self):
+    def step(self):
         self._calculate_fitness()
         self._environmental_selection()
         self._mating_selection(0.9)

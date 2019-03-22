@@ -39,7 +39,7 @@ problems = [
     'UF9'
 ]
 
-metaconfig_populationsize = 100
+DEFAULT_POPULATION_SIZE = 64
 metaconfig_budgets = list(range(500, 9500, 1000))
 
 
@@ -91,14 +91,9 @@ algo_base = {
     },
 }
 
-prob_base = {
-
-}
-
 cust_base = {
 
 }
-
 
 def init_alg___HGS(algo_config, problem_mod):
     reference_point = tuple(50.0

@@ -1,13 +1,18 @@
+import itertools
 import logging
 import random
 
+import rx
+import rx.operators as ops
+from rx.concurrency import NewThreadScheduler
+
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import DriverGen, ImgaProxy, StepsRun, ComplexDriver
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
 
 
-class IMGA(DriverGen):
+class IMGA(ComplexDriver):
     def __init__(self,
                  population,
                  dims,
@@ -20,8 +25,9 @@ class IMGA(DriverGen):
                  crossover_eta,
                  mutation_rate,
                  crossover_rate,
-                 topology=TorusTopology(4)):
-        super().__init__()
+                 topology=TorusTopology(4),
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fitnesses = fitnesses
         self.dims = dims
         self.mutation_eta = mutation_eta
@@ -41,17 +47,17 @@ class IMGA(DriverGen):
 
         Topology.print(self.topology)
 
+        self.logger = logging.getLogger(__name__)
+
+        self.spread_budget_info()
+
     class IMGAImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, islands):
+        def __init__(self, driver, cost, results):
             super().__init__(driver, cost)
-            self.islands = islands
+            self.global_population = results
 
         def finalized_population(self):
-            global_pop = []
-            for pop in [island.finish() for island in self.islands]:
-                global_pop.extend(pop)
-
-            return global_pop
+            return self.global_population
 
         def current_population(self):
             return self.finalized_population()
@@ -70,35 +76,36 @@ class IMGA(DriverGen):
             for island in self.islands:
                 island.driver.max_budget = self.max_budget
 
-    def population_generator(self):
-        logger = logging.getLogger(__name__)
+    def create_proxy(self, island_proxies):
+        self.cost = sum(proxy.cost for proxy in island_proxies)
+        all_results = itertools.chain(*(proxy.finalized_population() for proxy in island_proxies))
+        return IMGA.IMGAImgaProxy(self, self.cost, list(all_results))
 
-        self.spread_budget_info()
+    def finalized_population(self):
+        return itertools.chain(*(island.driver.finalized_population() for island in self.islands))
 
-        while True:
-            logger.debug(self.epoch_no)
-            self.epoch_no += 1
+    def step(self):
+        last_result = rx.from_iterable(self.islands).pipe(
+            ops.subscribe_on(NewThreadScheduler()),
+            ops.flat_map(lambda island: island.epoch(self.epoch_length).pipe(ops.last())),
+            ops.buffer_with_count(len(self.islands))
+        ).run()
+        self.migration()
+        self.update_cost(last_result)
 
-            cost = self.epoch()
-            self.total_cost += cost
+    def update_cost(self, results):
+        self.cost = sum(result.cost for result in results)
 
-            yield IMGA.IMGAImgaProxy(self, cost, self.islands)
-
-        return self.total_cost
-
-    def epoch(self):
-        epoch_cost = sum([island.epoch(self.epoch_length) for island in self.islands])
-
+    def migration(self):
         for i in range(len(self.islands)):
             island = self.islands[i]
 
             for n in self.topology[i]:
                 self.islands[n].immigrate(island.emigrate())
-
         for island in self.islands:
             island.assimilate()
 
-        return epoch_cost
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def create_islands(self, init_population):
         logger = logging.getLogger(__name__)
@@ -112,8 +119,6 @@ class IMGA(DriverGen):
         logger.debug(subpopulations)
 
         return [IMGA.Island(self, subpop) for subpop in subpopulations]
-
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     class Island:
 
@@ -129,7 +134,9 @@ class IMGA(DriverGen):
                                        mutation_rate=outer.mutation_rate,
                                        mutation_eta=outer.mutation_eta,
                                        crossover_rate=outer.crossover_rate,
-                                       crossover_eta=outer.crossover_eta)
+                                       crossover_eta=outer.crossover_eta,
+                                       message_adapter_factory=outer.driver_message_adapter_factory
+                                       )
             if isinstance(self.driver, DriverGen):
                 self.driver_gen = self.driver.population_generator()
                 self.last_proxy = None
@@ -137,14 +144,8 @@ class IMGA(DriverGen):
             self.all_refugees = []
 
         def epoch(self, epoch_length):
-            if isinstance(self.driver, DriverGen):
-                cost = 0
-                for _ in range(epoch_length):
-                    self.last_proxy = self.driver_gen.send(self.last_proxy)
-                    cost += self.last_proxy.cost
-                return cost
-            else:
-                return self.driver.steps(range(epoch_length))
+            steps_run = StepsRun(epoch_length)
+            return steps_run.create_job(self.driver)
 
         def finish(self):
             if isinstance(self.driver, DriverGen):
@@ -179,12 +180,7 @@ class IMGA(DriverGen):
             logger.debug('after emigrate: ' + str(len(self.driver.population)))
 
             self.all_refugees.extend(refugees)
-
-            if isinstance(self.driver, DriverGen):
-                return self.last_proxy.deport_emigrants(refugees)
-            else:
-                self.driver.population = current_population
-                return refugees
+            return self.driver.message_adapter.emigrate(refugees)
 
         def immigrate(self, migrants):
             self.visa_office.extend(migrants)
@@ -196,13 +192,7 @@ class IMGA(DriverGen):
                     'Number of immigrants and emigrants should be equal: {} != {}'.format(len(self.visa_office),
                                                                                           len(self.all_refugees)))
 
-            if isinstance(self.driver, DriverGen):
-                self.last_proxy.assimilate_immigrants(self.visa_office)
-            else:
-                current_population = self.driver.population
-                current_population.extend(self.visa_office)
-                self.driver.population = current_population
-
+            self.driver.message_adapter.immigrate(self.visa_office)
             logger.debug('after immigrate: ' + str(len(self.driver.population)))
 
             self.all_refugees.clear()

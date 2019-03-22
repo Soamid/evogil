@@ -2,7 +2,8 @@ docs_old
 art
 docs/evocomplex14/*.pdf
 stats.txt
-.idea
+.idea/*
+!.idea/runConfigurations/*
 .pydevproject
 .project
 __pycache__
@@ -36,3 +37,5 @@ run_all.bat
 run_queue.bat
 *.rar
 jmetal_src/
+
+venv/

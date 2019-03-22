@@ -64,15 +64,17 @@ Options:
         [default: 1]
   --renice <increment>
         Renice workers. Works on UNIX & derivatives.
+  -d <results_dir>, --dir <results_dir>
+        Directory where simulation results will be stored. If not specified, serialization.RESULTS_DIR is set.
+
 
 Pictures Summary Options:
   --selected <algo_name>
         Select and highlight specified algorithms on plots.
         [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA,HGS+JGBL,HGS+NSLS]
 """
-
 import logging
-import multiprocessing
+import time
 
 from docopt import docopt
 
@@ -97,9 +99,7 @@ def all_algos_problems(*args, **kwargs):
         print("   ", problem)
 
 
-def main_worker(queue, configurer):
-    configurer(queue)
-
+def main_worker():
     logger = logging.getLogger(__name__)
     logger.debug("Starting the evogil. Parsing arguments.")
     with log_time(system_time, logger, "Parsing done in {time_res}s"):
@@ -107,41 +107,31 @@ def main_worker(queue, configurer):
     logger.debug("Parsing result: %s", argv)
 
     run_dict = {
-        'run':         simulation.run_parallel.run_parallel,
-        'statistics':  statistic.stats.statistics,
-        'stats':       statistic.stats.statistics,
-        'rank':        statistic.ranking.rank,
-        'table':       statistic.ranking.table_rank,
+        'run': simulation.run_parallel.run_parallel,
+        'statistics': statistic.stats.statistics,
+        'stats': statistic.stats.statistics,
+        'rank': statistic.ranking.rank,
+        'table': statistic.ranking.table_rank,
         'rank_details': statistic.ranking.detailed_rank,
-        'pictures':    plots.pictures.pictures_from_stats,
-        'pictures_summary':    plots.pictures.pictures_summary,
+        'pictures': plots.pictures.pictures_from_stats,
+        'pictures_summary': plots.pictures.pictures_summary,
         'best_fronts': plots.best_fronts.best_fronts,
-        'violin':      plots.violin.violin,
-        'summary':     statistic.summary.analyse_results,
-        'list':        all_algos_problems,
+        'violin': plots.violin.violin,
+        'summary': statistic.summary.analyse_results,
+        'list': all_algos_problems,
     }
 
     for k, v in run_dict.items():
         logger.debug("run_dict: k,v = %s,%s", k, v)
         if argv[k]:
             logger.debug("run_dict match. argv[k]=%s", argv[k])
-            v(argv, queue)
+            v(argv)
             break
 
-
-def main():
-    root_logging_queue = multiprocessing.Queue(-1)
-    listener = multiprocessing.Process(target=log_helper.listener,
-                                       args=(root_logging_queue, log_helper.init_listener))
-    listener.start()
-
-    w = multiprocessing.Process(target=main_worker,
-                                args=(root_logging_queue, log_helper.init_worker))
-    w.start()
-    w.join()
-    root_logging_queue.put_nowait(None)
-    listener.join()
-
-
 if __name__ == '__main__':
-    main()
+    log_helper.init()
+    logger = logging.getLogger(__name__)
+
+    t = time.time()
+    main_worker()
+    logger.debug("Execution time: " + str(time.time() - t))

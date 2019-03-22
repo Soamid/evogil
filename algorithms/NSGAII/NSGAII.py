@@ -1,4 +1,4 @@
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, Driver
 from algorithms.base.drivertools import mutate, crossover
 
 __author__ = 'Prpht'
@@ -25,41 +25,7 @@ def dominates(x, y):
     return a
 
 
-class NSGAII(DriverGen):
-    class NSGAIIImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, individuals):
-            super().__init__(driver, cost)
-            self.individuals = individuals
-
-        def finalized_population(self):
-            return self.driver.finish()
-
-        def current_population(self):
-            return [x.v for x in self.individuals]
-
-        def deport_emigrants(self, immigrants, remove=True):
-            immigrants_cp = list(immigrants)
-            to_remove = []
-
-            for p in self.individuals:
-                if p.v in immigrants_cp:
-                    to_remove.append(p)
-                    immigrants_cp.remove(p.v)
-
-            if remove:
-                for p in to_remove:
-                    self.individuals.remove(p)
-                return to_remove
-            else:
-                return [NSGAII.Individual([vec for vec in x.v]) for x in to_remove]
-
-        def assimilate_immigrants(self, emigrants):
-            self.individuals.extend(emigrants)
-
-        def nominate_delegates(self):
-            self.driver.finish()
-            return [x.v for x in self.driver.front[1]]
-
+class NSGAII(Driver):
     def __init__(self,
                  population,
                  dims,
@@ -70,8 +36,10 @@ class NSGAII(DriverGen):
                  mutation_rate,
                  crossover_rate,
                  trim_function=lambda x: x,
-                 fitness_archive=None):
-        super().__init__()
+                 fitness_archive=None,
+                 *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.dims = dims
 
@@ -99,26 +67,14 @@ class NSGAII(DriverGen):
     def population(self):
         return [x.v for x in self.individuals]
 
+    def finalized_population(self):
+        return self.finish()
+
     @population.setter
     def population(self, pop):
-        self.individuals = [self.Individual(x) for x in pop]
+        self.individuals = [Individual(x) for x in pop]
         self.population_size = len(self.individuals)
         self.mating_size = int(self.mating_size_c * self.population_size)
-
-    def step(self, steps=1):
-        for _ in range(steps):
-            self._next_step()
-
-    def population_generator(self):
-        while True:
-            self._next_step()
-            yield NSGAII.NSGAIIImgaProxy(self, self.cost, self.individuals)
-            self.cost = 0
-        self._calculate_objectives()
-        self._nd_sort()
-        self._crowding()
-        self._environmental_selection()
-        return self.cost
 
     def finish(self):
         self._calculate_objectives()
@@ -127,7 +83,7 @@ class NSGAII(DriverGen):
         self._environmental_selection()
         return [x.v for x in self.individuals]
 
-    def _next_step(self):
+    def step(self):
         self._nd_sort()
         self._crowding()
         self._environmental_selection()
@@ -218,13 +174,13 @@ class NSGAII(DriverGen):
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
+            Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
             self.mating_individuals]
 
-    class Individual:
-        def __init__(self, vector):
-            self.v = vector
-            self.objectives = None
+class Individual:
+    def __init__(self, vector):
+        self.v = vector
+        self.objectives = None
 
 
 if __name__ == "__main__":

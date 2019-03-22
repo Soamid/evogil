@@ -5,35 +5,42 @@ import time
 
 import floatextras
 import numpy as np
+import rx
+import rx.operators as ops
+from rx import Observable
+from rx.concurrency import NewThreadScheduler
 
 from algorithms.base import drivertools
-from algorithms.base.drivergen import DriverGen, ImgaProxy
+from algorithms.base.drivergen import ImgaProxy, StepsRun, ComplexDriver
 from algorithms.base.hv import HyperVolume
 
 EPSILON = np.finfo(float).eps
-class HGS(DriverGen):
+
+
+class HGS(ComplexDriver):
 
     def __init__(self,
-             population,
-             dims,
-             fitnesses,
-             fitness_errors,
-             cost_modifiers,
-             driver,
-             mutation_etas,
-             crossover_etas,
-             mutation_rates,
-             crossover_rates,
-             reference_point,
-             mantissa_bits,
-             min_progress_ratio,
-             metaepoch_len=5,
-             max_level=2,
-             max_sprouts_no=20,
-             sproutiveness=1,
-             comparison_multipliers=(1.0, 0.1, 0.01),
-             population_sizes=(64, 16, 4)):
-        super().__init__()
+                 population,
+                 dims,
+                 fitnesses,
+                 fitness_errors,
+                 cost_modifiers,
+                 driver,
+                 mutation_etas,
+                 crossover_etas,
+                 mutation_rates,
+                 crossover_rates,
+                 reference_point,
+                 mantissa_bits,
+                 min_progress_ratio,
+                 metaepoch_len=5,
+                 max_level=2,
+                 max_sprouts_no=20,
+                 sproutiveness=1,
+                 comparison_multipliers=(1.0, 0.1, 0.01),
+                 population_sizes=(64, 16, 4),
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.driver = driver
 
@@ -64,6 +71,8 @@ class HGS(DriverGen):
         self.mantissa_bits = mantissa_bits
         self.global_fitness_archive = [ResultArchive() for _ in range(3)]
 
+        # TODO add preconditions checking if message adapter is HGS message adapter
+
         self.root = HGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
         self.nodes = [self.root]
         self.level_nodes = {
@@ -73,7 +82,6 @@ class HGS(DriverGen):
         }
 
         self.cost = 0
-        self.acc_cost = 0
 
     class HGSImgaProxy(ImgaProxy):
         def __init__(self, driver, cost):
@@ -100,19 +108,13 @@ class HGS(DriverGen):
                 merged_population.extend(node.population)
             return merged_population
 
-    def population_generator(self):
-        self.acc_cost = 0
-        while True:
-            # TODO: current cost debug print
-            print("cost", self.acc_cost)
+    def finalized_population(self):
+        merged_population = []
+        for node in self.driver.nodes:
+            merged_population.extend(node.population)
+        return merged_population
 
-            self.next_step()
-            yield HGS.HGSImgaProxy(self, self.cost)
-            self.acc_cost += self.cost
-            self.cost = 0
-        return self.acc_cost
-
-    def next_step(self):
+    def step(self):
         # TODO: status debug print
         print("nodes:", len(self.nodes),
               len([x for x in self.nodes if x.alive]),
@@ -125,7 +127,7 @@ class HGS(DriverGen):
               len([x for x in self.level_nodes[1] if x.ripe]),
               "   two:", len(self.level_nodes[2]),
               len([x for x in self.level_nodes[2] if x.alive]),
-              len([x for x in self.level_nodes[2] if x.ripe]),)
+              len([x for x in self.level_nodes[2] if x.ripe]), )
 
         self.run_metaepoch()
         self.trim_sprouts()
@@ -133,18 +135,26 @@ class HGS(DriverGen):
         self.revive_root()
         print("Nodes:")
         for i in range(3):
-            print("level {} : {} / {}".format(i+1, len([n for n in self.level_nodes[i] if n.ripe]), len(self.level_nodes[i])))
+            print("level {} : {} / {}".format(i + 1, len([n for n in self.level_nodes[i] if n.ripe]),
+                                              len(self.level_nodes[i])))
 
     def run_metaepoch(self):
+        node_jobs = []
         for node in self.level_nodes[2]:
-            node.run_metaepoch()
+            node_jobs.append(node.run_metaepoch())
         for node in self.level_nodes[1]:
-            node.run_metaepoch()
+            node_jobs.append(node.run_metaepoch())
         for node in self.level_nodes[0]:
-            node.run_metaepoch()
+            node_jobs.append(node.run_metaepoch())
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
+        rx.merge(*node_jobs).pipe(
+             ops.subscribe_on(NewThreadScheduler()),
+             ops.do_action(on_next=lambda message: self._update_cost(message))
+        ).run()
 
-
+    def _update_cost(self, message):
+        print("update cost")
+        self.cost += self.cost_modifiers[message.level] * message.epoch_cost
 
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
@@ -159,12 +169,12 @@ class HGS(DriverGen):
         for sprout in [x for x in nodes if x.alive]:
             if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) \
                     and ((sprout.hypervolume / (sprout.old_hypervolume + EPSILON)) - 1.0) \
-                    < self.min_progress_ratio[sprout.level] / 2**sprout.level:
-                    #TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
+                    < self.min_progress_ratio[sprout.level] / 2 ** sprout.level:
+                # TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
                 sprout.alive = False
                 sprout.center = np.mean(sprout.population, axis=0)
                 sprout.ripe = True
-                #TODO: logging killing not progressing sprouts
+                # TODO: logging killing not progressing sprouts
                 print("   KILL NOT PROGRESSING")
 
     def trim_redundant(self, nodes):
@@ -181,7 +191,7 @@ class HGS(DriverGen):
                 if (another_sprout.ripe or another_sprout in processed) \
                         and redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
                     sprout.alive = False
-                    #TODO: logging killing redundant sprouts
+                    # TODO: logging killing redundant sprouts
                     print("   KILL REDUNDANT")
             processed.append(sprout)
 
@@ -196,22 +206,23 @@ class HGS(DriverGen):
             for i in range(3):
                 self.min_progress_ratio[i] /= 2
 
-            #TODO: logging root revival
+            # TODO: logging root revival
             print("!!!   RESURRECTION")
 
     def blurred_fitnesses(self, level):
         def blurred(f):
             def blurred_f(*args, **kwargs):
                 f_val = f(*args, **kwargs)
-                x = math.fabs(random.gauss(f_val, self.fitness_errors[level]*f_val/3.0))
+                x = math.fabs(random.gauss(f_val, self.fitness_errors[level] * f_val / 3.0))
 
                 # print("level: {}, normal: {} blurred: {}, diff: {}".format(level, f_val, x, math.fabs(f_val - x)/f_val))
                 return x
+
             return blurred_f
 
         return [blurred(f) for f in self.fitnesses]
 
-    class Node():
+    class Node:
         def __init__(self,
                      owner,
                      level,
@@ -220,6 +231,7 @@ class HGS(DriverGen):
             self.ripe = False
             self.owner = owner
             self.level = level
+            self.current_cost = 0
             self.driver = owner.driver(population=population,
                                        dims=owner.dims,
                                        fitnesses=owner.blurred_fitnesses(self.level),
@@ -228,7 +240,10 @@ class HGS(DriverGen):
                                        crossover_eta=owner.crossover_etas[self.level],
                                        crossover_rate=owner.crossover_rates[self.level],
                                        fitness_archive=self.owner.global_fitness_archive[self.level],
-                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[self.level]))
+                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[
+                                           self.level]),
+                                       message_adapter_factory=owner.driver_message_adapter_factory)
+
             self.population = []
             self.sprouts = []
             self.delegates = []
@@ -240,23 +255,29 @@ class HGS(DriverGen):
             self.old_hypervolume = float('-inf')
             self.hypervolume = float('-inf')
 
-            self.final_proxy = None
-
-        def run_metaepoch(self):
+        def run_metaepoch(self) -> Observable:
             if self.alive:
-                iterations = 0
-                self.final_proxy = None
-                for proxy in self.driver.population_generator():
-                    # print("Level: {}, Original cost: {}, modified cost: {}".format(self.level, proxy.cost, self.owner.cost_modifiers[self.level] * proxy.cost))
-                    self.owner.cost += self.owner.cost_modifiers[self.level] * proxy.cost
-                    self.final_proxy = proxy
-                    iterations += 1
-                    if not iterations < self.owner.metaepoch_len:
-                        break
-                self.population = self.final_proxy.finalized_population()
-                self.delegates = self.final_proxy.nominate_delegates()
-                random.shuffle(self.delegates)
-                self.update_dominated_hypervolume()
+                epoch_job = StepsRun(self.owner.metaepoch_len)
+                return epoch_job.create_job(self.driver).pipe(
+                    ops.map(lambda message: self.fill_node_info(message)),
+                    ops.do_action(lambda message: self.update_current_cost(message)),
+                    ops.do_action(on_completed=lambda: self._after_metaepoch())
+                )
+            return rx.empty()
+
+        def fill_node_info(self, driver_message):
+            driver_message.level = self.level
+            driver_message.epoch_cost = driver_message.cost - self.current_cost
+            return driver_message
+
+        def update_current_cost(self, driver_message):
+            self.current_cost = driver_message.cost
+
+        def _after_metaepoch(self):
+            self.population = self.driver.finalized_population()
+            self.delegates = self.driver.message_adapter.nominate_delegates()
+            random.shuffle(self.delegates)
+            self.update_dominated_hypervolume()
 
         def update_dominated_hypervolume(self):
             self.old_hypervolume = self.hypervolume
@@ -296,10 +317,9 @@ class HGS(DriverGen):
                             self.owner.level_nodes[self.level + 1].append(new_sprout)
                             released_sprouts += 1
                         else:
-                            #TODO: logging redundant candidates
+                            # TODO: logging redundant candidates
                             # print("   CANDIDATE REDUNDANT")
                             pass
-
 
 
 def population_from_delegate(delegate, size, dims, rate, eta):
