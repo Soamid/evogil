@@ -10,9 +10,8 @@ from datetime import datetime
 import rx
 from rx import operators as ops
 
-from algorithms.base.driver import Driver, BudgetRun
+from algorithms.base.driver import BudgetRun
 from evotools import rxtools
-from evotools.random_tools import show_partial
 from simulation import factory, log_helper
 from simulation.run_config import NotViableConfiguration
 from simulation.serialization import RunResult
@@ -126,8 +125,7 @@ def worker(simulation, simulation_id):
         random_seed = int(time.time() * 256 + os.getpid())  # that's not enough for MT, but will have to do for now.
     random.seed(random_seed)
 
-    runres = RunResult(simulation.algorithm_name, simulation.problem_name, runid=simulation.run_id,
-                       results_path=simulation.results_dir)
+    runres = RunResult(simulation)
 
     try:
         final_driver, problem_mod = factory.prepare(simulation.algorithm_name, simulation.problem_name)
@@ -142,27 +140,23 @@ def worker(simulation, simulation_id):
 
         logger.debug("Beginning processing of %s, simulation: %s", driver, simulation)
         with log_time(process_time, logger, "Processing done in {time_res}s CPU time", out=proc_time):
-            if isinstance(driver, Driver):
-                def process_results(budget: int):
-                    finalpop = driver.finalized_population()
-                    finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-                    runres.store(budget, driver.cost, finalpop, finalpop_fit)
-                    results.append((driver.cost, finalpop))
+            def process_results(budget: int):
+                finalpop = driver.finalized_population()
+                finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+                runres.store(budget, driver.cost, finalpop, finalpop_fit)
+                results.append((driver.cost, finalpop))
 
-                driver.max_budget = simulation.budgets[-1]
+            driver.max_budget = simulation.budgets[-1]
 
-                for budget in simulation.budgets:
-                    budget_run = BudgetRun(budget)
-                    budget_run.create_job(driver).pipe(
-                        ops.do_action(on_completed=lambda: process_results(budget))
-                    ).subscribe(lambda proxy: logger.debug(
-                        "{}{} : Driver progress: budget={}, current cost={}, driver step={}".format(
-                            simulation.algorithm_name, simulation.problem_name, budget, proxy.cost,
-                            proxy.step_no)))
-            else:
-                e = NotImplementedError()
-                logger.exception("Oops. The driver type is not recognized, got %s", show_partial(driver), exc_info=e)
-                raise e
+            for budget in simulation.budgets:
+                budget_run = BudgetRun(budget)
+                budget_run.create_job(driver).pipe(
+                    ops.do_action(on_completed=lambda: process_results(budget))
+                ).subscribe(lambda proxy: logger.debug(
+                    "{}{} : Driver progress: budget={}, current cost={}, driver step={}".format(
+                        simulation.algorithm_name, simulation.problem_name, budget, proxy.cost,
+                        proxy.step_no)))
+
 
         return results, proc_time[-1], simulation_id
 

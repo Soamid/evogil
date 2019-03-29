@@ -13,10 +13,20 @@ from itertools import chain
 from pathlib import Path
 
 from metrics import metrics
+from simulation import factory
+from simulation.factory import SimulationCase
+from simulation.serializer import Serializer, Result
 
-RESULTS_DIR = '../results_temp/results_k1'
+RESULTS_DIR = '../results_temp/results_k2'
+
 
 class RunResult:
+
+    def __init__(self, simulation_case: SimulationCase):
+        self.serializer = Serializer(simulation_case)
+        self.simulation_case = simulation_case
+        self.budgets = {}
+
     @staticmethod
     def get_bounds():
         """ Wylicza górne granice wymiarów przeciwdziedziny dla wyznaczonych problemów """
@@ -40,10 +50,11 @@ class RunResult:
                 match = re.fullmatch("(?P<rundate>\d{4}-\d{2}-\d{2}\.\d{2}\d{2}\d{2}\.\d{6})__(?P<runid>\d{7})",
                                      candidate.name)
                 matchdict = match.groupdict()
-                res = RunResult(algo, problem,
-                                results_path=results_path,
-                                rundate=matchdict["rundate"],
-                                runid=matchdict["runid"])
+                run_id = matchdict["runid"]
+                run_date = matchdict["rundate"]
+                simulation_case = SimulationCase(problem, algo, None, run_id, None, results_path,
+                                                 factory.get_simulation_id(run_id, run_date))
+                res = RunResult(simulation_case)
                 res.preload_all_budgets(run_no)
                 run_no += 1
                 yield res
@@ -53,6 +64,7 @@ class RunResult:
     @staticmethod
     def each_result(results_path=RESULTS_DIR):
         cache = defaultdict(list)
+
         def f_metrics(result_list, problem_mod):
             """ Pierwszy *zawsze* będzie cost. To ważne.
             Nazwa `igd` nie może się zmieniać, to ważne dla `best_fronts`.
@@ -105,34 +117,10 @@ class RunResult:
                 problem_mod = import_module(problem_mod)
                 yield problem.name, problem_mod, f_problem(problem, problem_mod)
 
-    def __init__(self, algo, problem, results_path='results', rundate=None, runid=None):
-        if not rundate:
-            rundate = datetime.today().strftime("%Y-%m-%d.%H%M%S.%f")
-        if not runid:
-            runid = random.randint(1000000, 9999999)
-        self.rundate = rundate
-        self.runid = runid
-        self.path = Path(results_path,
-                         problem,
-                         algo,
-                         "{rundate}__{runid:0>7}".format(**locals()))
-        self.budgets = {}
-        self.algo = algo
-        self.problem = problem
-
     def store(self, budget, cost, population, population_fitnesses):
-        with suppress(FileExistsError):
-            self.path.mkdir(parents=True)
-
-        store_path = self.path / "{budget}.pickle".format(**locals())
-        with store_path.open(mode='wb') as fh:
-            pickle_store = {"population": population,
-                            "fitnesses": population_fitnesses,
-                            "cost": cost}
-            pickle.dump(pickle_store, fh)
-
-        self.budgets[budget] = RunResultBudget(self.problem,
-                                               self.algo,
+        store_path = self.serializer.store(Result(population, population_fitnesses, cost=cost), str(budget))
+        self.budgets[budget] = RunResultBudget(self.simulation_case.problem_name,
+                                               self.simulation_case.algorithm_name,
                                                budget,
                                                None,
                                                cost,
@@ -144,16 +132,16 @@ class RunResult:
         if budget in self.budgets:
             return self.budgets[budget]
 
-        store_path = self.path / "{budget}.pickle".format(**locals())
-        population_pickle = self.load_file(store_path)
-        res = RunResultBudget(self.problem,
-                              self.algo,
+        result = self.serializer.load(str(budget))
+
+        res = RunResultBudget(self.simulation_case.problem_name,
+                              self.simulation_case.algorithm_name,
                               budget,
                               None,
-                              population_pickle["cost"],
-                              population_pickle["population"],
-                              population_pickle["fitnesses"],
-                              store_path)
+                              result.additional_data["cost"],
+                              result.population,
+                              result.fitnesses,
+                              result.store_path)
         return self.budgets.setdefault(budget, res)
 
     @staticmethod
@@ -169,21 +157,21 @@ class RunResult:
     def preload_all_budgets(self, run_no):
         self.budgets = {}
         with suppress(FileNotFoundError):
-            for candidate in sorted(self.path.iterdir()):
+            for candidate in sorted(self.serializer.path.iterdir()):
                 try:
                     match = re.fullmatch("(?P<budget>[0-9]+)\.pickle",
                                          candidate.name)
 
                     budget = int(match.groupdict()["budget"])
-                    population_pickle = self.load_file(candidate)
+                    population_pickle = self.serializer.load(budget)
 
-                    res = RunResultBudget(self.problem,
-                                          self.algo,
+                    res = RunResultBudget(self.simulation_case.problem_name,
+                                          self.simulation_case.algorithm_name,
                                           budget,
                                           run_no,
-                                          population_pickle["cost"],
-                                          population_pickle["population"],
-                                          population_pickle["fitnesses"],
+                                          population_pickle.additional_data["cost"],
+                                          population_pickle.population,
+                                          population_pickle.fitnesses,
                                           candidate)
 
                     self.budgets[budget] = res
@@ -313,10 +301,10 @@ class RunResultBudget:
                                                  result_file.name)
 
                             budget = int(match.groupdict()["budget"])
-                            population_pickle = RunResult.load_file(result_file)
+                            result = RunResult.load_file(result_file)
 
                             print("Caching for algo: {} ... {}".format(algo_path.name, (self.problem, budget, i)))
-                            cache[(self.problem, budget, i)].append(population_pickle["fitnesses"])
+                            cache[(self.problem, budget, i)].append(result.fitnesses)
                         except (AttributeError, IsADirectoryError):
                             pass
         self.filter_non_dominated_in_cache(cache)
