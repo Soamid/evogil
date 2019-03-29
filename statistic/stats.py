@@ -32,7 +32,7 @@ def force_data(args):
     return metric_name, metric_name_long, data_process, force_analysis
 
 
-def statistics(args, queue):
+def statistics(args):
     logger = logging.getLogger(__name__)
 
     badbench = []

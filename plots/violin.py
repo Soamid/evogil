@@ -24,7 +24,7 @@ def prepare_data(data):
     return [[v if v else sys.float_info.epsilon for v in d] for d in data]
 
 
-def violin(args, queue):
+def violin(args):
     global_data = collections.defaultdict(dict)
 
     boot_size = int(args['--bootstrap'])

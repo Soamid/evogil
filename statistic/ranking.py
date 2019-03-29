@@ -21,7 +21,7 @@ def get_weak_winners(scoring, winner, error_rate):
     return [(algo, score) for algo, score in scoring if algo != winner[0] and (min(score, winner[1]) + eps) / (max(score, winner[1]) + eps) >= (1-error_rate)]
 
 
-def table_rank(args, queue):
+def table_rank(args):
     logger = logging.getLogger(__name__)
     logger.debug("table ranking")
 
@@ -117,7 +117,7 @@ def format_result(algo_score, results, count):
     return "{} ({})".format(algo_score[0], algo_score[1]) + ("$^*$" if results.count(algo_score[1]) > count else "")
 
 
-def detailed_rank(args, queue):
+def detailed_rank(args):
     # plot_pareto_fronts()
 
     logger = logging.getLogger(__name__)
@@ -155,7 +155,7 @@ def detailed_rank(args, queue):
             "{} ({})".format(score[0], score[1]) for score in global_scoring[(budget, metric_name)].most_common()))
 
 
-def rank(args, queue):
+def rank(args):
     # plot_pareto_fronts()
 
     logger = logging.getLogger(__name__)

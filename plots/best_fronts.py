@@ -150,7 +150,7 @@ def best_fronts_color_nondom(args, queue):
         save_plot(ax, f, problem_mod)
 
 
-def best_fronts(args, queue):
+def best_fronts(args):
     boot_size = int(args['--bootstrap'])
     for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
         original_front = problem_mod.pareto_front

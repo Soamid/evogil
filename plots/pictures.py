@@ -395,7 +395,7 @@ def plot_results(results):
             legend_saved = True
 
 
-def pictures_from_stats(args, queue):
+def pictures_from_stats(args):
     # plot_pareto_fronts()
 
     logger = logging.getLogger(__name__)
@@ -478,7 +478,7 @@ def plot_results_summary(problems, scoring, selected):
         plt.close()
 
 
-def pictures_summary(args, queue):
+def pictures_summary(args):
     logger = logging.getLogger(__name__)
     logger.debug("pictures_summary")
 
