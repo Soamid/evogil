@@ -16,7 +16,7 @@ def yj(x, j):
 
 
 def base_fit(x, J):
-    return (2 * sum(yj(x, j)**2 for j in J))/len(J)
+    return (2 * sum(yj(x, j) ** 2 for j in J)) / len(J)
 
 
 def fit_1(x):
@@ -27,6 +27,6 @@ def fit_2(x):
     return 1 - math.pow(x[0], 0.2) + base_fit(x, J2)
 
 
-name = 'UF7'
+name = "UF7"
 fitnesses = [fit_1, fit_2]
 dims = [(0, 1)] + [(-1, 1)] * (n - 1)

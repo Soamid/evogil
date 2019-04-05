@@ -18,28 +18,30 @@ EPSILON = np.finfo(float).eps
 
 
 class HGS(ComplexDriver):
-
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 fitness_errors,
-                 cost_modifiers,
-                 driver,
-                 mutation_etas,
-                 crossover_etas,
-                 mutation_rates,
-                 crossover_rates,
-                 reference_point,
-                 mantissa_bits,
-                 min_progress_ratio,
-                 metaepoch_len=5,
-                 max_level=2,
-                 max_sprouts_no=20,
-                 sproutiveness=1,
-                 comparison_multipliers=(1.0, 0.1, 0.01),
-                 population_sizes=(64, 16, 4),
-                 *args, **kwargs):
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        fitness_errors,
+        cost_modifiers,
+        driver,
+        mutation_etas,
+        crossover_etas,
+        mutation_rates,
+        crossover_rates,
+        reference_point,
+        mantissa_bits,
+        min_progress_ratio,
+        metaepoch_len=5,
+        max_level=2,
+        max_sprouts_no=20,
+        sproutiveness=1,
+        comparison_multipliers=(1.0, 0.1, 0.01),
+        population_sizes=(64, 16, 4),
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.driver = driver
@@ -73,13 +75,11 @@ class HGS(ComplexDriver):
 
         # TODO add preconditions checking if message adapter is HGS message adapter
 
-        self.root = HGS.Node(self, 0, random.sample(population, self.population_sizes[0]))
+        self.root = HGS.Node(
+            self, 0, random.sample(population, self.population_sizes[0])
+        )
         self.nodes = [self.root]
-        self.level_nodes = {
-            0: [self.root],
-            1: [],
-            2: [],
-        }
+        self.level_nodes = {0: [self.root], 1: [], 2: []}
 
         self.cost = 0
 
@@ -91,18 +91,24 @@ class HGS(ComplexDriver):
 
     def step(self):
         # TODO: status debug print
-        print("nodes:", len(self.nodes),
-              len([x for x in self.nodes if x.alive]),
-              len([x for x in self.nodes if x.ripe]),
-              "   zer:", len(self.level_nodes[0]),
-              len([x for x in self.level_nodes[0] if x.alive]),
-              len([x for x in self.level_nodes[0] if x.ripe]),
-              "   one:", len(self.level_nodes[1]),
-              len([x for x in self.level_nodes[1] if x.alive]),
-              len([x for x in self.level_nodes[1] if x.ripe]),
-              "   two:", len(self.level_nodes[2]),
-              len([x for x in self.level_nodes[2] if x.alive]),
-              len([x for x in self.level_nodes[2] if x.ripe]), )
+        print(
+            "nodes:",
+            len(self.nodes),
+            len([x for x in self.nodes if x.alive]),
+            len([x for x in self.nodes if x.ripe]),
+            "   zer:",
+            len(self.level_nodes[0]),
+            len([x for x in self.level_nodes[0] if x.alive]),
+            len([x for x in self.level_nodes[0] if x.ripe]),
+            "   one:",
+            len(self.level_nodes[1]),
+            len([x for x in self.level_nodes[1] if x.alive]),
+            len([x for x in self.level_nodes[1] if x.ripe]),
+            "   two:",
+            len(self.level_nodes[2]),
+            len([x for x in self.level_nodes[2] if x.alive]),
+            len([x for x in self.level_nodes[2] if x.ripe]),
+        )
 
         self.run_metaepoch()
         self.trim_sprouts()
@@ -110,8 +116,13 @@ class HGS(ComplexDriver):
         self.revive_root()
         print("Nodes:")
         for i in range(3):
-            print("level {} : {} / {}".format(i + 1, len([n for n in self.level_nodes[i] if n.ripe]),
-                                              len(self.level_nodes[i])))
+            print(
+                "level {} : {} / {}".format(
+                    i + 1,
+                    len([n for n in self.level_nodes[i] if n.ripe]),
+                    len(self.level_nodes[i]),
+                )
+            )
 
     def run_metaepoch(self):
         node_jobs = []
@@ -123,8 +134,8 @@ class HGS(ComplexDriver):
             node_jobs.append(node.run_metaepoch())
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
         rx.merge(*node_jobs).pipe(
-             ops.subscribe_on(NewThreadScheduler()),
-             ops.do_action(on_next=lambda message: self._update_cost(message))
+            ops.subscribe_on(NewThreadScheduler()),
+            ops.do_action(on_next=lambda message: self._update_cost(message)),
         ).run()
 
     def _update_cost(self, message):
@@ -142,9 +153,12 @@ class HGS(ComplexDriver):
 
     def trim_not_progressing(self, nodes):
         for sprout in [x for x in nodes if x.alive]:
-            if sprout.old_hypervolume is not None and (sprout.old_hypervolume > 0.0) \
-                    and ((sprout.hypervolume / (sprout.old_hypervolume + EPSILON)) - 1.0) \
-                    < self.min_progress_ratio[sprout.level] / 2 ** sprout.level:
+            if (
+                sprout.old_hypervolume is not None
+                and (sprout.old_hypervolume > 0.0)
+                and ((sprout.hypervolume / (sprout.old_hypervolume + EPSILON)) - 1.0)
+                < self.min_progress_ratio[sprout.level] / 2 ** sprout.level
+            ):
                 # TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
                 sprout.alive = False
                 sprout.center = np.mean(sprout.population, axis=0)
@@ -163,8 +177,11 @@ class HGS(ComplexDriver):
             for another_sprout in to_compare:
                 if not sprout.alive:
                     break
-                if (another_sprout.ripe or another_sprout in processed) \
-                        and redundant([another_sprout.center], [sprout.center], self.min_dists[sprout.level]):
+                if (another_sprout.ripe or another_sprout in processed) and redundant(
+                    [another_sprout.center],
+                    [sprout.center],
+                    self.min_dists[sprout.level],
+                ):
                     sprout.alive = False
                     # TODO: logging killing redundant sprouts
                     print("   KILL REDUNDANT")
@@ -188,7 +205,9 @@ class HGS(ComplexDriver):
         def blurred(f):
             def blurred_f(*args, **kwargs):
                 f_val = f(*args, **kwargs)
-                x = math.fabs(random.gauss(f_val, self.fitness_errors[level] * f_val / 3.0))
+                x = math.fabs(
+                    random.gauss(f_val, self.fitness_errors[level] * f_val / 3.0)
+                )
 
                 # print("level: {}, normal: {} blurred: {}, diff: {}".format(level, f_val, x, math.fabs(f_val - x)/f_val))
                 return x
@@ -198,37 +217,37 @@ class HGS(ComplexDriver):
         return [blurred(f) for f in self.fitnesses]
 
     class Node:
-        def __init__(self,
-                     owner,
-                     level,
-                     population):
+        def __init__(self, owner, level, population):
             self.alive = True
             self.ripe = False
             self.owner = owner
             self.level = level
             self.current_cost = 0
-            self.driver = owner.driver(population=population,
-                                       dims=owner.dims,
-                                       fitnesses=owner.blurred_fitnesses(self.level),
-                                       mutation_eta=owner.mutation_etas[self.level],
-                                       mutation_rate=owner.mutation_rates[self.level],
-                                       crossover_eta=owner.crossover_etas[self.level],
-                                       crossover_rate=owner.crossover_rates[self.level],
-                                       fitness_archive=self.owner.global_fitness_archive[self.level],
-                                       trim_function=lambda x: trim_vector(x, self.owner.mantissa_bits[
-                                           self.level]),
-                                       message_adapter_factory=owner.driver_message_adapter_factory)
+            self.driver = owner.driver(
+                population=population,
+                dims=owner.dims,
+                fitnesses=owner.blurred_fitnesses(self.level),
+                mutation_eta=owner.mutation_etas[self.level],
+                mutation_rate=owner.mutation_rates[self.level],
+                crossover_eta=owner.crossover_etas[self.level],
+                crossover_rate=owner.crossover_rates[self.level],
+                fitness_archive=self.owner.global_fitness_archive[self.level],
+                trim_function=lambda x: trim_vector(
+                    x, self.owner.mantissa_bits[self.level]
+                ),
+                message_adapter_factory=owner.driver_message_adapter_factory,
+            )
 
             self.population = []
             self.sprouts = []
             self.delegates = []
 
-            self.old_average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
-            self.average_fitnesses = [float('inf') for _ in self.owner.fitnesses]
+            self.old_average_fitnesses = [float("inf") for _ in self.owner.fitnesses]
+            self.average_fitnesses = [float("inf") for _ in self.owner.fitnesses]
 
             self.relative_hypervolume = None
-            self.old_hypervolume = float('-inf')
-            self.hypervolume = float('-inf')
+            self.old_hypervolume = float("-inf")
+            self.hypervolume = float("-inf")
 
         def run_metaepoch(self) -> Observable:
             if self.alive:
@@ -236,7 +255,7 @@ class HGS(ComplexDriver):
                 return epoch_job.create_job(self.driver).pipe(
                     ops.map(lambda message: self.fill_node_info(message)),
                     ops.do_action(lambda message: self.update_current_cost(message)),
-                    ops.do_action(on_completed=lambda: self._after_metaepoch())
+                    ops.do_action(on_completed=lambda: self._after_metaepoch()),
                 )
             return rx.empty()
 
@@ -256,37 +275,61 @@ class HGS(ComplexDriver):
 
         def update_dominated_hypervolume(self):
             self.old_hypervolume = self.hypervolume
-            fitness_values = [[f(p) for f in self.owner.fitnesses] for p in self.population]
+            fitness_values = [
+                [f(p) for f in self.owner.fitnesses] for p in self.population
+            ]
             hv = HyperVolume(self.owner.reference_point)
 
             if self.relative_hypervolume is None:
                 self.relative_hypervolume = hv.compute(fitness_values)
             else:
-                self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
+                self.hypervolume = (
+                    hv.compute(fitness_values) - self.relative_hypervolume
+                )
 
         def release_new_sprouts(self):
             if self.ripe:
                 for sprout in self.sprouts:
                     sprout.release_new_sprouts()
-                if self.level < self.owner.max_level and len(
-                        [x for x in self.sprouts if x.alive]) < self.owner.max_sprouts_no:
+                if (
+                    self.level < self.owner.max_level
+                    and len([x for x in self.sprouts if x.alive])
+                    < self.owner.max_sprouts_no
+                ):
                     released_sprouts = 0
                     for delegate in self.delegates:
-                        if released_sprouts >= self.owner.sproutiveness or len(
-                                [x for x in self.sprouts if x.alive]) >= self.owner.max_sprouts_no:
+                        if (
+                            released_sprouts >= self.owner.sproutiveness
+                            or len([x for x in self.sprouts if x.alive])
+                            >= self.owner.max_sprouts_no
+                        ):
                             break
 
-                        if not any([redundant([delegate], [sprout.center], self.owner.min_dists[self.level + 1])
-                                    for sprout in
-                                    [x for x in self.owner.level_nodes[self.level + 1] if len(x.population) > 0]]):
-                            candidate_population = population_from_delegate(delegate,
-                                                                            self.owner.population_sizes[self.level + 1],
-                                                                            self.owner.dims,
-                                                                            self.owner.mutation_rates[self.level + 1],
-                                                                            self.owner.mutation_etas[
-                                                                                self.level + 1])
+                        if not any(
+                            [
+                                redundant(
+                                    [delegate],
+                                    [sprout.center],
+                                    self.owner.min_dists[self.level + 1],
+                                )
+                                for sprout in [
+                                    x
+                                    for x in self.owner.level_nodes[self.level + 1]
+                                    if len(x.population) > 0
+                                ]
+                            ]
+                        ):
+                            candidate_population = population_from_delegate(
+                                delegate,
+                                self.owner.population_sizes[self.level + 1],
+                                self.owner.dims,
+                                self.owner.mutation_rates[self.level + 1],
+                                self.owner.mutation_etas[self.level + 1],
+                            )
 
-                            new_sprout = HGS.Node(self.owner, self.level + 1, candidate_population)
+                            new_sprout = HGS.Node(
+                                self.owner, self.level + 1, candidate_population
+                            )
                             self.sprouts.append(new_sprout)
                             self.owner.nodes.append(new_sprout)
                             self.owner.level_nodes[self.level + 1].append(new_sprout)
@@ -364,16 +407,11 @@ def _plot_node(node, color, dims, delegates=False):
         pop = node.delegates
 
     if node.alive:
-        marker = 'o'
+        marker = "o"
     else:
-        marker = '+'
-    plt.scatter(
-        [x[0] for x in pop],
-        [x[1] for x in pop],
-        color=color,
-        marker=marker
-    )
+        marker = "+"
+    plt.scatter([x[0] for x in pop], [x[1] for x in pop], color=color, marker=marker)
     plt.xlim(dims[0][0], dims[0][1])
     plt.ylim(dims[1][0], dims[1][1])
-    plt.savefig('plots/debug/{}.png'.format(time.time()))
+    plt.savefig("plots/debug/{}.png".format(time.time()))
     plt.close()

@@ -28,7 +28,10 @@ def redundant_projection(pop_a, pop_b, variances_multiplier):
     projections_b = [np.dot((x - mean_pop_b), diff_vector) for x in pop_b]
     projections_std_b = np.std(projections_b)
 
-    return (variances_multiplier * projections_std_a + variances_multiplier * projections_std_b) > len_diff_vector
+    return (
+        variances_multiplier * projections_std_a
+        + variances_multiplier * projections_std_b
+    ) > len_diff_vector
 
 
 def redundant_lda(pop_a, pop_b, variances_multiplier=2.0):
@@ -45,7 +48,9 @@ def redundant_lda(pop_a, pop_b, variances_multiplier=2.0):
     lda_projection = None
     while lda_projection is None:
         try:
-            lda_projection = [x[0] for x in lda_instance.fit_transform(combined, combined_class)]
+            lda_projection = [
+                x[0] for x in lda_instance.fit_transform(combined, combined_class)
+            ]
         except ValueError:
             # print("??? intelowy error!")
             # print(pop_a)
@@ -79,7 +84,10 @@ def compare_centers(pop_a, pop_b, variances_multiplier=2.0):
     projections_std_b = np.std(projections_b)
 
     # noinspection PyTypeChecker
-    return (variances_multiplier * projections_std_a + variances_multiplier * projections_std_b) > len_diff_vector
+    return (
+        variances_multiplier * projections_std_a
+        + variances_multiplier * projections_std_b
+    ) > len_diff_vector
 
 
 def scaled_domain(dims, eta):

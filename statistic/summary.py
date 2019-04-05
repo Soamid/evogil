@@ -9,5 +9,10 @@ def analyse_results(*args, **kwargs):
         for algo_name, budgets in algorithms:
             for result in budgets:
                 print(
-                    "{:9} {:14} {:>4} {:>2}".format(problem_name, algo_name, result["budget"], len(result["results"]))
+                    "{:9} {:14} {:>4} {:>2}".format(
+                        problem_name,
+                        algo_name,
+                        result["budget"],
+                        len(result["results"]),
+                    )
                 )

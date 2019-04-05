@@ -5,10 +5,12 @@ from algorithms.HGS.HGS_optional import *
 
 
 def __redundant_test():
-    sample_pop_a = [[random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)]
-                    for _ in range(1000)]
-    sample_pop_b = [[random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)]
-                    for _ in range(1000)]
+    sample_pop_a = [
+        [random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)] for _ in range(1000)
+    ]
+    sample_pop_b = [
+        [random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)] for _ in range(1000)
+    ]
 
     lda_instance = lda.LDA(n_components=1)
 
@@ -22,46 +24,48 @@ def __redundant_test():
     projection_a = [x for i, x in enumerate(post_lda) if combined_class[i] == 0]
     projection_b = [x for i, x in enumerate(post_lda) if combined_class[i] == 1]
 
-    plt.scatter(projection_a, [0.5 for _ in projection_a], c='b')
-    plt.scatter(projection_b, [0.5 for _ in projection_b], c='r')
+    plt.scatter(projection_a, [0.5 for _ in projection_a], c="b")
+    plt.scatter(projection_b, [0.5 for _ in projection_b], c="r")
 
     mean_a = np.mean(projection_a)
     mean_b = np.mean(projection_b)
 
-    plt.scatter([mean_a], [0.5], c='y')
-    plt.scatter([mean_b], [0.5], c='y')
+    plt.scatter([mean_a], [0.5], c="y")
+    plt.scatter([mean_b], [0.5], c="y")
 
     std_a = np.std(projection_a)
     std_b = np.std(projection_b)
 
-    plt.scatter([mean_a + 2 * std_a, mean_a - 2 * std_a], [0.5, 0.5], c='m')
-    plt.scatter([mean_b + 2 * std_b, mean_b - 2 * std_b], [0.5, 0.5], c='c')
+    plt.scatter([mean_a + 2 * std_a, mean_a - 2 * std_a], [0.5, 0.5], c="m")
+    plt.scatter([mean_b + 2 * std_b, mean_b - 2 * std_b], [0.5, 0.5], c="c")
 
     plt.show()
 
 
 def __compare_test():
-    sample_pop_a = [[random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)]
-                    for _ in range(1000)]
+    sample_pop_a = [
+        [random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)] for _ in range(1000)
+    ]
     # plt.scatter([x[0] for x in sample_pop_a], [x[1] for x in sample_pop_a], c='b')
 
     mean_pop_a = np.mean(sample_pop_a, axis=0)
-    plt.scatter([mean_pop_a[0]], [mean_pop_a[1]], c='g')
-    plt.scatter([mean_pop_a[0] + 2 * 0.015], [mean_pop_a[1]], c='g')
-    plt.scatter([mean_pop_a[0] - 2 * 0.015], [mean_pop_a[1]], c='g')
-    plt.scatter([mean_pop_a[0]], [mean_pop_a[1] + 2 * 0.05], c='g')
-    plt.scatter([mean_pop_a[0]], [mean_pop_a[1] - 2 * 0.05], c='g')
+    plt.scatter([mean_pop_a[0]], [mean_pop_a[1]], c="g")
+    plt.scatter([mean_pop_a[0] + 2 * 0.015], [mean_pop_a[1]], c="g")
+    plt.scatter([mean_pop_a[0] - 2 * 0.015], [mean_pop_a[1]], c="g")
+    plt.scatter([mean_pop_a[0]], [mean_pop_a[1] + 2 * 0.05], c="g")
+    plt.scatter([mean_pop_a[0]], [mean_pop_a[1] - 2 * 0.05], c="g")
 
-    sample_pop_b = [[random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)]
-                    for _ in range(1000)]
+    sample_pop_b = [
+        [random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)] for _ in range(1000)
+    ]
     # plt.scatter([x[0] for x in sample_pop_b], [x[1] for x in sample_pop_b], c='r')
 
     mean_pop_b = np.mean(sample_pop_b, axis=0)
-    plt.scatter([mean_pop_b[0]], [mean_pop_b[1]], c='g')
-    plt.scatter([mean_pop_b[0] + 2 * 0.04], [mean_pop_b[1]], c='g')
-    plt.scatter([mean_pop_b[0] - 2 * 0.04], [mean_pop_b[1]], c='g')
-    plt.scatter([mean_pop_b[0]], [mean_pop_b[1] + 2 * 0.025], c='g')
-    plt.scatter([mean_pop_b[0]], [mean_pop_b[1] - 2 * 0.025], c='g')
+    plt.scatter([mean_pop_b[0]], [mean_pop_b[1]], c="g")
+    plt.scatter([mean_pop_b[0] + 2 * 0.04], [mean_pop_b[1]], c="g")
+    plt.scatter([mean_pop_b[0] - 2 * 0.04], [mean_pop_b[1]], c="g")
+    plt.scatter([mean_pop_b[0]], [mean_pop_b[1] + 2 * 0.025], c="g")
+    plt.scatter([mean_pop_b[0]], [mean_pop_b[1] - 2 * 0.025], c="g")
 
     diff_vector = mean_pop_b - mean_pop_a
     print(diff_vector)
@@ -86,7 +90,7 @@ def __compare_test():
     print(dots_std_a)
 
     var_a = mean_pop_a + (2 * dots_std_a * diff_vector)
-    plt.scatter([var_a[0]], [var_a[1]], c='c')
+    plt.scatter([var_a[0]], [var_a[1]], c="c")
 
     dots_b = [np.dot((x - mean_pop_b), diff_vector) for x in sample_pop_b]
     flatted_b = [d * diff_vector + mean_pop_b for d in dots_b]
@@ -97,7 +101,7 @@ def __compare_test():
     print(dots_std_b)
 
     var_b = mean_pop_b + (-2 * dots_std_b * diff_vector)
-    plt.scatter([var_b[0]], [var_b[1]], c='m')
+    plt.scatter([var_b[0]], [var_b[1]], c="m")
 
     print(len_diff_vector)
     print(2 * dots_std_a + 2 * dots_std_b)
@@ -107,7 +111,7 @@ def __compare_test():
     # plt.xlim([0.0, 1.0])
     # plt.ylim([0.0, 1.0])
     plt.grid(True)
-    plt.axes().set_aspect('equal', 'datalim')
+    plt.axes().set_aspect("equal", "datalim")
     plt.show()
 
 
@@ -120,10 +124,7 @@ def __coding_test():
     print(scaled_domain(sample_dims, eta_1))
     print(scaled_domain(sample_dims, eta_2))
 
-    points = [
-        [random.uniform(a, b) for a, b in sample_dims]
-        for _ in range(1)
-    ]
+    points = [[random.uniform(a, b) for a, b in sample_dims] for _ in range(1)]
     print(points)
     decoded = decode_all(points, eta_0, sample_dims)
     print(decoded)
@@ -137,5 +138,5 @@ def __coding_test():
     print(a)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     __redundant_test()

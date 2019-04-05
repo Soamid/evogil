@@ -4,7 +4,6 @@ from algorithms.base.model import SubPopulation
 
 
 class OMOPSOIMGAMessageAdapter(IMGAMessageAdapter):
-
     def get_population(self):
         return [x.value for x in self.driver.individuals]
 
@@ -28,10 +27,8 @@ class OMOPSOIMGAMessageAdapter(IMGAMessageAdapter):
 
 
 class OMOPSOHGSMessageAdapter(HGSMessageAdapter):
-
     def get_population(self):
         return self.driver.population
 
     def nominate_delegates(self):
         return self.get_population()
-

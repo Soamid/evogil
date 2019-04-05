@@ -4,12 +4,14 @@ import random
 import itertools
 
 
-def gen_population(count: 'Int', dims: 'Int') -> '[[Float]]':
-    return [[random.uniform(from_range, to_range) for from_range, to_range in dims]
-            for _ in range(count)]
+def gen_population(count: "Int", dims: "Int") -> "[[Float]]":
+    return [
+        [random.uniform(from_range, to_range) for from_range, to_range in dims]
+        for _ in range(count)
+    ]
 
 
-def dominates(xs, ys) -> 'Bool':
+def dominates(xs, ys) -> "Bool":
     """
     :param xs: Wektor wyników A.
     :param ys: Wektor wyników B.
@@ -18,7 +20,7 @@ def dominates(xs, ys) -> 'Bool':
     return domination_cmp(xs, ys) > 0
 
 
-def domination_cmp(xs, ys) -> 'Int':
+def domination_cmp(xs, ys) -> "Int":
     """
     :param xs: Wektor wyników A.
     :param ys: Wektor wyników B.
@@ -34,7 +36,7 @@ def domination_cmp(xs, ys) -> 'Int':
     return direction
 
 
-def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
+def paretofront_layers(lst, fitfun_res) -> "[[Individual]]":
     """
     :param lst: Lista indywiduów.
     :param fitfun_res: Funkcja zwracająca wynik funkcji fitness indywiduów.
@@ -46,19 +48,17 @@ def paretofront_layers(lst, fitfun_res) -> '[[Individual]]':
     except TypeError:
         # workaround:
         logger = logging.getLogger(__name__)
-        logger.error("Wow, this is a bug. Please pass a function, not a list!", stack_info=True)
+        logger.error(
+            "Wow, this is a bug. Please pass a function, not a list!", stack_info=True
+        )
         lst_f_doms = [[indiv, [f(indiv) for f in fitfun_res], 0] for indiv in lst]
 
     while len(lst_f_doms) > 0:
         for i, j in itertools.permutations(lst_f_doms, 2):
             if dominates(i[1], j[1]):
                 j[2] += 1
-        yield [ind
-               for ind, f_ind, domtd in lst_f_doms
-               if domtd == 0]
-        lst_f_doms = [[ind, f_ind, 0]
-                      for ind, f_ind, domtd in lst_f_doms
-                      if domtd > 0]
+        yield [ind for ind, f_ind, domtd in lst_f_doms if domtd == 0]
+        lst_f_doms = [[ind, f_ind, 0] for ind, f_ind, domtd in lst_f_doms if domtd > 0]
 
         # No dobra, ten algo jest słaby: jego czas działania to O(k d n^2) dla k-ilości "warstw", n-ilości indywiduów.
         # Da się lepiej, ale ten margines jest zbyt mały, by... AW FCUK IT!
@@ -105,8 +105,6 @@ def split_front(pareto_front, epsilon):
 
 def one_fitness(fitnesses):
     def res(xs):
-        return [f(xs)
-                for f
-                in fitnesses]
+        return [f(xs) for f in fitnesses]
 
     return res

@@ -4,7 +4,6 @@ from algorithms.base.model import SubPopulation
 
 
 class SPEA2IMGAMessageAdapter(IMGAMessageAdapter):
-
     def get_population(self):
         return self.driver.population
 
@@ -16,9 +15,9 @@ class SPEA2IMGAMessageAdapter(IMGAMessageAdapter):
         to_remove = []
 
         for p in self.driver.individuals:
-            if p['value'] in immigrants_cp:
+            if p["value"] in immigrants_cp:
                 to_remove.append(p)
-                immigrants_cp.remove(p['value'])
+                immigrants_cp.remove(p["value"])
 
         for p in to_remove:
             self.driver.individuals.remove(p)
@@ -26,9 +25,8 @@ class SPEA2IMGAMessageAdapter(IMGAMessageAdapter):
 
 
 class SPEA2HGSMessageAdapter(HGSMessageAdapter):
-
     def get_population(self):
         return self.driver.population
 
     def nominate_delegates(self):
-        return [x['value'] for x in self.driver.archive]
+        return [x["value"] for x in self.driver.archive]

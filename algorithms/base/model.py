@@ -12,6 +12,7 @@ SubPopulation = Population
 
 # UNIVERSAL MESSAGES #
 
+
 class ProgressMessage:
     def __init__(self, step_no: int, cost: int):
         self.cost = cost
@@ -19,15 +20,16 @@ class ProgressMessage:
 
 
 class PopulationMessage(ProgressMessage):
-    def __init__(self, population: Population, progress : ProgressMessage):
+    def __init__(self, population: Population, progress: ProgressMessage):
         super().__init__(progress.step_no, progress.cost)
         self.population = population
 
+
 # UNIVERSAL MESSAGES ADAPTERS #
 
-class MessageAdapter:
 
-    def __init__(self, driver: 'Driver'):
+class MessageAdapter:
+    def __init__(self, driver: "Driver"):
         self.driver = driver
 
     def emit_result(self):
@@ -35,8 +37,7 @@ class MessageAdapter:
 
 
 class ProgressMessageAdapter(MessageAdapter):
-
-    def __init__(self, driver: 'Driver'):
+    def __init__(self, driver: "Driver"):
         super().__init__(driver)
 
     def emit_result(self):
@@ -44,7 +45,6 @@ class ProgressMessageAdapter(MessageAdapter):
 
 
 class PopulationMessageAdapter(ProgressMessageAdapter):
-
     def emit_result(self) -> PopulationMessage:
         return PopulationMessage(self.get_population(), super().emit_result())
 

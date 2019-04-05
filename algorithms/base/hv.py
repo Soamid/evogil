@@ -17,7 +17,7 @@
 
 __author__ = "Simon Wessing"
 
-#TODO Use global hv after evil branch merge!
+# TODO Use global hv after evil branch merge!
 class HyperVolume:
     """
     Hypervolume computation based on variant 3 of the algorithm in the paper:
@@ -33,7 +33,6 @@ class HyperVolume:
         """Constructor."""
         self.referencePoint = referencePoint
         self.list = []
-
 
     def compute(self, front):
         """Returns the hypervolume that is dominated by a non-dominated front.
@@ -61,13 +60,14 @@ class HyperVolume:
             # this way the reference point doesn't have to be explicitly used
             # in the HV computation
             for j in range(len(relevantPoints)):
-                relevantPoints[j] = [relevantPoints[j][i] - referencePoint[i] for i in range(dimensions)]
+                relevantPoints[j] = [
+                    relevantPoints[j][i] - referencePoint[i] for i in range(dimensions)
+                ]
 
         self.preProcess(relevantPoints)
         bounds = [-1.0e308] * dimensions
         hyperVolume = self.hvRecursive(dimensions - 1, len(relevantPoints), bounds)
         return hyperVolume
-
 
     def hvRecursive(self, dimIndex, length, bounds):
         """Recursive call to hypervolume calculation.
@@ -109,7 +109,10 @@ class HyperVolume:
                     q.ignore = 0
                 q = q.prev[dimIndex]
             q = p.prev[dimIndex]
-            while length > 1 and (q.cargo[dimIndex] > bounds[dimIndex] or q.prev[dimIndex].cargo[dimIndex] >= bounds[dimIndex]):
+            while length > 1 and (
+                q.cargo[dimIndex] > bounds[dimIndex]
+                or q.prev[dimIndex].cargo[dimIndex] >= bounds[dimIndex]
+            ):
                 p = q
                 remove(p, dimIndex, bounds)
                 q = p.prev[dimIndex]
@@ -118,10 +121,14 @@ class HyperVolume:
             qCargo = q.cargo
             qPrevDimIndex = q.prev[dimIndex]
             if length > 1:
-                hvol = qPrevDimIndex.volume[dimIndex] + qPrevDimIndex.area[dimIndex] * (qCargo[dimIndex] - qPrevDimIndex.cargo[dimIndex])
+                hvol = qPrevDimIndex.volume[dimIndex] + qPrevDimIndex.area[dimIndex] * (
+                    qCargo[dimIndex] - qPrevDimIndex.cargo[dimIndex]
+                )
             else:
                 qArea[0] = 1
-                qArea[1:dimIndex+1] = [qArea[i] * -qCargo[i] for i in range(dimIndex)]
+                qArea[1 : dimIndex + 1] = [
+                    qArea[i] * -qCargo[i] for i in range(dimIndex)
+                ]
             q.volume[dimIndex] = hvol
             if q.ignore >= dimIndex:
                 qArea[dimIndex] = qPrevDimIndex.area[dimIndex]
@@ -147,7 +154,6 @@ class HyperVolume:
             hvol -= q.area[dimIndex] * q.cargo[dimIndex]
             return hvol
 
-
     def preProcess(self, front):
         """Sets up the list data structure needed for calculation."""
         dimensions = len(self.referencePoint)
@@ -158,7 +164,6 @@ class HyperVolume:
             nodeList.extend(nodes, i)
         self.list = nodeList
 
-
     def sortByDimension(self, nodes, i):
         """Sorts the list of nodes by the i-th value of the contained points."""
         # build a list of tuples of (point[i], node)
@@ -168,10 +173,9 @@ class HyperVolume:
         decorated.sort()
         # write back to original list
         nodes[:] = [node for (_, node) in decorated]
-            
-            
-            
-class MultiList: 
+
+
+class MultiList:
     """A special data structure needed by FonsecaHyperVolume. 
     
     It consists of several doubly linked lists that share common nodes. So, 
@@ -179,24 +183,22 @@ class MultiList:
 
     """
 
-    class Node: 
-        
-        def __init__(self, numberLists, cargo=None): 
-            self.cargo = cargo 
-            self.next  = [None] * numberLists
+    class Node:
+        def __init__(self, numberLists, cargo=None):
+            self.cargo = cargo
+            self.next = [None] * numberLists
             self.prev = [None] * numberLists
             self.ignore = 0
             self.area = [0.0] * numberLists
             self.volume = [0.0] * numberLists
-    
-        def __str__(self): 
+
+        def __str__(self):
             return str(self.cargo)
 
         def __eq__(self, other):
             return True
-        
-        
-    def __init__(self, numberLists):  
+
+    def __init__(self, numberLists):
         """Constructor. 
         
         Builds 'numberLists' doubly linked lists.
@@ -205,9 +207,8 @@ class MultiList:
         self.numberLists = numberLists
         self.sentinel = MultiList.Node(numberLists)
         self.sentinel.next = [self.sentinel] * numberLists
-        self.sentinel.prev = [self.sentinel] * numberLists  
-        
-        
+        self.sentinel.prev = [self.sentinel] * numberLists
+
     def __str__(self):
         strings = []
         for i in range(self.numberLists):
@@ -221,13 +222,11 @@ class MultiList:
         for string in strings:
             stringRepr += string + "\n"
         return stringRepr
-    
-    
+
     def __len__(self):
         """Returns the number of lists that are included in this MultiList."""
         return self.numberLists
-    
-    
+
     def getLength(self, i):
         """Returns the length of the i-th list."""
         length = 0
@@ -237,8 +236,7 @@ class MultiList:
             length += 1
             node = node.next[i]
         return length
-            
-            
+
     def append(self, node, index):
         """Appends a node to the end of the list at the given index."""
         lastButOne = self.sentinel.prev[index]
@@ -247,8 +245,7 @@ class MultiList:
         # set the last element as the new one
         self.sentinel.prev[index] = node
         lastButOne.next[index] = node
-        
-        
+
     def extend(self, nodes, index):
         """Extends the list at the given index with the nodes."""
         sentinel = self.sentinel
@@ -259,20 +256,18 @@ class MultiList:
             # set the last element as the new one
             sentinel.prev[index] = node
             lastButOne.next[index] = node
-        
-        
-    def remove(self, node, index, bounds): 
+
+    def remove(self, node, index, bounds):
         """Removes and returns 'node' from all lists in [0, 'index'[."""
-        for i in range(index): 
+        for i in range(index):
             predecessor = node.prev[i]
             successor = node.next[i]
             predecessor.next[i] = successor
-            successor.prev[i] = predecessor  
+            successor.prev[i] = predecessor
             if bounds[i] > node.cargo[i]:
                 bounds[i] = node.cargo[i]
         return node
-    
-    
+
     def reinsert(self, node, index, bounds):
         """
         Inserts 'node' at the position it had in all lists in [0, 'index'[
@@ -280,12 +275,11 @@ class MultiList:
         nodes of the node that is reinserted are in the list.
 
         """
-        for i in range(index): 
+        for i in range(index):
             node.prev[i].next[i] = node
             node.next[i].prev[i] = node
             if bounds[i] > node.cargo[i]:
                 bounds[i] = node.cargo[i]
-            
 
 
 if __name__ == "__main__":
@@ -293,10 +287,5 @@ if __name__ == "__main__":
     # Example:
     referencePoint = [2, 2, 2]
     hv = HyperVolume(referencePoint)
-    front = [[1,0,1], [0,1,0]]
+    front = [[1, 0, 1], [0, 1, 0]]
     volume = hv.compute(front)
-
-            
-            
-            
-        

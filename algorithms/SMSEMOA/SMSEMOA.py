@@ -10,19 +10,22 @@ from evotools import ea_utils
 
 
 class SMSEMOA(Driver):
-    def __init__(self,
-                 population,
-                 fitnesses,
-                 dims,
-                 mutation_eta,
-                 mutation_rate,
-                 crossover_eta,
-                 crossover_rate,
-                 reference_point,
-                 epoch_length_multiplier=0.5,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        population,
+        fitnesses,
+        dims,
+        mutation_eta,
+        mutation_rate,
+        crossover_eta,
+        crossover_rate,
+        reference_point,
+        epoch_length_multiplier=0.5,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.fitnesses = fitnesses
         self.dims = dims
@@ -65,23 +68,25 @@ class SMSEMOA(Driver):
                 p.objectives = self.fitness_archive[p.value]
                 objectives_cost = 0
             else:
-                p.objectives = [o(p.value)
-                                for o in self.fitnesses]
+                p.objectives = [o(p.value) for o in self.fitnesses]
                 objectives_cost = len(self.population)
         return objectives_cost
 
     def generate(self, pop):
         selected_parents = [x.value for x in random.sample(pop, 2)]
-        child = crossover(selected_parents[0],
-                          selected_parents[1],
-                          self.dims,
-                          self.crossover_rate,
-                          self.crossover_eta)
+        child = crossover(
+            selected_parents[0],
+            selected_parents[1],
+            self.dims,
+            self.crossover_rate,
+            self.crossover_eta,
+        )
 
-        return Individual(self.trim_function(mutate(child,
-                                                    self.dims,
-                                                    self.mutation_rate,
-                                                    self.mutation_eta)))
+        return Individual(
+            self.trim_function(
+                mutate(child, self.dims, self.mutation_rate, self.mutation_eta)
+            )
+        )
 
     def reduce_population(self, pop):
         sorted_pop = nd_sort(pop)
@@ -99,7 +104,10 @@ class SMSEMOA(Driver):
 
         hv_global = hv.compute(results)
 
-        return [(pop[i], hv_global - hv.compute(results[:i] + results[i + 1:])) for i in range(len(results))]
+        return [
+            (pop[i], hv_global - hv.compute(results[:i] + results[i + 1 :]))
+            for i in range(len(results))
+        ]
 
 
 def nd_sort(pop):

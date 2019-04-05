@@ -1,7 +1,7 @@
 from algorithms.base.driver import Driver
 from algorithms.base.drivertools import mutate, crossover
 
-__author__ = 'Prpht'
+__author__ = "Prpht"
 
 import collections
 import random
@@ -26,19 +26,21 @@ def dominates(x, y):
 
 
 class NSGAII(Driver):
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 mating_population_size,
-                 mutation_eta,
-                 crossover_eta,
-                 mutation_rate,
-                 crossover_rate,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args,
-                 **kwargs):
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        mating_population_size,
+        mutation_eta,
+        crossover_eta,
+        mutation_rate,
+        crossover_rate,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.dims = dims
@@ -99,14 +101,19 @@ class NSGAII(Driver):
     def _calculate_objectives(self):
         for ind in self.individuals:
             if ind.objectives is None:
-                if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+                if (self.fitness_archive is not None) and (
+                    ind.v in self.fitness_archive
+                ):
                     fitnesses = self.fitness_archive[ind.v]
                 else:
                     self.cost += 1
                     fitnesses = [objective(ind.v) for objective in self.objectives]
                     if self.fitness_archive is not None:
                         self.fitness_archive[ind.v] = fitnesses
-                ind.objectives = {objective: fitness for objective, fitness in zip(self.objectives, fitnesses)}
+                ind.objectives = {
+                    objective: fitness
+                    for objective, fitness in zip(self.objectives, fitnesses)
+                }
 
     def _nd_sort(self):
         self.dominated_by = collections.defaultdict(set)
@@ -147,35 +154,61 @@ class NSGAII(Driver):
                     # self.dist[inds[0]] = self.dist[inds[-1]] = float('inf')
                     max_r = inds[-1].objectives[objective]
                     min_r = inds[0].objectives[objective]
-                    self.dist[inds[0]] = float('inf')
-                    self.dist[inds[-1]] += 2 * (inds[-1].objectives[objective] - inds[-2].objectives[objective]) / (
-                            max_r - min_r + sys.float_info.epsilon)
+                    self.dist[inds[0]] = float("inf")
+                    self.dist[inds[-1]] += (
+                        2
+                        * (
+                            inds[-1].objectives[objective]
+                            - inds[-2].objectives[objective]
+                        )
+                        / (max_r - min_r + sys.float_info.epsilon)
+                    )
                     for k in range(1, len(inds) - 1):
-                        self.dist[inds[k]] += (inds[k + 1].objectives[objective] - inds[k - 1].objectives[
-                            objective]) / (max_r - min_r + sys.float_info.epsilon)
+                        self.dist[inds[k]] += (
+                            inds[k + 1].objectives[objective]
+                            - inds[k - 1].objectives[objective]
+                        ) / (max_r - min_r + sys.float_info.epsilon)
 
     def _environmental_selection(self):
-        fitness = lambda ind: (self.nsga_rank[ind], 1 / (self.dist[ind] + sys.float_info.epsilon))
+        fitness = lambda ind: (
+            self.nsga_rank[ind],
+            1 / (self.dist[ind] + sys.float_info.epsilon),
+        )
         self.fitness = {ind: fitness(ind) for ind in self.individuals}
-        self.individuals = sorted(self.individuals, key=lambda ind: self.fitness[ind])[:self.population_size]
+        self.individuals = sorted(self.individuals, key=lambda ind: self.fitness[ind])[
+            : self.population_size
+        ]
 
     def _mating_selection(self, p):
         coin = lambda: random.random() < p
-        better = lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin() \
+        better = (
+            lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2
+            if coin()
             else self.fitness[x1] > self.fitness[x2] and x1 or x2
-        self.mating_individuals = [better(random.choice(self.individuals), random.choice(self.individuals)) for _ in
-                                   range(2 * self.mating_size)]
+        )
+        self.mating_individuals = [
+            better(random.choice(self.individuals), random.choice(self.individuals))
+            for _ in range(2 * self.mating_size)
+        ]
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims,
-                      self.crossover_rate, self.crossover_eta) for i in
-            range(self.mating_size)]
+            crossover(
+                self.mating_individuals[i].v,
+                self.mating_individuals[self.mating_size + i].v,
+                self.dims,
+                self.crossover_rate,
+                self.crossover_eta,
+            )
+            for i in range(self.mating_size)
+        ]
 
     def _mutation(self):
         self.mating_individuals = [
-            Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
-            self.mating_individuals]
+            Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta))
+            for x in self.mating_individuals
+        ]
+
 
 class Individual:
     def __init__(self, vector):

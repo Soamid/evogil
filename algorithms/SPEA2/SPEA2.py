@@ -20,19 +20,22 @@ class SPEA2(Driver):
 
         def __call__(self, pool):
             sub_pool = random.sample(pool, self.tournament_size)
-            return min(sub_pool, key=lambda x: x['fitness'])['value']
+            return min(sub_pool, key=lambda x: x["fitness"])["value"]
 
-    def __init__(self,
-                 population,
-                 fitnesses,
-                 dims,
-                 mutation_eta,
-                 mutation_rate,
-                 crossover_eta,
-                 crossover_rate,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        population,
+        fitnesses,
+        dims,
+        mutation_eta,
+        mutation_rate,
+        crossover_eta,
+        crossover_rate,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.fitnesses = fitnesses
@@ -52,32 +55,39 @@ class SPEA2(Driver):
 
     @property
     def population(self):
-        return [x['value'] for x in self.individuals]
+        return [x["value"] for x in self.individuals]
 
     @population.setter
     def population(self, pop):
-        self.individuals = [{'value': x} for x in pop]
+        self.individuals = [{"value": x} for x in pop]
 
     def finalized_population(self):
-        return [x['value'] for x in self.archive]
+        return [x["value"] for x in self.archive]
 
     def finish(self):
-        return [x['value'] for x in self.archive]
+        return [x["value"] for x in self.archive]
 
     def step(self):
         self.cost += self.calculate_fitnesses(self.individuals, self.archive)
         self.archive = self.environmental_selection(self.individuals, self.archive)
 
-        self.population = [self.trim_function(mutate(
-            crossover(self.select(self.archive),
-                      self.select(self.archive),
-                      self.dims,
-                      self.crossover_rate,
-                      self.crossover_eta),
-            self.dims,
-            self.mutation_rate,
-            self.mutation_eta))
-            for _ in self.individuals]
+        self.population = [
+            self.trim_function(
+                mutate(
+                    crossover(
+                        self.select(self.archive),
+                        self.select(self.archive),
+                        self.dims,
+                        self.crossover_rate,
+                        self.crossover_eta,
+                    ),
+                    self.dims,
+                    self.mutation_rate,
+                    self.mutation_eta,
+                )
+            )
+            for _ in self.individuals
+        ]
 
     def calculate_fitnesses(self, population, archive):
         objectives_cost = self.calculate_objectives(population)
@@ -87,41 +97,41 @@ class SPEA2(Driver):
         for p in union:
             raw_fitness = self.calculate_raw_fitness(p, union)
             density = self.calculate_density(p, union)
-            p['fitness'] = raw_fitness + density
+            p["fitness"] = raw_fitness + density
         return objectives_cost
 
     def calculate_raw_fitness(self, p1, pop):
-        return 0. + sum(y['dominates']
-                        for y in pop
-                        if self.dominates(y, p1))
+        return 0.0 + sum(y["dominates"] for y in pop if self.dominates(y, p1))
 
     def calculate_density(self, p1, pop):
-        distances = sorted([self.euclidean_distance(p1['objectives'], p2['objectives'])
-                            for p2 in pop])
+        distances = sorted(
+            [self.euclidean_distance(p1["objectives"], p2["objectives"]) for p2 in pop]
+        )
         k = int(math.sqrt(len(pop)))
         return 1.0 / (distances[k] + 2.0)
 
     def calculate_objectives(self, pop):
         objectives_cost = 0
         for p in pop:
-            if (self.fitness_archive is not None) and (p['value'] in self.fitness_archive):
-                p['objectives'] = self.fitness_archive[p['value']]
+            if (self.fitness_archive is not None) and (
+                p["value"] in self.fitness_archive
+            ):
+                p["objectives"] = self.fitness_archive[p["value"]]
                 objectives_cost = 0
             else:
-                p['objectives'] = [o(p['value'])
-                                   for o in self.fitnesses]
+                p["objectives"] = [o(p["value"]) for o in self.fitnesses]
                 objectives_cost = len(self.population)
         return objectives_cost
 
     def calculate_dominated(self, pop):
         for p in pop:
-            p['dominates'] = len([x
-                                  for x in pop
-                                  if id(p) != id(x) and self.dominates(p, x)])
+            p["dominates"] = len(
+                [x for x in pop if id(p) != id(x) and self.dominates(p, x)]
+            )
 
     @staticmethod
     def dominates(p1, p2):
-        return ea_utils.dominates(p1['objectives'], p2['objectives'])
+        return ea_utils.dominates(p1["objectives"], p2["objectives"])
 
     @staticmethod
     def euclidean_distance(c1, c2):
@@ -129,13 +139,13 @@ class SPEA2(Driver):
 
     def environmental_selection(self, pop, archive):
         union = archive + pop
-        sorted_union = sorted(union, key=lambda x: x['fitness'])
+        sorted_union = sorted(union, key=lambda x: x["fitness"])
         index = self.get_domination_index(sorted_union)
         environment = sorted_union[:index]
 
         if len(environment) < self.__archive_size:
             diff_size = self.__archive_size - len(environment)
-            environment += sorted_union[index:index + diff_size]
+            environment += sorted_union[index : index + diff_size]
 
         elif len(environment) > self.__archive_size:
             while len(environment) > self.__archive_size:
@@ -147,7 +157,7 @@ class SPEA2(Driver):
     @staticmethod
     def get_domination_index(sorted_pop):
         for i, p in enumerate(sorted_pop):
-            if p['fitness'] > 1:
+            if p["fitness"] > 1:
                 return i
 
         return len(sorted_pop)
@@ -155,9 +165,23 @@ class SPEA2(Driver):
     def choose_to_truncate(self, pop):
         distances = []
         for p in pop:
-            distances.append((p,
-                              sorted([(p2, self.euclidean_distance(p['objectives'], p2['objectives'])) for p2 in pop],
-                                     key=lambda x: x[1])))
+            distances.append(
+                (
+                    p,
+                    sorted(
+                        [
+                            (
+                                p2,
+                                self.euclidean_distance(
+                                    p["objectives"], p2["objectives"]
+                                ),
+                            )
+                            for p2 in pop
+                        ],
+                        key=lambda x: x[1],
+                    ),
+                )
+            )
 
         return self.get_min(distances, 0)[0]
 

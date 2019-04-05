@@ -8,20 +8,22 @@ from algorithms.base.driver import Driver
 
 
 class NSLS(Driver):
-
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 mutation_eta,
-                 crossover_eta,
-                 mutation_rate,
-                 crossover_rate,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 local_search_mu=0.5,
-                 local_search_sigma=0.5,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        mutation_eta,
+        crossover_eta,
+        mutation_rate,
+        crossover_rate,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        local_search_mu=0.5,
+        local_search_sigma=0.5,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.trim_function = trim_function
@@ -61,14 +63,19 @@ class NSLS(Driver):
     def calculate_objectives(self, individuals):
         for ind in individuals:
             if ind.objectives is None:
-                if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+                if (self.fitness_archive is not None) and (
+                    ind.v in self.fitness_archive
+                ):
                     fitnesses = self.fitness_archive[ind.v]
                 else:
                     self.cost += 1
                     fitnesses = [objective(ind.v) for objective in self.objectives]
                     if self.fitness_archive is not None:
                         self.fitness_archive[ind.v] = fitnesses
-                ind.objectives = {objective: fitness for objective, fitness in zip(self.objectives, fitnesses)}
+                ind.objectives = {
+                    objective: fitness
+                    for objective, fitness in zip(self.objectives, fitnesses)
+                }
 
     def step(self):
         self.calculate_objectives(self.individuals)
@@ -156,7 +163,10 @@ class NSLS(Driver):
         next_gen_individuals = []
 
         front_no = 1
-        while len(next_gen_individuals) + len(self.front[front_no]) <= self.population_size:
+        while (
+            len(next_gen_individuals) + len(self.front[front_no])
+            <= self.population_size
+        ):
             next_gen_individuals.extend(self.front[front_no])
             front_no += 1
         last_front = self.front[front_no]
@@ -165,9 +175,9 @@ class NSLS(Driver):
 
         additional = []
         for obj_f in self.objectives:
-            min_obj = float('+inf')
+            min_obj = float("+inf")
             min_ind = None
-            max_obj = float('-inf')
+            max_obj = float("-inf")
             max_ind = None
             for ind in last_front:
                 obj = ind.objectives[obj_f]
@@ -188,10 +198,12 @@ class NSLS(Driver):
             last_front = [x for x in last_front if x not in additional]
             distances = collections.defaultdict(float)
             for ind in last_front:
-                distances[ind] = min([distance.euclidean(ind.v, x.v) for x in additional])
+                distances[ind] = min(
+                    [distance.euclidean(ind.v, x.v) for x in additional]
+                )
 
             for _ in range(to_select - len(additional)):
-                max_dist = float('-inf')
+                max_dist = float("-inf")
                 max_ind = None
                 for ind in last_front:
                     dist = distances[ind]
@@ -201,7 +213,9 @@ class NSLS(Driver):
                 additional.append(max_ind)
                 last_front.remove(max_ind)
                 for ind in last_front:
-                    distances[ind] = min(distances[ind], distance.euclidean(ind.v, max_ind.v))
+                    distances[ind] = min(
+                        distances[ind], distance.euclidean(ind.v, max_ind.v)
+                    )
 
         next_gen_individuals.extend(additional)
         self.individuals = next_gen_individuals

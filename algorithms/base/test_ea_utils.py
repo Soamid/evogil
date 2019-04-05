@@ -6,16 +6,18 @@ from unittest import TestCase
 from algorithms.utils.ea_utils import *
 
 import problems.kursawe.problem as kursawe
-from evotools.ea_utils import paretofront_layers, domination_cmp, dominates, gen_population
+from evotools.ea_utils import (
+    paretofront_layers,
+    domination_cmp,
+    dominates,
+    gen_population,
+)
 from metrics.metrics_utils import euclid_sqr_distance
 
 
 class TestEAUtils(TestCase):
     def test_gen_population(self):
-        dims = [
-            [(-10, 10)],
-            [(-10, 0), (0, 10)]
-        ]
+        dims = [[(-10, 10)], [(-10, 0), (0, 10)]]
         for dm in dims:
             res = gen_population(10, dm)
             self.assertEqual(len(res), 10)
@@ -25,13 +27,13 @@ class TestEAUtils(TestCase):
                     self.assertTrue(a < c < b)
 
     def test_euclid_distance(self):
-        self.assertEqual(euclid_sqr_distance([], []), 0.)
-        self.assertEqual(euclid_sqr_distance([1], [1]), 0.)
-        self.assertEqual(euclid_sqr_distance([1], [2]), 1.)
-        self.assertEqual(euclid_sqr_distance([1], [3]), 4.)
-        self.assertEqual(euclid_sqr_distance([1, 1], [1, 3]), 4.)
-        self.assertEqual(euclid_sqr_distance([1, 1], [1, 3]), 4.)
-        self.assertEqual(euclid_sqr_distance([0, 0, 0, 0], [1, 1, 1, 1]), 4.)
+        self.assertEqual(euclid_sqr_distance([], []), 0.0)
+        self.assertEqual(euclid_sqr_distance([1], [1]), 0.0)
+        self.assertEqual(euclid_sqr_distance([1], [2]), 1.0)
+        self.assertEqual(euclid_sqr_distance([1], [3]), 4.0)
+        self.assertEqual(euclid_sqr_distance([1, 1], [1, 3]), 4.0)
+        self.assertEqual(euclid_sqr_distance([1, 1], [1, 3]), 4.0)
+        self.assertEqual(euclid_sqr_distance([0, 0, 0, 0], [1, 1, 1, 1]), 4.0)
 
     def test_dominates(self):
         data = [
@@ -47,14 +49,9 @@ class TestEAUtils(TestCase):
         self.assertEqual(0, domination_cmp(indA, indB))
 
     def test_domination_cmp(self):
-        data = [
-            ([0, 0], [1, 0], 1),
-            ([1, 1], [1, 1], 0),
-            ([1, 0], [0, 0], -1),
-        ]
+        data = [([0, 0], [1, 0], 1), ([1, 1], [1, 1], 0), ([1, 0], [0, 0], -1)]
         for a, b, c in data:
             self.assertEquals(domination_cmp(a, b), c)
-
 
     def test_paretofront_layers(self):
         def identity(x):
@@ -62,9 +59,7 @@ class TestEAUtils(TestCase):
 
         indvs = [[0, 0], [1, 1], [0, 1], [1, 0], [1, 1]]
         res = list(paretofront_layers(indvs, identity))
-        self.assertEqual(sum(len(layer)
-                             for layer in res),
-                         len(indvs))
+        self.assertEqual(sum(len(layer) for layer in res), len(indvs))
         self.assertListEqual(res[0], [[0, 0]])
         self.assertTrue([0, 1] in res[1])
         self.assertTrue([1, 0] in res[2])
@@ -78,9 +73,8 @@ class TestEAUtils(TestCase):
 
         random.seed()
         mkd = lambda: random.choice([0, 1, 2, 3])
-        #noinspection PyUnusedLocal
-        pop = [[mkd() for j in range(3)]
-               for i in range(1000)]
+        # noinspection PyUnusedLocal
+        pop = [[mkd() for j in range(3)] for i in range(1000)]
         res = paretofront_layers(pop, fits)
         ind_a = [2, 3, 2]
         ind_b = [2, 2, 1]
@@ -113,18 +107,20 @@ class TestEAUtils(TestCase):
                 try:
                     self.assertEqual(0, domination_cmp(indA_1[1], indA_2[1]))
                 except AssertionError as e:
-                    print("ERR!\n\nA = {0}\nB = {1}\nf(A) = {2}\nf(B) = {3}".format(indA_1[0],
-                                                                                    indA_2[0],
-                                                                                    indA_1[1],
-                                                                                    indA_2[1]))
+                    print(
+                        "ERR!\n\nA = {0}\nB = {1}\nf(A) = {2}\nf(B) = {3}".format(
+                            indA_1[0], indA_2[0], indA_1[1], indA_2[1]
+                        )
+                    )
                     raise e
             for indA in layA:
                 for indB in layB:
                     try:
                         self.assertFalse(dominates(indB[1], indA[1]))
                     except AssertionError as e:
-                        print("ERR!\n\nA = {0}\nB = {1}\nf(A) = {2}\nf(B) = {3}".format(indA[0],
-                                                                                        indB[0],
-                                                                                        indA[1],
-                                                                                        indB[1]))
+                        print(
+                            "ERR!\n\nA = {0}\nB = {1}\nf(A) = {2}\nf(B) = {3}".format(
+                                indA[0], indB[0], indA[1], indB[1]
+                            )
+                        )
                         raise e

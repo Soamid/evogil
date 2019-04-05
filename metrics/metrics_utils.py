@@ -12,9 +12,9 @@ def distance_from_pareto(solution, pareto):
     logger = logging.getLogger(__name__)
     solution = list(solution)
     logger.debug("distance_from_pareto: input length %d", len(solution))
-    return sum([min([euclid_distance(x, y)
-                     for y in pareto])
-                for x in solution]) / len(solution)
+    return sum([min([euclid_distance(x, y) for y in pareto]) for x in solution]) / len(
+        solution
+    )
 
 
 def distribution(solution, sigma=0.5):
@@ -22,26 +22,26 @@ def distribution(solution, sigma=0.5):
     solution = list(solution)
     logger.debug("distribution: input length %d", len(solution))
     try:
-        return sum(sum(1
-                       for y in solution
-                       if sigma < math.sqrt(sum((x1 - y1) ** 2 for x1, y1 in zip(x, y)))
-        )
-                   for x in solution
+        return sum(
+            sum(
+                1
+                for y in solution
+                if sigma < math.sqrt(sum((x1 - y1) ** 2 for x1, y1 in zip(x, y)))
+            )
+            for x in solution
         ) / (len(solution) * (len(solution) - 1))
     except ZeroDivisionError:
-        return float('inf')
+        return float("inf")
 
 
 def extent(solution):
     logger = logging.getLogger(__name__)
     logger.debug("extent: input length %d", len(solution))
-    return math.sqrt(sum(max(math.fabs(x[i] - y[i])
-                             for x in solution
-                             for y in solution
-    )
-                         for i
-                         in range(len(solution[0]))
-    )
+    return math.sqrt(
+        sum(
+            max(math.fabs(x[i] - y[i]) for x in solution for y in solution)
+            for i in range(len(solution[0]))
+        )
     )
 
 
@@ -87,19 +87,23 @@ def spacing(solution):
 
 
 def distance(from_set, to_set):
-    distances = [
-        min([euclid_sqr_distance(f, t) for t in to_set])
-        for f in from_set
-    ]
+    distances = [min([euclid_sqr_distance(f, t) for t in to_set]) for f in from_set]
     return math.sqrt(sum(distances) / len(distances))
 
+
 def pareto_dominance_indicator(solution, not_dominated_solution, all_solutions):
-    non_dominated_intersection = [s for s in not_dominated_solution if tuple(s) in all_solutions]
+    non_dominated_intersection = [
+        s for s in not_dominated_solution if tuple(s) in all_solutions
+    ]
     return len(non_dominated_intersection) / len(all_solutions)
 
+
 def filter_not_dominated2(ind_set):
-    d = {tuple(ind) : [not dominates(other_ind, ind) for other_ind in ind_set] for ind in ind_set}
-    result= [ind for ind in d.keys() if all(d[ind])]
+    d = {
+        tuple(ind): [not dominates(other_ind, ind) for other_ind in ind_set]
+        for ind in ind_set
+    }
+    result = [ind for ind in d.keys() if all(d[ind])]
     # for x in result:
     #     for y in result:
     #         if dominates(x,y) or dominates(y,x):
@@ -121,7 +125,3 @@ def filter_not_dominated(ind_set):
             new_not_dominated.append(ind)
         not_dominated = new_not_dominated
     return not_dominated
-
-
-
-

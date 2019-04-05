@@ -5,7 +5,6 @@ from algorithms.base.model import SubPopulation
 
 
 class SMSEMOAIMGAMessageAdapter(IMGAMessageAdapter):
-
     def get_population(self):
         return self.driver.population
 
@@ -28,10 +27,8 @@ class SMSEMOAIMGAMessageAdapter(IMGAMessageAdapter):
 
 
 class SMSEMOAHGSMessageAdapter(HGSMessageAdapter):
-
     def get_population(self):
         return self.driver.population
 
     def nominate_delegates(self):
         return [i.value for i in nd_sort(self.driver.individuals)[1]]
-

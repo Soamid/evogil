@@ -6,22 +6,24 @@ import sys
 from algorithms.base.driver import Driver
 from algorithms.base.drivertools import rank, mutate, crossover
 
-class IBEA(Driver):
 
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 kappa,
-                 mating_population_size,
-                 mutation_eta,
-                 crossover_eta,
-                 mutation_rate,
-                 crossover_rate,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args,
-                 **kwargs):
+class IBEA(Driver):
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        kappa,
+        mating_population_size,
+        mutation_eta,
+        crossover_eta,
+        mutation_rate,
+        crossover_rate,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.individuals = []
@@ -74,12 +76,19 @@ class IBEA(Driver):
     def _scale_objectives(self):
         min_max = lambda x: (min(x), max(x))
         for ind in self.individuals:
-            if not ind.known_objectives or not ((self.fitness_archive is not None) and (ind.v in self.fitness_archive)):
+            if not ind.known_objectives or not (
+                (self.fitness_archive is not None) and (ind.v in self.fitness_archive)
+            ):
                 self.cost += 1
             ind.known_objectives = True
-        measured = [(objective, min_max([objective(ind.v) for ind in self.individuals])) for objective in
-                    self.objectives]
-        self.scaled_objectives = [self._scale(objective, min_o, max_o) for objective, (min_o, max_o) in measured]
+        measured = [
+            (objective, min_max([objective(ind.v) for ind in self.individuals]))
+            for objective in self.objectives
+        ]
+        self.scaled_objectives = [
+            self._scale(objective, min_o, max_o)
+            for objective, (min_o, max_o) in measured
+        ]
 
     @staticmethod
     def _scale(fun, min_o, max_o):
@@ -89,38 +98,73 @@ class IBEA(Driver):
         return scaled
 
     def _calculate_fitness(self):
-        self.indicators = {(x1, x2): self.indicator(x1.v, x2.v) for x1, x2 in
-                           itertools.product(self.individuals, self.individuals)}
+        self.indicators = {
+            (x1, x2): self.indicator(x1.v, x2.v)
+            for x1, x2 in itertools.product(self.individuals, self.individuals)
+        }
         self.c = max([abs(x) for x in self.indicators.values()])
-        self.fitness = {x1: sum(
-            [(-1) * math.exp((-1) * (self.indicators[(x2, x1)] / abs(self.c * self.k + sys.float_info.epsilon))) for x2
-             in self.individuals if x2 != x1]) for x1 in self.individuals}
+        self.fitness = {
+            x1: sum(
+                [
+                    (-1)
+                    * math.exp(
+                        (-1)
+                        * (
+                            self.indicators[(x2, x1)]
+                            / abs(self.c * self.k + sys.float_info.epsilon)
+                        )
+                    )
+                    for x2 in self.individuals
+                    if x2 != x1
+                ]
+            )
+            for x1 in self.individuals
+        }
 
     def _environmental_selection(self):
         while len(self.individuals) > self.population_size:
-            self.individuals = sorted(self.individuals, key=lambda y: self.fitness[y], reverse=True)
+            self.individuals = sorted(
+                self.individuals, key=lambda y: self.fitness[y], reverse=True
+            )
             removed = self.individuals.pop()
             for x in self.individuals:
                 self.fitness[x] += math.exp(
-                    (-1) * (self.indicators[(removed, x)] / abs(self.c * self.k + sys.float_info.epsilon)))
+                    (-1)
+                    * (
+                        self.indicators[(removed, x)]
+                        / abs(self.c * self.k + sys.float_info.epsilon)
+                    )
+                )
 
     def _mating_selection(self, p):
         coin = lambda: random.random() < p
-        better = lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2 if coin() \
+        better = (
+            lambda x1, x2: self.fitness[x1] < self.fitness[x2] and x1 or x2
+            if coin()
             else self.fitness[x1] > self.fitness[x2] and x1 or x2
-        self.mating_individuals = [better(random.choice(self.individuals), random.choice(self.individuals)) for _ in
-                                   range(2 * self.mating_size)]
+        )
+        self.mating_individuals = [
+            better(random.choice(self.individuals), random.choice(self.individuals))
+            for _ in range(2 * self.mating_size)
+        ]
 
     def _crossover(self):
         self.mating_individuals = [
-            crossover(self.mating_individuals[i].v, self.mating_individuals[self.mating_size + i].v, self.dims,
-                      self.crossover_rate, self.crossover_eta) for i in
-            range(self.mating_size)]
+            crossover(
+                self.mating_individuals[i].v,
+                self.mating_individuals[self.mating_size + i].v,
+                self.dims,
+                self.crossover_rate,
+                self.crossover_eta,
+            )
+            for i in range(self.mating_size)
+        ]
 
     def _mutation(self):
         self.mating_individuals = [
-            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta)) for x in
-            self.mating_individuals]
+            self.Individual(mutate(x, self.dims, self.mutation_rate, self.mutation_eta))
+            for x in self.mating_individuals
+        ]
         for ind in self.mating_individuals:
             ind.known_objectives = False
 
@@ -146,7 +190,12 @@ class IBEA(Driver):
             self.population = population
 
         def __call__(self, x1, x2):
-            return max([objective(x1) - objective(x2) for objective in self.population.scaled_objectives])
+            return max(
+                [
+                    objective(x1) - objective(x2)
+                    for objective in self.population.scaled_objectives
+                ]
+            )
 
     class Individual:
         def __init__(self, vector):
