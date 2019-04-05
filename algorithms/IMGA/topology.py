@@ -2,7 +2,6 @@ import logging
 
 
 class Topology:
-
     def create(self, size):
         """ :return: Return created topology as adjacency list """
         raise NotImplementedError
@@ -11,7 +10,8 @@ class Topology:
     def print(t):
         logger = logging.getLogger(__name__)
         for i in range(len(t)):
-            logger.debug(str(i) + ' : ' + str(t[i]))
+            logger.debug(str(i) + " : " + str(t[i]))
+
 
 class TorusTopology(Topology):
     def __init__(self, width):
@@ -66,8 +66,3 @@ class TorusTopology(Topology):
                 t[N].remove(N)
 
         return [set(neighbors) for neighbors in t]
-
-
-
-
-

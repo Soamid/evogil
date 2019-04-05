@@ -1,33 +1,41 @@
 import random
 
+import algorithms
 from algorithms.NSGAII.NSGAII import NSGAII
 
 
 class JGBL(NSGAII):
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 mating_population_size,
-                 mutation_eta,
-                 crossover_eta,
-                 mutation_rate,
-                 crossover_rate,
-                 jumping_rate,
-                 jumping_percentage,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args,
-                 **kwargs):
-        super().__init__(population,
-                         dims,
-                         fitnesses,
-                         mating_population_size,
-                         mutation_eta,
-                         crossover_eta,
-                         mutation_rate,
-                         crossover_rate, trim_function, fitness_archive,
-                         *args, **kwargs)
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        mating_population_size,
+        mutation_eta,
+        crossover_eta,
+        mutation_rate,
+        crossover_rate,
+        jumping_rate,
+        jumping_percentage,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
+        super().__init__(
+            population,
+            dims,
+            fitnesses,
+            mating_population_size,
+            mutation_eta,
+            crossover_eta,
+            mutation_rate,
+            crossover_rate,
+            trim_function,
+            fitness_archive,
+            *args,
+            **kwargs
+        )
         self.jumping_rate = jumping_rate
         self.jumping_percentage = jumping_percentage
 
@@ -44,7 +52,7 @@ class JGBL(NSGAII):
         nondominanted = self.front[1]
 
         if len(nondominanted) > len(self.individuals):
-            print('hop')
+            print("hop")
             pop_set = set(self.individuals)
             nondominanted = [n for n in nondominanted if n not in pop_set]
             print(len(nondominanted))
@@ -68,10 +76,26 @@ class JGBL(NSGAII):
                 _, cut_self = self.cut_and_paste(ind.v, ind.v)
                 _, copy_self = self.copy_and_paste(ind.v, ind.v)
 
-                cut_ind1, cut_ind2 = self.cut_and_paste(ind.v, random.choice(nondominated).v)
-                copy_ind1, copy_ind2 = self.copy_and_paste(ind.v, random.choice(nondominated).v)
+                cut_ind1, cut_ind2 = self.cut_and_paste(
+                    ind.v, random.choice(nondominated).v
+                )
+                copy_ind1, copy_ind2 = self.copy_and_paste(
+                    ind.v, random.choice(nondominated).v
+                )
 
-                jumping_pop.extend([self.Individual(x) for x in [cut_self, copy_self, cut_ind1, cut_ind2, copy_ind1, copy_ind2]])
+                jumping_pop.extend(
+                    [
+                        algorithms.NSGAII.NSGAII.Individual(x)
+                        for x in [
+                            cut_self,
+                            copy_self,
+                            cut_ind1,
+                            cut_ind2,
+                            copy_ind1,
+                            copy_ind2,
+                        ]
+                    ]
+                )
         return jumping_pop
 
     def cut_and_paste(self, x, y):
@@ -109,10 +133,15 @@ class JGBL(NSGAII):
                 return
 
     def decode_ratio(self, ratio):
-        return [self.dims[i][0] + ratio[i] * (self.dims[i][1] - self.dims[i][0]) for i in range(len(ratio))]
+        return [
+            self.dims[i][0] + ratio[i] * (self.dims[i][1] - self.dims[i][0])
+            for i in range(len(ratio))
+        ]
 
     def prepare_transposon(self, x):
-        transposon_pos = sorted(random.sample(range(len(x)), int(self.jumping_percentage * len(x))))
+        transposon_pos = sorted(
+            random.sample(range(len(x)), int(self.jumping_percentage * len(x)))
+        )
         ratio = self.convert_to_ratio(x)
 
         transposon = [ratio[i] for i in transposon_pos]
@@ -126,9 +155,12 @@ class JGBL(NSGAII):
         return list_
 
     def convert_to_ratio(self, x):
-        return [(x[i] - self.dims[i][0]) / (self.dims[i][1] - self.dims[i][0]) for i in range(len(x))]
+        return [
+            (x[i] - self.dims[i][0]) / (self.dims[i][1] - self.dims[i][0])
+            for i in range(len(x))
+        ]
 
 
-if __name__ == '__main__':
-    jgbl = JGBL([(1, 5), (1, 5), (1, 5), (1, 5)], 0.5)
-    print(jgbl.copy_and_paste([3, 2, 1, 5], [4, 2.5, 2.66, 1.734]))
+# if __name__ == "__main__":
+#     jgbl = JGBL([(1, 5), (1, 5), (1, 5), (1, 5)], 0.5)
+#     print(jgbl.copy_and_paste([3, 2, 1, 5], [4, 2.5, 2.66, 1.734]))

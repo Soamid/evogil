@@ -1,10 +1,10 @@
 import functools
 
 p_no = 150
-emoa_points = [i/(p_no-1) for i in range(p_no)]
+emoa_points = [i / (p_no - 1) for i in range(p_no)]
 
 p_no2 = 300
-emoa_points2 = [i/(p_no2-1) for i in range(p_no2)]
+emoa_points2 = [i / (p_no2 - 1) for i in range(p_no2)]
 
 
 def emoa_fitness_2(f1, g, h, x):
@@ -21,19 +21,24 @@ def subfit2(x, f1, g, h):
 
 
 def emoa_fitnesses(f1, g, h, dimensions, letter, known_front):
-    return ([functools.partial(subfit1, f1=f1),
-             functools.partial(subfit2, f1=f1, g=g, h=h)],
-            [(0, 1) for _ in range(dimensions)],
-            "ZDT2",
-            known_front)
+    return (
+        [
+            functools.partial(subfit1, f1=f1),
+            functools.partial(subfit2, f1=f1, g=g, h=h),
+        ],
+        [(0, 1) for _ in range(dimensions)],
+        "ZDT2",
+        known_front,
+    )
 
 
 def emoa_fitnesses2(f1, g, h, dimensions, letter, known_front):
-    return ([subfit1,
-             functools.partial(subfit2, f1=f1, g=g, h=h)],
-            [(0, 1)] + [(-5, 5) for _ in range(dimensions-1)],
-            "ZDT2",
-            known_front)
+    return (
+        [subfit1, functools.partial(subfit2, f1=f1, g=g, h=h)],
+        [(0, 1)] + [(-5, 5) for _ in range(dimensions - 1)],
+        "ZDT2",
+        known_front,
+    )
 
 
 def f1b(x):
@@ -47,9 +52,12 @@ def gb(xs):
 def hb(f1, g):
     return 1 - (f1 / g) ** 2
 
-emoa_b_analytical = [[x for x in emoa_points], [1-x*x for x in emoa_points]]
+
+emoa_b_analytical = [[x for x in emoa_points], [1 - x * x for x in emoa_points]]
 
 pareto_set = []
-fitnesses, dims, name, pareto_front = emoa_fitnesses(f1b, gb, hb, 30, 'b', emoa_b_analytical)
+fitnesses, dims, name, pareto_front = emoa_fitnesses(
+    f1b, gb, hb, 30, "b", emoa_b_analytical
+)
 
 pareto_front = [[x, y] for x, y in zip(pareto_front[0], pareto_front[1])]

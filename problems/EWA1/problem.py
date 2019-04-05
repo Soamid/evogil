@@ -8,10 +8,10 @@ def f1(x):
 
 
 def f2(x):
-    return ((x[0] - 0.5)**2) * ((x[1] - 0.5)**2)
+    return ((x[0] - 0.5) ** 2) * ((x[1] - 0.5) ** 2)
 
 
-name = 'EWA1'
+name = "EWA1"
 dims = [(0, 1), (0, 1)]
 fitnesses = [f1, f2]
 

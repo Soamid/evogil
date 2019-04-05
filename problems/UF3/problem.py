@@ -19,9 +19,22 @@ def yj(x, j):
 
 def base_fit(x, J):
     Y = [yj(x, j) for j in J]
-    return 2*(4 * sum(map(lambda y: y ** 2, Y)) - 2 * functools.reduce(operator.mul,
-                                                                    [math.cos((20 * Y[j] * math.pi) / math.sqrt(J[j]))
-                                                                     for j in range(len(J))]) + 2) / len(J)
+    return (
+        2
+        * (
+            4 * sum(map(lambda y: y ** 2, Y))
+            - 2
+            * functools.reduce(
+                operator.mul,
+                [
+                    math.cos((20 * Y[j] * math.pi) / math.sqrt(J[j]))
+                    for j in range(len(J))
+                ],
+            )
+            + 2
+        )
+        / len(J)
+    )
 
 
 def fit_1(x):
@@ -32,6 +45,6 @@ def fit_2(x):
     return 1 - math.sqrt(x[0]) + base_fit(x, J2)
 
 
-name = 'UF3'
+name = "UF3"
 fitnesses = [fit_1, fit_2]
-dims = [(0, 1)]*n
+dims = [(0, 1)] * n

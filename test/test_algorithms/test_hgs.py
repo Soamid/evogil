@@ -8,7 +8,6 @@ from simulation.factory import prepare
 
 
 class HGSTest(unittest.TestCase):
-
     def test_steps(self):
         final_driver, problem_mod = prepare("HGS+NSGAII", "ZDT1")
         print(final_driver())
@@ -22,8 +21,8 @@ class HGSTest(unittest.TestCase):
                 steps_run = StepsRun(steps_no)
 
                 results = []
-                steps_run.create_job(hgs)\
-                    .subscribe(lambda result: results.append(result))
+                steps_run.create_job(hgs).subscribe(
+                    lambda result: results.append(result)
+                )
 
                 self.assertEqual(len(results), steps_no)
-

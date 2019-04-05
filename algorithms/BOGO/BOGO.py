@@ -9,15 +9,18 @@ class Individual:
         self.v = vector
         self.fit = [f(self.v) for f in fitnesses]
 
+
 class BOGO(Driver):
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 mutation_variance,
-                 crossover_variance,
-                 *args,
-                 **kwargs):
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        mutation_variance,
+        crossover_variance,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.archive = []
         self.fitnesses = fitnesses

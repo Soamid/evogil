@@ -15,7 +15,6 @@ from simulation.factory import prepare
 
 
 class DriverTest(unittest.TestCase):
-
     def test_create_and_run_all_supported_algorithms(self):
         test_cases = run_config.algorithms
         for test_case in test_cases:
@@ -24,19 +23,20 @@ class DriverTest(unittest.TestCase):
                 algorithm = algo_factory()
 
                 simple_simulation = StepsRun(1)
-                result = list(simple_simulation.create_job(algorithm).pipe(
-                    ops.subscribe_on(NewThreadScheduler()),
-                    ops.to_iterable()
-                ).run())
+                result = list(
+                    simple_simulation.create_job(algorithm)
+                    .pipe(ops.subscribe_on(NewThreadScheduler()), ops.to_iterable())
+                    .run()
+                )
                 self.assertEqual(1, len(result))
                 self.assertIsInstance(result[0], ProgressMessage)
 
     def test_smoke(self):
-        with(tempfile.TemporaryDirectory(prefix='evogil_smoke_')) as temp_dir:
+        with (tempfile.TemporaryDirectory(prefix="evogil_smoke_")) as temp_dir:
             python = sys.executable
-            os.system(f'{python} evogil.py run 50,100 -a NSGAII -p zdt1 -d {temp_dir}')
+            os.system(f"{python} evogil.py run 50,100 -a NSGAII -p zdt1 -d {temp_dir}")
 
-            results = list(glob.glob(f'{temp_dir}/ZDT1/NSGAII/*/*.pickle'))
+            results = list(glob.glob(f"{temp_dir}/ZDT1/NSGAII/*/*.pickle"))
             self.assertTrue(results)
             for result_file in results:
                 print("Found result file: " + result_file)

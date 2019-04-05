@@ -8,19 +8,22 @@ from algorithms.base.driver import Driver
 class OMOPSO(Driver):
     ETA = 0.0075
 
-    def __init__(self,
-                 population,
-                 fitnesses,
-                 dims,
-                 mutation_eta,
-                 mutation_rate,
-                 crossover_eta,
-                 crossover_rate,
-                 mutation_perturbation=0.5,
-                 mutation_probability=0.05,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        population,
+        fitnesses,
+        dims,
+        mutation_eta,
+        mutation_rate,
+        crossover_eta,
+        crossover_rate,
+        mutation_perturbation=0.5,
+        mutation_probability=0.05,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.fitnesses = fitnesses
         self.dims = dims
@@ -89,7 +92,11 @@ class OMOPSO(Driver):
 
         self.leader_archive.crowding()
 
-        self.logger.debug("{}: {} : {}".format(self.gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
+        self.logger.debug(
+            "{}: {} : {}".format(
+                self.gen_no, len(self.leader_archive.archive), len(self.archive.archive)
+            )
+        )
         self.gen_no += 1
 
     def update_personal_best(self):
@@ -112,8 +119,7 @@ class OMOPSO(Driver):
                 p.objectives = self.fitness_archive[p.value]
                 objectives_cost = 0
             else:
-                p.objectives = [o(p.value)
-                                for o in self.fitnesses]
+                p.objectives = [o(p.value) for o in self.fitnesses]
                 objectives_cost = len(self.individuals)
         return objectives_cost
 
@@ -131,8 +137,11 @@ class OMOPSO(Driver):
 
     def compute_speed(self):
         for p in self.individuals:
-            best_global = self.crowding_selector(self.leader_archive) if len(self.leader_archive.archive) > 1 \
+            best_global = (
+                self.crowding_selector(self.leader_archive)
+                if len(self.leader_archive.archive) > 1
                 else self.leader_archive.archive[0]
+            )
 
             r1 = random.random()
             r2 = random.random()
@@ -141,20 +150,28 @@ class OMOPSO(Driver):
             W = random.uniform(0.1, 0.5)
 
             for j in range(len(self.dims)):
-                p.speed[j] = W * p.speed[j] \
-                             + C1 * r1 * (p.best_val.value[j] - p.value[j]) \
-                             + C2 * r2 * (best_global.value[j] - p.value[j])
+                p.speed[j] = (
+                    W * p.speed[j]
+                    + C1 * r1 * (p.best_val.value[j] - p.value[j])
+                    + C2 * r2 * (best_global.value[j] - p.value[j])
+                )
 
     def mopso_mutation(self, evolution_progress):
         pop_len = len(self.individuals)
         pop_part = int(pop_len / 3)
-        uniform_mutation = UniformMutation(self.mutation_probability, self.mutation_perturbation, self.dims)
+        uniform_mutation = UniformMutation(
+            self.mutation_probability, self.mutation_perturbation, self.dims
+        )
         map(uniform_mutation, self.individuals[0:pop_part])
 
         if evolution_progress:
-            non_uniform_mutation = NonUniformMutation(evolution_progress, self.mutation_probability,
-                                                      self.mutation_perturbation, self.dims)
-            map(non_uniform_mutation, self.individuals[pop_part: 2 * pop_part])
+            non_uniform_mutation = NonUniformMutation(
+                evolution_progress,
+                self.mutation_probability,
+                self.mutation_perturbation,
+                self.dims,
+            )
+            map(non_uniform_mutation, self.individuals[pop_part : 2 * pop_part])
 
 
 class Mutation(object):
@@ -185,14 +202,18 @@ class UniformMutation(Mutation):
 
 
 class NonUniformMutation(Mutation):
-    def __init__(self, evolution_progress, mutation_probability, mutation_perturbation, dims):
+    def __init__(
+        self, evolution_progress, mutation_probability, mutation_perturbation, dims
+    ):
         super().__init__(mutation_probability, mutation_perturbation, dims)
         self.evolution_progress = evolution_progress
 
     def do_mutation(self, p, index):
-        return self.delta(self.dims[index][1] - p.value[index]) \
-            if random.random() < 0.5 \
+        return (
+            self.delta(self.dims[index][1] - p.value[index])
+            if random.random() < 0.5
             else self.delta(self.dims[index][0] - p.value[index])
+        )
 
     def delta(self, y):
         rand = random.random()
@@ -296,13 +317,16 @@ class LeaderArchive(Archive):
             obj_min = self.archive[0].objectives[i]
             obj_max = self.archive[archive_len - 1].objectives[i]
 
-            self.archive[0].crowd_val = float('inf')
-            self.archive[archive_len - 1].crowd_val = float('inf')
+            self.archive[0].crowd_val = float("inf")
+            self.archive[archive_len - 1].crowd_val = float("inf")
 
             for j in range(1, archive_len - 1):
                 if obj_max - obj_min > 0:
-                    dist = self.archive[j].objectives[i] - self.archive[j - 1].objectives[i]
-                    dist /= (obj_max - obj_min)
+                    dist = (
+                        self.archive[j].objectives[i]
+                        - self.archive[j - 1].objectives[i]
+                    )
+                    dist /= obj_max - obj_min
                     self.archive[j].crowd_val += dist
                 else:
-                    self.archive[j].crowd_val = float('inf')
+                    self.archive[j].crowd_val = float("inf")

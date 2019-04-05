@@ -2,13 +2,14 @@ from algorithms.HGS.message import HGSMessageAdapter, DefaultHGSMessageAdapter
 from algorithms.IMGA.message import IMGAMessageAdapter, DefaultIMGAMessageAdapter
 from algorithms.base.model import SubPopulation
 
+# pylint: disable=function-redefined
 
 # This template module for message.py modules used to combining MOEAs. Copy this module to your algorithm module
 # and change Xxx to your algorithm name.
 # Examples are provided for all supported multi-deme models. Feel free to add or use your own.
 
-class XxxIMGAMessageAdapter(IMGAMessageAdapter):
 
+class XxxIMGAMessageAdapter(IMGAMessageAdapter):
     def get_population(self):
         return [x.v for x in self.driver.individuals]
 
@@ -30,7 +31,6 @@ class XxxIMGAMessageAdapter(IMGAMessageAdapter):
 
 
 class XxxHGSMessageAdapter(HGSMessageAdapter):
-
     def get_population(self):
         return [x.v for x in self.driver.individuals]
 
@@ -38,11 +38,13 @@ class XxxHGSMessageAdapter(HGSMessageAdapter):
         self.driver.finish()
         return [x.v for x in self.driver.front[1]]
 
+
 # You can also use default implementations instead. Remember *you have to* declare message adapter explicitly
 # in your message.py if you want to enable hybridization, even if your algorithm meets default adapter's implementation
 # criteria.
 def XxxIMGAMessageAdapter(driver):
     return DefaultIMGAMessageAdapter(driver)
+
 
 def XxxHGSMessageAdapter(driver):
     return DefaultHGSMessageAdapter(driver)

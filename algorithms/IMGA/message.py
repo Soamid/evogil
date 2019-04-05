@@ -2,7 +2,6 @@ from algorithms.base.model import PopulationMessageAdapter, SubPopulation
 
 
 class IMGAMessageAdapter(PopulationMessageAdapter):
-
     def emigrate(self, migrants: SubPopulation):
         raise NotImplementedError
 
@@ -11,7 +10,6 @@ class IMGAMessageAdapter(PopulationMessageAdapter):
 
 
 class DefaultIMGAMessageAdapter(IMGAMessageAdapter):
-
     def get_population(self):
         return [x.v for x in self.driver.individuals]
 

@@ -13,19 +13,21 @@ import matplotlib.pyplot as plt
 
 
 class NSGAIII(Driver):
-
-    def __init__(self,
-                 population,
-                 dims,
-                 fitnesses,
-                 mutation_eta,
-                 crossover_eta,
-                 mutation_rate='default',
-                 crossover_rate=0.9,
-                 theta=5,
-                 trim_function=lambda x: x,
-                 fitness_archive=None,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        population,
+        dims,
+        fitnesses,
+        mutation_eta,
+        crossover_eta,
+        mutation_rate="default",
+        crossover_rate=0.9,
+        theta=5,
+        trim_function=lambda x: x,
+        fitness_archive=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.fitness_archive = fitness_archive
@@ -39,11 +41,15 @@ class NSGAIII(Driver):
         self.eta_crossover = crossover_eta
         self.eta_mutation = mutation_eta
         self.crossover_rate = crossover_rate
-        self.mutation_rate = 1.0 / len(self.dims) if mutation_rate is 'default' else mutation_rate
+        self.mutation_rate = (
+            1.0 / len(self.dims) if mutation_rate is "default" else mutation_rate
+        )
 
         self.population_size = len(population)
         self.reference_points = self.generate_reference_points()
-        self.reference_point_lengths = [numpy.linalg.norm(point) for point in self.reference_points]
+        self.reference_point_lengths = [
+            numpy.linalg.norm(point) for point in self.reference_points
+        ]
 
         self.individuals = []
         self.trim_function = trim_function
@@ -53,7 +59,7 @@ class NSGAIII(Driver):
         self.primary_cost_included = False
         self.budget = None
 
-        self.ideal_point = [float('inf') for _ in range(self.objective_no)]
+        self.ideal_point = [float("inf") for _ in range(self.objective_no)]
         self.update_ideal_point(self.individuals)
 
         # TODO: remove debug
@@ -66,7 +72,10 @@ class NSGAIII(Driver):
         self.front = []
 
     def generate_reference_points(self):
-        return [generate_reference_point(self.objective_no) for _ in range(self.population_size)]
+        return [
+            generate_reference_point(self.objective_no)
+            for _ in range(self.population_size)
+        ]
 
     @property
     def population(self):
@@ -85,7 +94,9 @@ class NSGAIII(Driver):
     def _calculate_objectives(self, individuals):
         for ind in individuals:
             if ind.objectives is None:
-                if (self.fitness_archive is not None) and (ind.v in self.fitness_archive):
+                if (self.fitness_archive is not None) and (
+                    ind.v in self.fitness_archive
+                ):
                     ind.objectives = self.fitness_archive[ind.v]
                 else:
                     self.cost += 1
@@ -199,16 +210,31 @@ class NSGAIII(Driver):
         for _ in range(int(self.population_size / 2)):
             parent_a = random.choice(self.individuals)
             parent_b = random.choice(self.individuals)
-            child_a, child_b = simulated_binary_crossover(parent_a, parent_b, self.dims,
-                                                          crossover_rate=self.crossover_rate, eta=self.eta_crossover)
-            polynomial_mutation(child_a, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
-            polynomial_mutation(child_b, self.dims, mutation_rate=self.mutation_rate, eta=self.eta_mutation)
+            child_a, child_b = simulated_binary_crossover(
+                parent_a,
+                parent_b,
+                self.dims,
+                crossover_rate=self.crossover_rate,
+                eta=self.eta_crossover,
+            )
+            polynomial_mutation(
+                child_a,
+                self.dims,
+                mutation_rate=self.mutation_rate,
+                eta=self.eta_mutation,
+            )
+            polynomial_mutation(
+                child_b,
+                self.dims,
+                mutation_rate=self.mutation_rate,
+                eta=self.eta_mutation,
+            )
             offspring_inds.append(child_a)
             offspring_inds.append(child_b)
         return offspring_inds
 
     def normalize(self, individuals):
-        defiled_point = [float('-inf') for _ in range(self.objective_no)]
+        defiled_point = [float("-inf") for _ in range(self.objective_no)]
         for ind in individuals:
             for i, objective in enumerate(ind.objectives):
                 if defiled_point[i] < objective:
@@ -220,16 +246,22 @@ class NSGAIII(Driver):
 
         for ind in individuals:
             ind.normalized_objectives = numpy.array(
-                [(obj - self.ideal_point[i]) / (defiled_point[i] - self.ideal_point[i] + EPSILON)
-                 for i, obj in enumerate(ind.objectives)])
+                [
+                    (obj - self.ideal_point[i])
+                    / (defiled_point[i] - self.ideal_point[i] + EPSILON)
+                    for i, obj in enumerate(ind.objectives)
+                ]
+            )
 
     def clustering(self, individuals):
         self.clusters = [[] for _ in self.reference_points]
         for ind in individuals:
-            min_rejection = float('inf')
+            min_rejection = float("inf")
             min_i = -1
             for i, reference_point in enumerate(self.reference_points):
-                rejection = scalar_rejection(ind, reference_point, self.reference_point_lengths[i])
+                rejection = scalar_rejection(
+                    ind, reference_point, self.reference_point_lengths[i]
+                )
                 if rejection < min_rejection:
                     min_rejection = rejection
                     min_i = i
@@ -240,8 +272,12 @@ class NSGAIII(Driver):
     def calculate_theta_fitness(self):
         for i, cluster in enumerate(self.clusters):
             for ind in cluster:
-                ind.theta_fitness = scalar_projection(ind, self.reference_points[i],
-                                                      self.reference_point_lengths[i]) + self.theta * ind.rejection
+                ind.theta_fitness = (
+                    scalar_projection(
+                        ind, self.reference_points[i], self.reference_point_lengths[i]
+                    )
+                    + self.theta * ind.rejection
+                )
 
     def create_final_population(self, fronts):
         new_inds = []
@@ -324,7 +360,9 @@ def generate_reference_point(objective_no):
             rand = 0.0
             while rand == 0.0:
                 rand = random.random()
-            coordinate = (1.0 - coord_sum) * (1.0 - math.pow(rand, 1.0 / (objective_no - i)))
+            coordinate = (1.0 - coord_sum) * (
+                1.0 - math.pow(rand, 1.0 / (objective_no - i))
+            )
             coord_sum += coordinate
             reference_point.append(coordinate)
         else:
@@ -333,13 +371,19 @@ def generate_reference_point(objective_no):
 
 
 def scalar_projection(ind, reference_point, reference_point_length):
-    return numpy.dot(ind.normalized_objectives, reference_point) / reference_point_length
+    return (
+        numpy.dot(ind.normalized_objectives, reference_point) / reference_point_length
+    )
 
 
 def scalar_rejection(ind, reference_point, reference_point_length):
-    scalar_projection_value = scalar_projection(ind, reference_point, reference_point_length)
+    scalar_projection_value = scalar_projection(
+        ind, reference_point, reference_point_length
+    )
     return numpy.linalg.norm(
-        ind.normalized_objectives - ((scalar_projection_value / reference_point_length) * reference_point))
+        ind.normalized_objectives
+        - ((scalar_projection_value / reference_point_length) * reference_point)
+    )
 
 
 def simulated_binary_crossover(parent_a, parent_b, dims, crossover_rate=1.0, eta=30.0):
@@ -429,7 +473,7 @@ def polynomial_mutation(ind, dims, mutation_rate=0.0, eta=20.0):
         ind.objectives = None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sample_dims = [(-100.0, 100.0), (-100.0, 100.0)]
 
     mutatedX = []

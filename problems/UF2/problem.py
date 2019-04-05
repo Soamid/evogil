@@ -12,9 +12,24 @@ J2 = [j for j in range(2, n + 1) if not j % 2]
 
 
 def base_fit(x, J, trig):
-    return 2 / len(J) * sum(
-        (x[j - 1] - (0.3 * x[0] ** 2 * math.cos(24 * math.pi * x[0] + 4 * j * math.pi / n) + 0.6 * x[0]) * trig(
-            6 * math.pi * x[0] + j * math.pi / n)) ** 2 for j in J)
+    return (
+        2
+        / len(J)
+        * sum(
+            (
+                x[j - 1]
+                - (
+                    0.3
+                    * x[0] ** 2
+                    * math.cos(24 * math.pi * x[0] + 4 * j * math.pi / n)
+                    + 0.6 * x[0]
+                )
+                * trig(6 * math.pi * x[0] + j * math.pi / n)
+            )
+            ** 2
+            for j in J
+        )
+    )
 
 
 def fit_1(x):
@@ -25,6 +40,6 @@ def fit_2(x):
     return 1 - math.sqrt(x[0]) + base_fit(x, J2, math.sin)
 
 
-name = 'UF2'
+name = "UF2"
 fitnesses = [fit_1, fit_2]
 dims = [(0, 1)] + [(-1, 1)] * (n - 1)

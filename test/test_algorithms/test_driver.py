@@ -5,7 +5,6 @@ from simulation.factory import prepare
 
 
 class DriverTest(unittest.TestCase):
-
     def test_step_number_updated(self):
         steps = [0, 1, 2]
 

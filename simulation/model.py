@@ -11,8 +11,16 @@ def get_simulation_id(run_id, run_date=None):
 
 
 class SimulationCase:
-    def __init__(self, problem_name: str, algorithm_name: str, budgets: List[int], run_id: int, renice: str,
-                 results_dir: str, id=None):
+    def __init__(
+        self,
+        problem_name: str,
+        algorithm_name: str,
+        budgets: List[int],
+        run_id: int,
+        renice: str,
+        results_dir: str,
+        id=None,
+    ):
         self.problem_name = problem_name
         self.algorithm_name = algorithm_name
         self.budgets = budgets
@@ -29,4 +37,4 @@ class SimulationCase:
         return str(self)
 
     def __str__(self):
-        return 'Simulation:' + str(vars(self))
+        return "Simulation:" + str(vars(self))

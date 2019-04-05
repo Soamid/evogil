@@ -16,7 +16,9 @@ def shutdown_default_executor():
     default_process_executor.shutdown()
 
 
-def from_process(worker: Callable, *args, executor: ProcessPoolExecutor = None, **kwargs):
+def from_process(
+    worker: Callable, *args, executor: ProcessPoolExecutor = None, **kwargs
+):
     executor = executor if executor else default_process_executor
 
     def run_as_process():

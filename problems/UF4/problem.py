@@ -30,9 +30,9 @@ def fit_1(x):
 
 
 def fit_2(x):
-    return 1 - x[0]**2 + base_fit(x, J2)
+    return 1 - x[0] ** 2 + base_fit(x, J2)
 
 
-name = 'UF4'
+name = "UF4"
 fitnesses = [fit_1, fit_2]
 dims = [(0, 1)] + [(-2, 2)] * (n - 1)

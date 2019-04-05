@@ -8,7 +8,6 @@ from simulation.factory import prepare
 
 
 class ImgaTest(unittest.TestCase):
-
     def test_results_number_is_correct(self):
         steps = [0, 1, 3]
 
@@ -22,8 +21,9 @@ class ImgaTest(unittest.TestCase):
                 steps_run = StepsRun(steps_no)
 
                 results = []
-                steps_run.create_job(imga) \
-                    .subscribe(lambda proxy: results.append(proxy))
+                steps_run.create_job(imga).subscribe(
+                    lambda proxy: results.append(proxy)
+                )
 
                 self.assertEqual(len(results), steps_no)
 
@@ -43,7 +43,7 @@ class ImgaTest(unittest.TestCase):
 
         steps_run.create_job(imga).pipe(
             ops.subscribe_on(NewThreadScheduler()),
-            ops.do_action(on_next=on_imga_result)
+            ops.do_action(on_next=on_imga_result),
         ).run()
 
         self.assertListEqual(total_costs, islands_costs)

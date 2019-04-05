@@ -6,7 +6,7 @@ from evotools.ea_utils import paretofront_layers
 EPSILON = numpy.finfo(float).eps
 
 
-#polynomial mutation
+# polynomial mutation
 def mutate(xs, dims, mutation_rate, eta):
     new_xs = [x for x in xs]
     for i, dim in enumerate(dims):
@@ -49,11 +49,13 @@ def old_mutate(xs, dimensions, mutation_probability, mutation_variance):
     def coin():
         return random.random() < mutation_probability
 
-    return [min(max(a, (random.gauss(x, sigma))), b) if coin() else x
-            for x, (a, b), sigma in zip(xs, dimensions, mutation_variance)]
+    return [
+        min(max(a, (random.gauss(x, sigma))), b) if coin() else x
+        for x, (a, b), sigma in zip(xs, dimensions, mutation_variance)
+    ]
 
 
-#simulated binary crossover
+# simulated binary crossover
 def crossover(xs, ys, dims, crossover_rate, eta):
     new_xs = [x for x in xs]
     new_ys = [y for y in ys]
@@ -115,18 +117,11 @@ def get_beta_q(rand, alpha, eta):
 
 
 def old_crossover(xs, ys):
-    return [random.uniform(x, y)
-            for x, y
-            in zip(xs, ys)
-    ]
+    return [random.uniform(x, y) for x, y in zip(xs, ys)]
 
 
 def crossover_triangular(xs, ys):
-    return [random.triangular(low=min(x, y),
-                              high=max(x, y))
-            for x, y
-            in zip(xs, ys)
-    ]
+    return [random.triangular(low=min(x, y), high=max(x, y)) for x, y in zip(xs, ys)]
 
 
 def crossover_beta(xs, ys, dimensions, crossover_variance):
@@ -134,9 +129,9 @@ def crossover_beta(xs, ys, dimensions, crossover_variance):
     Wyznacza a na podstawie zadanej wariancji.
     :warning: Wariancja v musi spełniać: v/(b-a) <= 0.25 gdzie [a,b] jest przestrzenią.
     """
-    return [random.betavariate(v / (b - a), v / (b - a)) * abs(x - y) + min(x, y)
-            for x, y, (a, b), v
-            in zip(xs, ys, dimensions, crossover_variance)
+    return [
+        random.betavariate(v / (b - a), v / (b - a)) * abs(x - y) + min(x, y)
+        for x, y, (a, b), v in zip(xs, ys, dimensions, crossover_variance)
     ]
 
 
@@ -148,18 +143,16 @@ def average_indiv(population):
     return list(res)
 
 
-def rank(individuals: 'Iterator Individual', calc_objective):
+def rank(individuals: "Iterator Individual", calc_objective):
     """
     :param individuals: Grupa indywiduów.
     :param calc_objective: Określa jak otrzymać wektor wyników.
     :return: Itertator: posortowane dane wejściowe od najlepszych do najgorszych.
     """
-    return iter(indiv
-                for eqv_class
-                in paretofront_layers(individuals,
-                                      fitfun_res=calc_objective)
-                for indiv
-                in eqv_class
+    return iter(
+        indiv
+        for eqv_class in paretofront_layers(individuals, fitfun_res=calc_objective)
+        for indiv in eqv_class
     )
 
 
@@ -167,9 +160,6 @@ def get_indivs_inorder(self, fitnesses, population):
     """ :return: Iterator: bieżąca populacja posortowana od najlepszych do najgorszych. """
 
     def calc_objective(ind):
-        return [f(ind)
-                for f
-                in fitnesses
-        ]
+        return [f(ind) for f in fitnesses]
 
     return rank(population, calc_objective)

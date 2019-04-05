@@ -19,8 +19,9 @@ def h(t):
 
 
 def base_fit(x, J):
-    return (1 / (2 * n) + eps) * math.fabs(math.sin(2 * n * math.pi * x[0])) + (2 * sum(h(yj(x, j)) for j in J)) / len(
-        J)
+    return (1 / (2 * n) + eps) * math.fabs(math.sin(2 * n * math.pi * x[0])) + (
+        2 * sum(h(yj(x, j)) for j in J)
+    ) / len(J)
 
 
 def fit_1(x):
@@ -31,6 +32,6 @@ def fit_2(x):
     return 1 - x[0] + base_fit(x, J2)
 
 
-name = 'UF5'
+name = "UF5"
 fitnesses = [fit_1, fit_2]
 dims = [(0, 1)] + [(-1, 1)] * (n - 1)

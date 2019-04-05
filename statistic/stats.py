@@ -8,19 +8,39 @@ from simulation.timing import process_time, log_time
 from statistic.stats_bootstrap import yield_analysis, average
 
 fields = [
-    ("PROBLEM",                     [9],             "{problem_name:{0}}"),
-    ("ALGO",                        [14],            "{algo_name:{0}}"),
-    ("N",                           [2],             "{len_data:>{0}}"),
+    ("PROBLEM", [9], "{problem_name:{0}}"),
+    ("ALGO", [14], "{algo_name:{0}}"),
+    ("N", [2], "{len_data:>{0}}"),
     # ("AvgPop",                      [5],             "{avg_pop_len:{0}}"),
-    ("Budgt",                       [5],             "{result[budget]!s:>{0}}"),
-    ("METRICS OY",                  [15],            "{metric_name:^{0}}"),
-    ("✓",                           [5],             "{analysis[goodbench]:^{0}}"),
-    ("RESULT, confidence interval", [10, 10, 10, 6], "{analysis[btstrpd][from]: >0{0}.3f} ≤ {analysis[btstrpd][metrics]: >{1}.3f} ≤ {analysis[btstrpd][to]: >0{2}.3f}"),
-    ("σ",                           [10],            "{analysis[stdev]: >{0}.3f}"),
-    ("OUTLIERS",                    [7, 7, 12],      "{analysis[mild_outliers]:>{0}} mild {analysis[extr_outliers]:>{1}} extr."),
-    ("RES w/o outliers",            [10, 10, 4],     "{analysis[metrics_nooutliers]:>{0}.3f} ({analysis[mean_nooutliers_diff]:>+{1}.3f}%)"),
-    ("σ w/o outliers",              [10, 10, 4],     "{analysis[stdev_nooutliers]:>{0}.3f} ({analysis[stdev_nooutliers_diff]:>{1}.3f}%)"),
-    ("(C INT)/METRICS",             [7, 10, 2],      "{analysis[pr_dispersion]: >{0}.3f}% {analysis[dispersion_warn]:<{1}}"),
+    ("Budgt", [5], "{result[budget]!s:>{0}}"),
+    ("METRICS OY", [15], "{metric_name:^{0}}"),
+    ("✓", [5], "{analysis[goodbench]:^{0}}"),
+    (
+        "RESULT, confidence interval",
+        [10, 10, 10, 6],
+        "{analysis[btstrpd][from]: >0{0}.3f} ≤ {analysis[btstrpd][metrics]: >{1}.3f} ≤ {analysis[btstrpd][to]: >0{2}.3f}",
+    ),
+    ("σ", [10], "{analysis[stdev]: >{0}.3f}"),
+    (
+        "OUTLIERS",
+        [7, 7, 12],
+        "{analysis[mild_outliers]:>{0}} mild {analysis[extr_outliers]:>{1}} extr.",
+    ),
+    (
+        "RES w/o outliers",
+        [10, 10, 4],
+        "{analysis[metrics_nooutliers]:>{0}.3f} ({analysis[mean_nooutliers_diff]:>+{1}.3f}%)",
+    ),
+    (
+        "σ w/o outliers",
+        [10, 10, 4],
+        "{analysis[stdev_nooutliers]:>{0}.3f} ({analysis[stdev_nooutliers_diff]:>{1}.3f}%)",
+    ),
+    (
+        "(C INT)/METRICS",
+        [7, 10, 2],
+        "{analysis[pr_dispersion]: >{0}.3f}% {analysis[dispersion_warn]:<{1}}",
+    ),
 ]
 
 
@@ -37,7 +57,7 @@ def statistics(args):
 
     badbench = []
     cost_badbench = []
-    boot_size = int(args['--bootstrap'])
+    boot_size = int(args["--bootstrap"])
 
     # pretty format
     screen_width = sum(y for x in fields for y in x[1]) + 4 * len(fields)
@@ -51,14 +71,16 @@ def statistics(args):
 
     def print_header():
         print()
-        print('..'.join('[{0:^{1}}]'.format(head, sum(width))
-                        for head, width, var
-                        in fields)
-              + "..",
-              flush=True)
+        print(
+            "..".join(
+                "[{0:^{1}}]".format(head, sum(width)) for head, width, var in fields
+            )
+            + "..",
+            flush=True,
+        )
         return True
 
-    with close_and_join(multiprocessing.Pool(min(int(args['-j']), 8))) as p:
+    with close_and_join(multiprocessing.Pool(min(int(args["-j"]), 8))) as p:
         for problem_name, problem_mod, algorithms in RunResult.each_result():
             for algo_name, budgets in algorithms:
                 header_just_printed = print_header()
@@ -67,19 +89,30 @@ def statistics(args):
                     len_data = len(result["results"])
 
                     first_budget_line = True
-                    avg_pop_len = average([len(x.population) for x in result["results"]])
+                    avg_pop_len = average(
+                        [len(x.population) for x in result["results"]]
+                    )
 
-                    with log_time(process_time,
-                                  logger,
-                                  "Calculating metrics for {} :: {} :: {} in {{time_res:.3f}}s".format(
-                                      problem_name, algo_name, result["budget"]
-                                  )):
+                    with log_time(
+                        process_time,
+                        logger,
+                        "Calculating metrics for {} :: {} :: {} in {{time_res:.3f}}s".format(
+                            problem_name, algo_name, result["budget"]
+                        ),
+                    ):
 
-                        results_precalc = p.map(force_data,
-                                                zip(repeat(boot_size), result["analysis"]),
-                                                chunksize=1)
+                        results_precalc = p.map(
+                            force_data,
+                            zip(repeat(boot_size), result["analysis"]),
+                            chunksize=1,
+                        )
 
-                        for metric_name, metric_name_long, data_process, analysis in results_precalc:
+                        for (
+                            metric_name,
+                            metric_name_long,
+                            data_process,
+                            analysis,
+                        ) in results_precalc:
                             if first_budget_line and not header_just_printed:
                                 if screen_width % 2 == 1:
                                     print("-" + " -" * (screen_width // 2))
@@ -103,10 +136,13 @@ def statistics(args):
                                 stdev_process = analysis["stdev"]
                                 mean_process = analysis["mean"]
 
-                                outliers = len([x
-                                                for x
-                                                in data_process
-                                                if lower_process <= x <= upper_process])
+                                outliers = len(
+                                    [
+                                        x
+                                        for x in data_process
+                                        if lower_process <= x <= upper_process
+                                    ]
+                                )
                                 print(
                                     "{err_prefix}:: Suspicious result analysis:\n"
                                     "{err_prefix}::             {0:>2} / {1:2} ({4:7.3f}%) out of [ {2:>18.13} ; {3:<18.13} ]\n"
@@ -122,42 +158,86 @@ def statistics(args):
                                         max(data_process),
                                         upper_process - lower_process,
                                         max(data_process) - min(data_process),
-                                        err_prefix=err_prefix)
+                                        err_prefix=err_prefix,
+                                    )
                                 )
-                                print("{err_prefix}:: Values".format(err_prefix=err_prefix))
+                                print(
+                                    "{err_prefix}:: Values".format(
+                                        err_prefix=err_prefix
+                                    )
+                                )
 
                                 def aux(x):
                                     try:
-                                        return abs(x - mean_process) * 100.0 / stdev_process
+                                        return (
+                                            abs(x - mean_process)
+                                            * 100.0
+                                            / stdev_process
+                                        )
                                     except ZeroDivisionError:
                                         return float("inf")
 
-                                print(''.join(
-                                    "{err_prefix}:: {0:>30.20}  = avg {1:<+30} = avg {3:+8.3f}% ⨉ σ | {2:17} {4:17} {5:17}\n".format(
-                                        x,
-                                        x - mean_process,
-                                        (lower_process <= x <= upper_process) and "(out of mean±3σ)" or "",
-                                        aux(x),
-                                        ((low_out_fence_process <= x < analysis["low_inn_fence"]) or (
-                                            analysis[
-                                                "upp_inn_fence"] <= x < upp_out_fence_process)) and " (mild outlier)" or "",
-                                        ((x < low_out_fence_process) or (
-                                            upp_out_fence_process < x)) and "(EXTREME outlier)" or "",
-                                        err_prefix=err_prefix
-                                    )
-                                    for x in data_process),
-                                    end=''
+                                print(
+                                    "".join(
+                                        "{err_prefix}:: {0:>30.20}  = avg {1:<+30} = avg {3:+8.3f}% ⨉ σ | {2:17} {4:17} {5:17}\n".format(
+                                            x,
+                                            x - mean_process,
+                                            (lower_process <= x <= upper_process)
+                                            and "(out of mean±3σ)"
+                                            or "",
+                                            aux(x),
+                                            (
+                                                (
+                                                    low_out_fence_process
+                                                    <= x
+                                                    < analysis["low_inn_fence"]
+                                                )
+                                                or (
+                                                    analysis["upp_inn_fence"]
+                                                    <= x
+                                                    < upp_out_fence_process
+                                                )
+                                            )
+                                            and " (mild outlier)"
+                                            or "",
+                                            (
+                                                (x < low_out_fence_process)
+                                                or (upp_out_fence_process < x)
+                                            )
+                                            and "(EXTREME outlier)"
+                                            or "",
+                                            err_prefix=err_prefix,
+                                        )
+                                        for x in data_process
+                                    ),
+                                    end="",
                                 )
-                                if abs(analysis["mean_nooutliers_diff"]) > 10.:
-                                    badbench.append([problem_name, algo_name, result["budget"], metric_name_long])
-                                    print(err_prefix + "::", "#"*22, "#"*67, "#"*22)
-                                    print(err_prefix + "::", "#"*22,
-                                          "Mean of results changed a lot (> 10%), so probably UNTRUSTED result",
-                                          "#"*22)
-                                    print(err_prefix + "::", "#"*22, "#"*67, "#"*22)
+                                if abs(analysis["mean_nooutliers_diff"]) > 10.0:
+                                    badbench.append(
+                                        [
+                                            problem_name,
+                                            algo_name,
+                                            result["budget"],
+                                            metric_name_long,
+                                        ]
+                                    )
+                                    print(
+                                        err_prefix + "::", "#" * 22, "#" * 67, "#" * 22
+                                    )
+                                    print(
+                                        err_prefix + "::",
+                                        "#" * 22,
+                                        "Mean of results changed a lot (> 10%), so probably UNTRUSTED result",
+                                        "#" * 22,
+                                    )
+                                    print(
+                                        err_prefix + "::", "#" * 22, "#" * 67, "#" * 22
+                                    )
                                 else:
-                                    print(err_prefix + "::",
-                                          "Mean of results changed a little (< 10%), so probably that's all okay")
+                                    print(
+                                        err_prefix + "::",
+                                        "Mean of results changed a little (< 10%), so probably that's all okay",
+                                    )
 
     if badbench:
         print("#" * 237)

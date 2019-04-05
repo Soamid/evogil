@@ -10,7 +10,7 @@ class Epsilon:
         self._dim = len(pareto[0])
         self.set_params()
 
-        eps = float('-inf')
+        eps = float("-inf")
 
         for i in range(len(solution)):
             for j in range(len(pareto)):
@@ -39,8 +39,8 @@ class Epsilon:
         self._obj = [0 for _ in range(self._dim)]
 
 
-if __name__ == '__main__':
-    opt = [[0., 1., 1.], [1., 0., 1.], [1., 1., 0.]]
+if __name__ == "__main__":
+    opt = [[0.0, 1.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]
     mine = [[0.3, 1.5, 1.3]]
     eps = Epsilon()
     print(eps.epsilon(mine, opt))

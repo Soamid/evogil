@@ -8,8 +8,9 @@ from algorithms.base.model import ProgressMessageAdapter, ProgressMessage
 
 class StepCountingDriver(type):
     def __init__(cls, name, bases, clsdict):
-        step_function = 'next_step'
+        step_function = "next_step"
         if step_function in clsdict:
+
             def counting_step(self):
                 proxy = clsdict[step_function](self)
                 self.step_no += 1
@@ -19,7 +20,6 @@ class StepCountingDriver(type):
 
 
 class Driver(object, metaclass=StepCountingDriver):
-
     def __init__(self, message_adapter_factory=ProgressMessageAdapter):
         self.max_budget = None
         self.finished = False
@@ -39,13 +39,12 @@ class Driver(object, metaclass=StepCountingDriver):
 
 
 class ComplexDriver(Driver):
-
     def __init__(self, driver_message_adapter_factory, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.driver_message_adapter_factory = driver_message_adapter_factory
 
-class DriverRun:
 
+class DriverRun:
     def create_job(self, driver: Driver) -> Observable:
         raise NotImplementedError
 
@@ -62,14 +61,13 @@ class BudgetRun(DriverRun):
             observer.on_next(driver.next_step())
         observer.on_completed()
 
+
 class StepsRun(DriverRun):
     def __init__(self, steps: int):
         self.steps = steps
 
     def create_job(self, driver: Driver):
-        return rx.range(0, self.steps).pipe(
-            ops.map(lambda _: driver.next_step())
-        )
+        return rx.range(0, self.steps).pipe(ops.map(lambda _: driver.next_step()))
 
 
 class DriverRx(Driver):
