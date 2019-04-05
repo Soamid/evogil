@@ -3,7 +3,7 @@ import unittest
 import rx
 from rx.concurrency import NewThreadScheduler
 
-from algorithms.base.drivergen import StepsRun
+from algorithms.base.driver import StepsRun
 from simulation.factory import prepare
 
 

@@ -2,7 +2,7 @@ import copy
 import logging
 import random
 
-from algorithms.base.drivergen import ImgaProxy, Driver
+from algorithms.base.driver import Driver
 
 
 class OMOPSO(Driver):

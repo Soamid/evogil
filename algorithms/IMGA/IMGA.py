@@ -7,7 +7,7 @@ import rx.operators as ops
 from rx.concurrency import NewThreadScheduler
 
 from algorithms.IMGA.topology import TorusTopology, Topology
-from algorithms.base.drivergen import DriverGen, ImgaProxy, StepsRun, ComplexDriver
+from algorithms.base.driver import StepsRun, ComplexDriver
 from evotools import ea_utils
 from evotools.random_tools import weighted_choice
 
@@ -51,35 +51,10 @@ class IMGA(ComplexDriver):
 
         self.spread_budget_info()
 
-    class IMGAImgaProxy(ImgaProxy):
-        def __init__(self, driver, cost, results):
-            super().__init__(driver, cost)
-            self.global_population = results
-
-        def finalized_population(self):
-            return self.global_population
-
-        def current_population(self):
-            return self.finalized_population()
-
-        def deport_emigrants(self, immigrants):
-            raise Exception("IMGA does not support migrations")
-
-        def assimilate_immigrants(self, emigrants):
-            raise Exception("IMGA does not support migrations")
-
-        def nominate_delegates(self):
-            raise Exception("IMGA does not support migrations")
-
     def spread_budget_info(self):
         if self.max_budget:
             for island in self.islands:
                 island.driver.max_budget = self.max_budget
-
-    def create_proxy(self, island_proxies):
-        self.cost = sum(proxy.cost for proxy in island_proxies)
-        all_results = itertools.chain(*(proxy.finalized_population() for proxy in island_proxies))
-        return IMGA.IMGAImgaProxy(self, self.cost, list(all_results))
 
     def finalized_population(self):
         return itertools.chain(*(island.driver.finalized_population() for island in self.islands))
@@ -137,9 +112,6 @@ class IMGA(ComplexDriver):
                                        crossover_eta=outer.crossover_eta,
                                        message_adapter_factory=outer.driver_message_adapter_factory
                                        )
-            if isinstance(self.driver, DriverGen):
-                self.driver_gen = self.driver.population_generator()
-                self.last_proxy = None
             self.visa_office = []
             self.all_refugees = []
 
@@ -148,8 +120,6 @@ class IMGA(ComplexDriver):
             return steps_run.create_job(self.driver)
 
         def finish(self):
-            if isinstance(self.driver, DriverGen):
-                return self.last_proxy.finalized_population()
             return self.driver.finish()
 
         def emigrate(self):
@@ -158,10 +128,7 @@ class IMGA(ComplexDriver):
             def fitfun_res(ind):
                 return [f(ind) for f in self.outer.fitnesses]
 
-            if isinstance(self.driver, DriverGen):
-                current_population = self.last_proxy.current_population()
-            else:
-                current_population = self.driver.population
+            current_population = self.driver.population
 
             refugees = []
             for _ in range(self.outer.migrants_number):

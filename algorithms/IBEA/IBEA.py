@@ -3,7 +3,7 @@ import math
 import random
 import sys
 
-from algorithms.base.drivergen import Driver
+from algorithms.base.driver import Driver
 from algorithms.base.drivertools import rank, mutate, crossover
 
 class IBEA(Driver):
