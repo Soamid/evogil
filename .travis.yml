@@ -23,4 +23,5 @@ install:
   - source activate evogil
 
 script:
-  python -m unittest discover test
+  - python -m unittest discover test
+  - pylint --errors-only --rcfile=.pylintrc evogil

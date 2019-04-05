@@ -4,42 +4,42 @@ from algorithms.HGS.HGS import *
 from algorithms.HGS.HGS_optional import *
 
 
-def __redundant_test():
-    sample_pop_a = [
-        [random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)] for _ in range(1000)
-    ]
-    sample_pop_b = [
-        [random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)] for _ in range(1000)
-    ]
-
-    lda_instance = lda.LDA(n_components=1)
-
-    combined = [x for x in sample_pop_a]
-    combined_class = [0 for _ in sample_pop_a]
-    for x in sample_pop_b:
-        combined.append(x)
-        combined_class.append(1)
-    post_lda = lda_instance.fit_transform(combined, combined_class)
-
-    projection_a = [x for i, x in enumerate(post_lda) if combined_class[i] == 0]
-    projection_b = [x for i, x in enumerate(post_lda) if combined_class[i] == 1]
-
-    plt.scatter(projection_a, [0.5 for _ in projection_a], c="b")
-    plt.scatter(projection_b, [0.5 for _ in projection_b], c="r")
-
-    mean_a = np.mean(projection_a)
-    mean_b = np.mean(projection_b)
-
-    plt.scatter([mean_a], [0.5], c="y")
-    plt.scatter([mean_b], [0.5], c="y")
-
-    std_a = np.std(projection_a)
-    std_b = np.std(projection_b)
-
-    plt.scatter([mean_a + 2 * std_a, mean_a - 2 * std_a], [0.5, 0.5], c="m")
-    plt.scatter([mean_b + 2 * std_b, mean_b - 2 * std_b], [0.5, 0.5], c="c")
-
-    plt.show()
+# def __redundant_test():
+#     sample_pop_a = [
+#         [random.gauss(0.3, 0.015), random.gauss(0.3, 0.05)] for _ in range(1000)
+#     ]
+#     sample_pop_b = [
+#         [random.gauss(0.5, 0.04), random.gauss(0.5, 0.025)] for _ in range(1000)
+#     ]
+#
+#     lda_instance = lda.LDA(n_components=1)
+#
+#     combined = [x for x in sample_pop_a]
+#     combined_class = [0 for _ in sample_pop_a]
+#     for x in sample_pop_b:
+#         combined.append(x)
+#         combined_class.append(1)
+#     post_lda = lda_instance.fit_transform(combined, combined_class)
+#
+#     projection_a = [x for i, x in enumerate(post_lda) if combined_class[i] == 0]
+#     projection_b = [x for i, x in enumerate(post_lda) if combined_class[i] == 1]
+#
+#     plt.scatter(projection_a, [0.5 for _ in projection_a], c="b")
+#     plt.scatter(projection_b, [0.5 for _ in projection_b], c="r")
+#
+#     mean_a = np.mean(projection_a)
+#     mean_b = np.mean(projection_b)
+#
+#     plt.scatter([mean_a], [0.5], c="y")
+#     plt.scatter([mean_b], [0.5], c="y")
+#
+#     std_a = np.std(projection_a)
+#     std_b = np.std(projection_b)
+#
+#     plt.scatter([mean_a + 2 * std_a, mean_a - 2 * std_a], [0.5, 0.5], c="m")
+#     plt.scatter([mean_b + 2 * std_b, mean_b - 2 * std_b], [0.5, 0.5], c="c")
+#
+#     plt.show()
 
 
 def __compare_test():
@@ -136,7 +136,3 @@ def __coding_test():
     print(a)
     a *= 10 ** 25
     print(a)
-
-
-if __name__ == "__main__":
-    __redundant_test()

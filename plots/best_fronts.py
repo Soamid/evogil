@@ -190,7 +190,3 @@ def best_fronts(args):
             if best_result and algo_name in algos:
                 plot_results(ax, best_result["results"][0], algo_name)
         save_plot(ax, f, problem_mod)
-
-
-if __name__ == "__main__":
-    best_fronts({"--bootstrap": 10000}, None)

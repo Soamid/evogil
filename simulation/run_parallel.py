@@ -119,9 +119,9 @@ def worker(simulation, simulation_id):
         "Starting the worker. PID: %d, simulation case: %s", os.getpid(), simulation
     )
 
-    if simulation.renice:
+    if simulation.renice and os.name == "posix":
         logger.debug("Renice the process PID:%s by %s", os.getpid(), simulation)
-        os.nice(int(simulation.renice))
+        os.nice(int(simulation.renice)) # pylint: disable=no-member
 
     logger.debug("Getting random seed")
     # basically we duplicate the code of https://github.com/python/cpython/blob/master/Lib/random.py#L111 because

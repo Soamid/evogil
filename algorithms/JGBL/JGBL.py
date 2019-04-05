@@ -1,5 +1,6 @@
 import random
 
+import algorithms
 from algorithms.NSGAII.NSGAII import NSGAII
 
 
@@ -84,7 +85,7 @@ class JGBL(NSGAII):
 
                 jumping_pop.extend(
                     [
-                        self.Individual(x)
+                        algorithms.NSGAII.NSGAII.Individual(x)
                         for x in [
                             cut_self,
                             copy_self,
@@ -160,6 +161,6 @@ class JGBL(NSGAII):
         ]
 
 
-if __name__ == "__main__":
-    jgbl = JGBL([(1, 5), (1, 5), (1, 5), (1, 5)], 0.5)
-    print(jgbl.copy_and_paste([3, 2, 1, 5], [4, 2.5, 2.66, 1.734]))
+# if __name__ == "__main__":
+#     jgbl = JGBL([(1, 5), (1, 5), (1, 5), (1, 5)], 0.5)
+#     print(jgbl.copy_and_paste([3, 2, 1, 5], [4, 2.5, 2.66, 1.734]))

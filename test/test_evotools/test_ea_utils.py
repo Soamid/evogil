@@ -1,9 +1,7 @@
 import itertools
 import operator
 import random
-from unittest import TestCase
-
-from algorithms.utils.ea_utils import *
+import unittest
 
 import problems.kursawe.problem as kursawe
 from evotools.ea_utils import (
@@ -15,7 +13,8 @@ from evotools.ea_utils import (
 from metrics.metrics_utils import euclid_sqr_distance
 
 
-class TestEAUtils(TestCase):
+@unittest.SkipTest
+class TestEAUtils(unittest.TestCase):
     def test_gen_population(self):
         dims = [[(-10, 10)], [(-10, 0), (0, 10)]]
         for dm in dims:

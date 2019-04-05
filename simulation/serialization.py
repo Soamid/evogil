@@ -337,9 +337,10 @@ class RunResultBudget:
         except KeyError:
             logger = logging.getLogger(__name__)
             logger.exception(
-                "No matching run for: problem={} algo={} run_no{}={}".format(
-                    self.problem, self.budget, self.run_no
-                )
+                "No matching run for: problem=%s algo=%s run_no=%s",
+                self.problem,
+                self.budget,
+                self.run_no,
             )
             return None
 

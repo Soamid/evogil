@@ -662,7 +662,3 @@ def pictures_summary(args):
                             scoring[metric_name][algo_name][problem_name] /= max_score
 
     plot_results_summary(problems, scoring, selected)
-
-
-if __name__ == "__main__":
-    pictures_from_stats({"--bootstrap": 10000}, None)

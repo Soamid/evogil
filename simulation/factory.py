@@ -338,7 +338,7 @@ def prepare_message_adapter_class(algo: str, all_drivers: List[str], driver_pos:
         adapter_class_name = "{}{}MessageAdapter".format(driver_algo, algo)
 
         logger.debug(
-            "Searching for message adapter in... {}.{}",
+            "Searching for message adapter in... %s.%s",
             message_mod_name,
             adapter_class_name,
         )

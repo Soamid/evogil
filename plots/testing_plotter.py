@@ -4,8 +4,6 @@ from collections import defaultdict
 
 from matplotlib import pyplot as plt
 
-from simulation.serialization import get_current_time
-
 EXTENT = "extent"
 DISTRIBUTION = "distribution"
 DISTANCE_FROM_PARETO = "distance_from_pareto"
@@ -24,7 +22,7 @@ def plot_quality(series, metrics_name, problem_name):
         plt.plot(costs, values, linestyle="-", marker="o", label=alg)
 
     plt.yscale("log")
-    path = "_".join(["quality", problem_name, metrics_name, get_current_time()])
+    path = "_".join(["quality", problem_name, metrics_name])
     plt.legend(loc=4)
     plt.savefig(path + ".png")
     plt.close(f)

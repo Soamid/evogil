@@ -67,13 +67,13 @@ Options:
   -d <results_dir>, --dir <results_dir>
         Directory where simulation results will be stored. If not specified, serialization.RESULTS_DIR is set.
 
-
 Pictures Summary Options:
   --selected <algo_name>
         Select and highlight specified algorithms on plots.
         [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA,HGS+JGBL,HGS+NSLS]
 """
 import logging
+import os
 import time
 
 from docopt import docopt

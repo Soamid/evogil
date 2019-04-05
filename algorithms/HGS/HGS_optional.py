@@ -1,3 +1,5 @@
+import math
+
 from algorithms.base import drivertools
 import numpy as np
 
@@ -34,40 +36,40 @@ def redundant_projection(pop_a, pop_b, variances_multiplier):
     ) > len_diff_vector
 
 
-def redundant_lda(pop_a, pop_b, variances_multiplier=2.0):
-    if pop_a is pop_b:
-        return False
-
-    combined = [x for x in pop_a]
-    combined_class = [0 for _ in pop_a]
-    for x in pop_b:
-        combined.append(x)
-        combined_class.append(1)
-
-    lda_instance = lda.LDA(n_components=1)
-    lda_projection = None
-    while lda_projection is None:
-        try:
-            lda_projection = [
-                x[0] for x in lda_instance.fit_transform(combined, combined_class)
-            ]
-        except ValueError:
-            # print("??? intelowy error!")
-            # print(pop_a)
-            # print(pop_b)
-            # print("intelowy error! ???")
-            return False
-
-    projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
-    projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]
-
-    mean_a = np.mean(projection_a)
-    mean_b = np.mean(projection_b)
-
-    std_a = np.std(projection_a)
-    std_b = np.std(projection_b)
-
-    return (variances_multiplier * (std_a + std_b)) > math.fabs(mean_a - mean_b)
+# def redundant_lda(pop_a, pop_b, variances_multiplier=2.0):
+#     if pop_a is pop_b:
+#         return False
+#
+#     combined = [x for x in pop_a]
+#     combined_class = [0 for _ in pop_a]
+#     for x in pop_b:
+#         combined.append(x)
+#         combined_class.append(1)
+#
+#     lda_instance = lda.LDA(n_components=1)
+#     lda_projection = None
+#     while lda_projection is None:
+#         try:
+#             lda_projection = [
+#                 x[0] for x in lda_instance.fit_transform(combined, combined_class)
+#             ]
+#         except ValueError:
+#             # print("??? intelowy error!")
+#             # print(pop_a)
+#             # print(pop_b)
+#             # print("intelowy error! ???")
+#             return False
+#
+#     projection_a = [x for i, x in enumerate(lda_projection) if combined_class[i] == 0]
+#     projection_b = [x for i, x in enumerate(lda_projection) if combined_class[i] == 1]
+#
+#     mean_a = np.mean(projection_a)
+#     mean_b = np.mean(projection_b)
+#
+#     std_a = np.std(projection_a)
+#     std_b = np.std(projection_b)
+#
+#     return (variances_multiplier * (std_a + std_b)) > math.fabs(mean_a - mean_b)
 
 
 def compare_centers(pop_a, pop_b, variances_multiplier=2.0):
