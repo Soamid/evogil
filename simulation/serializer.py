@@ -2,7 +2,7 @@ import pickle
 from contextlib import suppress
 from pathlib import Path
 
-from simulation.factory import SimulationCase
+from simulation.model import SimulationCase
 
 
 class Result:

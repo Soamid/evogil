@@ -2,11 +2,9 @@ import fnmatch
 import logging
 import os
 import pickle
-import random
 import re
 from collections import defaultdict
 from contextlib import suppress
-from datetime import datetime
 from functools import partial
 from importlib import import_module
 from itertools import chain
@@ -14,7 +12,7 @@ from pathlib import Path
 
 from metrics import metrics
 from simulation import factory
-from simulation.factory import SimulationCase
+from simulation.model import SimulationCase
 from simulation.serializer import Serializer, Result
 
 RESULTS_DIR = '../results_temp/results_k2'
@@ -53,7 +51,7 @@ class RunResult:
                 run_id = matchdict["runid"]
                 run_date = matchdict["rundate"]
                 simulation_case = SimulationCase(problem, algo, None, run_id, None, results_path,
-                                                 factory.get_simulation_id(run_id, run_date))
+                                                                  factory.get_simulation_id(run_id, run_date))
                 res = RunResult(simulation_case)
                 res.preload_all_budgets(run_no)
                 run_no += 1
