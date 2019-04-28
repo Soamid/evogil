@@ -3,7 +3,7 @@ from contextlib import suppress
 from functools import partial
 from importlib import import_module
 from itertools import product
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf
@@ -13,8 +13,15 @@ from simulation.run_config import NotViableConfiguration
 
 logger = logging.getLogger(__name__)
 
+BUDGETS_PARAM = "budgets"
 
-def create_simulation(args):
+
+def create_budget_simulation(args: Dict[str, str]):
+    params = {BUDGETS_PARAM: parse_budgets(args)}
+    return create_simulation(args, params)
+
+
+def create_simulation(args: Dict[str, str], params: Dict[str, Any]):
     budgets = parse_budgets(args)
     logger.debug("Budgets: %s", budgets)
 
@@ -36,10 +43,10 @@ def create_simulation(args):
         SimulationCase(
             simulation_case[0],
             simulation_case[1],
-            budgets,
             run_id,
             args["--renice"],
             resolve_results_dir(args),
+            **params
         )
         for simulation_case in order
         for run_id in range(int(args["-N"]))

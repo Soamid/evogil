@@ -54,11 +54,10 @@ class RunResult:
                 simulation_case = SimulationCase(
                     problem,
                     algo,
-                    None,
                     run_id,
                     None,
                     results_path,
-                    factory.get_simulation_id(run_id, run_date),
+                    factory.get_simulation_id(run_id, run_date)
                 )
                 res = RunResult(simulation_case)
                 res.preload_all_budgets(run_no)

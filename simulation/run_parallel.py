@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_parallel(args):
-    simulation_cases = factory.create_simulation(args)
+    simulation_cases = factory.create_budget_simulation(args)
 
     logger.debug("Shuffling the job queue")
     random.shuffle(simulation_cases)
@@ -68,7 +68,7 @@ def log_simulation_stats(start_time, simulation_id, simultations_count):
 def log_summary(args, results, simulation_cases, wall_time):
     proc_times = sum(subres[1] for subres in results if subres is not None)
     errors = [
-        (simulation.config, simulation.budgets, simulation.run_id)
+        (simulation.config, simulation.run_id)
         for comp_result, simulation in zip(results, simulation_cases)
         if comp_result is None
     ]
@@ -79,13 +79,12 @@ def log_summary(args, results, simulation_cases, wall_time):
     logger.info("  est. speedup:  %7.3f", speedup)
     if errors:
         logger.error("Errors encountered:")
-        for (probl, algo), budgets, runid in errors:
+        for (probl, algo), runid in errors:
             logger.error(
-                "  %9s :: %14s :: runID=%d :: budgets=%s",
+                "  %9s :: %14s :: runID=%d ",
                 probl,
                 algo,
-                runid,
-                ",".join(str(x) for x in budgets),
+                runid
             )
     summary = collections.defaultdict(float)
     for simulation, subres in zip(simulation_cases, results):

@@ -1,3 +1,5 @@
+import time
+
 import rx
 from rx import Observable
 from rx import operators as ops
@@ -68,6 +70,20 @@ class StepsRun(DriverRun):
 
     def create_job(self, driver: Driver):
         return rx.range(0, self.steps).pipe(ops.map(lambda _: driver.next_step()))
+
+
+class TimeRun(DriverRun):
+    def __init__(self, timeout: int):
+        self.timeout = timeout
+
+    def create_job(self, driver: Driver) -> Observable:
+        return rx.create(lambda observer, scheduler=None: self._start(driver, observer))
+
+    def _start(self, driver: Driver, observer: Observer):
+        start_time = time.time()
+        while time.time() - start_time < self.timeout:
+            observer.on_next(driver.next_step())
+        observer.on_completed()
 
 
 class DriverRx(Driver):

@@ -73,7 +73,6 @@ Pictures Summary Options:
         [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA,HGS+JGBL,HGS+NSLS]
 """
 import logging
-import os
 import time
 
 from docopt import docopt

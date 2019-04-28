@@ -94,8 +94,13 @@ class SimulationWorker:
 
 
 class BudgetWorker(SimulationWorker):
+
     def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
         super().__init__(simulation, simulation_no)
+
+    @property
+    def budgets(self):
+        return self.simulation.params[factory.BUDGETS_PARAM]
 
     def run_driver(
         self, driver: Driver, problem_mod: ModuleType, logger: logging.Logger
@@ -109,8 +114,8 @@ class BudgetWorker(SimulationWorker):
             runres.store(budget, driver.cost, finalpop, finalpop_fit)
             results.append((driver.cost, finalpop))
 
-        driver.max_budget = self.simulation.budgets[-1]
-        for budget in self.simulation.budgets:
+        driver.max_budget = self.budgets[-1]
+        for budget in self.budgets:
             budget_run = BudgetRun(budget)
             budget_run.create_job(driver).pipe(
                 ops.do_action(on_completed=lambda: process_results(budget))
@@ -125,4 +130,19 @@ class BudgetWorker(SimulationWorker):
                     )
                 )
             )
+        return results
+
+
+class TimeWorker(SimulationWorker):
+
+    def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
+        super().__init__(simulation, simulation_no)
+
+    def run_driver(
+            self, driver: Driver, problem_mod: ModuleType, logger: logging.Logger
+    ):
+        results = []
+
+
+
         return results
