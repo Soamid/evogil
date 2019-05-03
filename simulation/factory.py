@@ -15,10 +15,18 @@ logger = logging.getLogger(__name__)
 
 BUDGETS_PARAM = "budgets"
 
+TIMEOUT_PARAM = "timeout"
+
+SAMPLING_INTERVAL_PARAM = "sampling_interval"
+
 
 def create_budget_simulation(args: Dict[str, str]):
     params = {BUDGETS_PARAM: parse_budgets(args)}
     return create_simulation(args, params)
+
+
+def create_time_bound_simulation(args: Dict[str, str]):
+    return None  # TODO runner support
 
 
 def create_simulation(args: Dict[str, str], params: Dict[str, Any]):

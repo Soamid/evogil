@@ -80,8 +80,8 @@ class TimeRun(DriverRun):
         return rx.create(lambda observer, scheduler=None: self._start(driver, observer))
 
     def _start(self, driver: Driver, observer: Observer):
-        start_time = time.time()
-        while time.time() - start_time < self.timeout:
+        self.start_time = time.time()
+        while time.time() - self.start_time < self.timeout:
             observer.on_next(driver.next_step())
         observer.on_completed()
 

@@ -7,10 +7,12 @@ from types import ModuleType
 
 from rx import operators as ops
 
-from algorithms.base.driver import BudgetRun, Driver
+from algorithms.base.driver import BudgetRun, Driver, TimeRun
+from algorithms.base.model import ProgressMessage
 from simulation import factory, log_helper
 from simulation.run_config import NotViableConfiguration
 from simulation.serialization import RunResult
+from simulation.serializer import Serializer, Result
 from simulation.timing import log_time, process_time
 
 
@@ -138,11 +140,32 @@ class TimeWorker(SimulationWorker):
     def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
         super().__init__(simulation, simulation_no)
 
+
     def run_driver(
             self, driver: Driver, problem_mod: ModuleType, logger: logging.Logger
     ):
         results = []
+        timeout = self.simulation.params[factory.TIMEOUT_PARAM]
+        sampling_interval = self.simulation.params[factory.SAMPLING_INTERVAL_PARAM]
 
+        serializer = Serializer(self.simulation)
 
+        def process_results(msg: ProgressMessage):
+            finalpop = driver.finalized_population()
+            print(f"result: {finalpop}")
+            finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
+
+            time_elapsed = time.time() - time_run.start_time
+            time_slot = (time_elapsed // sampling_interval) * sampling_interval
+
+            serializer.store(Result(finalpop, finalpop_fit), str(time_slot))
+            results.append((driver.cost, finalpop))
+
+        time_run = TimeRun(timeout)
+
+        time_run.create_job(driver).pipe(
+            ops.sample(sampling_interval * 1000),
+            ops.do_action(on_next=process_results)
+        ).run()
 
         return results
