@@ -97,7 +97,6 @@ class SimulationWorker:
 
 
 class BudgetWorker(SimulationWorker):
-
     def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
         super().__init__(simulation, simulation_no)
 
@@ -137,13 +136,11 @@ class BudgetWorker(SimulationWorker):
 
 
 class TimeWorker(SimulationWorker):
-
     def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
         super().__init__(simulation, simulation_no)
 
-
     def run_driver(
-            self, driver: Driver, problem_mod: ModuleType, logger: logging.Logger
+        self, driver: Driver, problem_mod: ModuleType, logger: logging.Logger
     ):
         results = []
         timeout = self.simulation.params[factory.TIMEOUT_PARAM]
@@ -165,18 +162,21 @@ class TimeWorker(SimulationWorker):
             results.append((driver.cost, finalpop))
             slots_filled.add(time_slot)
 
-
         def snap_to_time_slot(time_elapsed):
-            return int(time_elapsed // sampling_interval) * sampling_interval
+            return min(
+                int(time_elapsed // sampling_interval) * sampling_interval, timeout
+            )
 
         def fill_remaining_results():
             last_slot = None
-            for time_slot in range(sampling_interval, timeout+1, sampling_interval):
+            for time_slot in range(sampling_interval, timeout + 1, sampling_interval):
                 if time_slot in slots_filled:
                     last_slot = time_slot
                 elif last_slot:
                     result_to_fill = serializer.load(last_slot)
-                    for missing_slot in range(last_slot + sampling_interval, time_slot+1, sampling_interval):
+                    for missing_slot in range(
+                        last_slot + sampling_interval, time_slot + 1, sampling_interval
+                    ):
                         serializer.store(result_to_fill, str(missing_slot))
 
         time_run = TimeRun(timeout)
@@ -184,7 +184,7 @@ class TimeWorker(SimulationWorker):
         time_run.create_job(driver).pipe(
             ops.subscribe_on(NewThreadScheduler()),
             ops.sample(sampling_interval),
-            ops.do_action(on_next=process_results, on_completed=fill_remaining_results)
+            ops.do_action(on_next=process_results, on_completed=fill_remaining_results),
         ).run()
 
         return results
