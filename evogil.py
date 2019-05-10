@@ -4,7 +4,8 @@
 Usage:
   evogil.py -h | --help
   evogil.py list
-  evogil.py run <budget> [options]
+  evogil.py run budget <budget> [options]
+  evogil.py run time [(--timeout | -t) <timeout>] [(--step | -s) <step>] [options]
   evogil.py (stats | statistics) [options]
   evogil.py rank
   evogil.py rank_details
@@ -84,7 +85,7 @@ import simulation.run_parallel
 import statistic.ranking
 import statistic.stats
 import statistic.summary
-from simulation import run_config, log_helper
+from simulation import run_config, log_helper, factory
 from simulation.timing import system_time, log_time
 
 
@@ -106,7 +107,9 @@ def main_worker():
     logger.debug("Parsing result: %s", argv)
 
     run_dict = {
-        "run": simulation.run_parallel.run_parallel,
+        "run": lambda args: simulation.run_parallel.run_parallel(
+            args, worker_factory=resolve_worker(args)
+        ),
         "statistics": statistic.stats.statistics,
         "stats": statistic.stats.statistics,
         "rank": statistic.ranking.rank,
@@ -120,12 +123,22 @@ def main_worker():
         "list": all_algos_problems,
     }
 
+    print(argv)
     for k, v in run_dict.items():
         logger.debug("run_dict: k,v = %s,%s", k, v)
         if argv[k]:
             logger.debug("run_dict match. argv[k]=%s", argv[k])
             v(argv)
             break
+
+def resolve_worker(args):
+    worker_dict = {
+        "budget" : factory.create_budget_simulation,
+        "time": factory.create_time_bound_simulation,
+    }
+    for worker_name, worker in worker_dict.items():
+        if args[worker_name]:
+            return worker
 
 
 if __name__ == "__main__":

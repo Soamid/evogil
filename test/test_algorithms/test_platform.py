@@ -34,7 +34,7 @@ class DriverTest(unittest.TestCase):
     def test_smoke(self):
         with (tempfile.TemporaryDirectory(prefix="evogil_smoke_")) as temp_dir:
             python = sys.executable
-            os.system(f"{python} evogil.py run 50,100 -a NSGAII -p zdt1 -d {temp_dir}")
+            os.system(f"{python} evogil.py run budget 50,100 -a NSGAII -p zdt1 -d {temp_dir}")
 
             results = list(glob.glob(f"{temp_dir}/ZDT1/NSGAII/*/*.pickle"))
             self.assertTrue(results)

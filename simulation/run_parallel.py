@@ -15,8 +15,8 @@ from simulation.timing import system_time
 logger = logging.getLogger(__name__)
 
 
-def run_parallel(args):
-    simulation_cases = factory.create_budget_simulation(args)
+def run_parallel(args, worker_factory):
+    simulation_cases = worker_factory(args)
 
     logger.debug("Shuffling the job queue")
     random.shuffle(simulation_cases)
