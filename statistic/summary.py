@@ -1,11 +1,14 @@
 # base
 
 # self
-from simulation.serialization import RunResult
+from simulation import serialization
+from simulation.serialization import BudgetResultsExtractor
 
 
 def analyse_results(*args, **kwargs):
-    for problem_name, problem_mod, algorithms in RunResult.each_result():
+    for problem_name, problem_mod, algorithms in serialization.each_result(
+        BudgetResultsExtractor()
+    ):
         for algo_name, budgets in algorithms:
             for result in budgets:
                 print(

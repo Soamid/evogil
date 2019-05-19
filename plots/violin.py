@@ -9,8 +9,9 @@ from numpy.linalg import LinAlgError
 
 # self
 from plots.pictures import algos, algos_order, PLOTS_DIR
+from simulation import serialization
 from statistic.ranking import best_func
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
 from statistic.stats_bootstrap import find_acceptable_result_for_budget
 
 
@@ -31,7 +32,9 @@ def violin(args):
 
     boot_size = int(args["--bootstrap"])
 
-    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+    for problem_name, problem_mod, algorithms in serialization.each_result(
+        BudgetResultsExtractor(), RESULTS_DIR
+    ):
         for algo_name, results in algorithms:
             max_result = find_acceptable_result_for_budget(list(results), boot_size)
             if max_result:

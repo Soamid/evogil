@@ -2,7 +2,8 @@ import collections
 import logging
 import sys
 
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation import serialization
+from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
 from simulation.timing import log_time, process_time
 from statistic.stats_bootstrap import (
     yield_analysis,
@@ -58,8 +59,8 @@ def table_rank(args):
     for result_set in result_dirs:
         print("***{}***".format(result_set))
         with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-            for problem_name, problem_mod, algorithms in RunResult.each_result(
-                result_set
+            for problem_name, problem_mod, algorithms in serialization.each_result(
+                BudgetResultsExtractor(), result_set
             ):
                 print(result_set, problem_name)
                 scoring = collections.defaultdict(list)
@@ -193,8 +194,8 @@ def detailed_rank(args):
         scoring = collections.defaultdict(list)
 
         with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-            for problem_name, problem_mod, algorithms in RunResult.each_result(
-                result_set
+            for problem_name, problem_mod, algorithms in serialization.each_result(
+                BudgetResultsExtractor(), result_set
             ):
                 for algo_name, results in algorithms:
                     for result in results:
@@ -242,7 +243,9 @@ def rank(args):
     scoring = collections.defaultdict(list)
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+        for problem_name, problem_mod, algorithms in serialization.each_result(
+            BudgetResultsExtractor(), RESULTS_DIR
+        ):
             for algo_name, results in algorithms:
                 max_budget_result = find_acceptable_result_for_budget(
                     list(results), boot_size

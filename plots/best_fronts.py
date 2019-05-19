@@ -9,7 +9,8 @@ import plots
 from evotools import ea_utils
 from metrics import metrics
 from plots.pictures import algos, algos_order
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation import serialization
+from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
 from statistic.stats_bootstrap import find_acceptable_result_for_budget
 
 PF_PLOTS_DIR = Path("fronts")
@@ -151,7 +152,9 @@ def best_fronts_color_nondom(args, queue):
     boot_size = int(args["--bootstrap"])
     scoring = defaultdict(list)
     global_scoring = defaultdict(list)
-    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+    for problem_name, problem_mod, algorithms in serialization.each_result(
+        BudgetResultsExtractor(), RESULTS_DIR
+    ):
         for algo_name, results in algorithms:
             best_result = find_acceptable_result_for_budget(list(results), boot_size)
             """:type: RunResultBudget """
@@ -179,7 +182,9 @@ def best_fronts_color_nondom(args, queue):
 
 def best_fronts(args):
     boot_size = int(args["--bootstrap"])
-    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+    for problem_name, problem_mod, algorithms in serialization.each_result(
+        BudgetResultsExtractor(), RESULTS_DIR
+    ):
         original_front = problem_mod.pareto_front
         ax, f = plot_problem_front(original_front, multimodal=problem_name == "ZDT3")
 

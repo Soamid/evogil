@@ -13,7 +13,6 @@ from algorithms.base.model import ProgressMessage
 from simulation import factory, log_helper
 from simulation.model import SimulationCase
 from simulation.run_config import NotViableConfiguration
-from simulation.serialization import RunResult
 from simulation.serializer import Serializer, Result
 from simulation.timing import log_time, process_time
 
@@ -108,13 +107,13 @@ class BudgetWorker(SimulationWorker):
     def run_driver(
         self, driver: Driver, problem_mod: ModuleType, logger: logging.Logger
     ):
-        runres = RunResult(self.simulation)
+        serializer = Serializer(self.simulation)
         results = []
 
         def process_results(budget: int):
             finalpop = driver.finalized_population()
             finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-            runres.store(budget, driver.cost, finalpop, finalpop_fit)
+            serializer.store(Result(finalpop, finalpop_fit, cost=driver.cost), str(budget))
             results.append((driver.cost, finalpop))
 
         driver.max_budget = self.budgets[-1]

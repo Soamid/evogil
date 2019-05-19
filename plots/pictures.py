@@ -1,9 +1,9 @@
 import collections
 import logging
-import math
 from contextlib import suppress
 from pathlib import Path
 
+import math
 from mpl_toolkits.mplot3d import Axes3D
 
 import problems.UF1.problem as uf1
@@ -21,7 +21,8 @@ import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 from evotools import ea_utils
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation import serialization
+from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
 from simulation.timing import log_time, process_time
 from statistic import ranking
 from statistic.ranking import best_func
@@ -526,7 +527,9 @@ def pictures_from_stats(args):
 
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+        for problem_name, problem_mod, algorithms in serialization.each_result(
+            BudgetResultsExtractor(), RESULTS_DIR
+        ):
             for algo_name, budgets in algorithms:
                 for result in budgets:
                     _, _, cost_data = next(result["analysis"])
@@ -620,7 +623,9 @@ def pictures_summary(args):
     problems = set()
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+        for problem_name, problem_mod, algorithms in serialization.each_result(
+            BudgetResultsExtractor(), RESULTS_DIR
+        ):
             problems.add(problem_name)
             problem_score = collections.defaultdict(list)
             algos = list(algorithms)
