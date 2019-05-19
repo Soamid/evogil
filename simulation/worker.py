@@ -11,6 +11,7 @@ from rx.concurrency import NewThreadScheduler
 from algorithms.base.driver import BudgetRun, Driver, TimeRun
 from algorithms.base.model import ProgressMessage
 from simulation import factory, log_helper
+from simulation.model import SimulationCase
 from simulation.run_config import NotViableConfiguration
 from simulation.serialization import RunResult
 from simulation.serializer import Serializer, Result
@@ -18,7 +19,7 @@ from simulation.timing import log_time, process_time
 
 
 class SimulationWorker:
-    def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
+    def __init__(self, simulation: SimulationCase, simulation_no: int):
         self.simulation = simulation
         self.simulation_no = simulation_no
 
@@ -97,7 +98,7 @@ class SimulationWorker:
 
 
 class BudgetWorker(SimulationWorker):
-    def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
+    def __init__(self, simulation: SimulationCase, simulation_no: int):
         super().__init__(simulation, simulation_no)
 
     @property
@@ -136,7 +137,7 @@ class BudgetWorker(SimulationWorker):
 
 
 class TimeWorker(SimulationWorker):
-    def __init__(self, simulation: factory.SimulationCase, simulation_no: int):
+    def __init__(self, simulation: SimulationCase, simulation_no: int):
         super().__init__(simulation, simulation_no)
 
     def run_driver(

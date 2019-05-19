@@ -15,8 +15,8 @@ from simulation.timing import system_time
 logger = logging.getLogger(__name__)
 
 
-def run_parallel(args, worker_factory):
-    simulation_cases = worker_factory(args)
+def run_parallel(args):
+    worker_factory, simulation_cases = factory.resolve_configuration(args)
 
     logger.debug("Shuffling the job queue")
     random.shuffle(simulation_cases)
@@ -39,7 +39,7 @@ def run_parallel(args, worker_factory):
             log_simulation_stats(start_time, subres[-1], len(simulation_cases))
 
         rx.from_iterable(range(len(simulation_cases))).pipe(
-            ops.map(lambda i: worker.BudgetWorker(simulation_cases[i], i)),
+            ops.map(lambda i: worker_factory(simulation_cases[i], i)),
             ops.flat_map(lambda w: rxtools.from_process(w.run)),
         ).pipe(ops.do_action(on_next=process_result)).run()
     log_summary(args, results, simulation_cases, wall_time)

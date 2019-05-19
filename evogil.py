@@ -18,7 +18,11 @@ Usage:
 
 Commands:
   run
-    Performs benchmarks. Param: budget(s), list of integers separated by comma.
+    Performs benchmarks. Subcommands:
+        budget
+            Run with budget constraints. Param: budget(s), list of integers separated by comma.
+        time
+            Run with timeout constraints. Params: timeout and/or step measured in seconds.
   summary
     Returns number of results for each tuple: algorithm, problem, budget.
   stats
@@ -107,9 +111,7 @@ def main_worker():
     logger.debug("Parsing result: %s", argv)
 
     run_dict = {
-        "run": lambda args: simulation.run_parallel.run_parallel(
-            args, worker_factory=resolve_worker(args)
-        ),
+        "run": simulation.run_parallel.run_parallel,
         "statistics": statistic.stats.statistics,
         "stats": statistic.stats.statistics,
         "rank": statistic.ranking.rank,
@@ -130,15 +132,6 @@ def main_worker():
             logger.debug("run_dict match. argv[k]=%s", argv[k])
             v(argv)
             break
-
-def resolve_worker(args):
-    worker_dict = {
-        "budget" : factory.create_budget_simulation,
-        "time": factory.create_time_bound_simulation,
-    }
-    for worker_name, worker in worker_dict.items():
-        if args[worker_name]:
-            return worker
 
 
 if __name__ == "__main__":

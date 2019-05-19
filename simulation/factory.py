@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf
-from simulation import run_config, serialization
+from simulation import run_config, serialization, worker
 from simulation.model import SimulationCase
 from simulation.run_config import NotViableConfiguration
 
@@ -20,19 +20,29 @@ TIMEOUT_PARAM = "timeout"
 SAMPLING_INTERVAL_PARAM = "sampling_interval"
 
 
+def resolve_configuration(args: Dict[str, str]):
+    worker_dict = {
+        "budget": create_budget_simulation,
+        "time": create_time_bound_simulation,
+    }
+    for factory_name, factory_method in worker_dict.items():
+        if args[factory_name]:
+            return factory_method(args)
+
+
 def create_budget_simulation(args: Dict[str, str]):
     params = {BUDGETS_PARAM: parse_budgets(args)}
-    return create_simulation(args, params)
+    return worker.BudgetWorker, create_simulation(args, params)
 
 
 def create_time_bound_simulation(args: Dict[str, str]):
-    return None  # TODO runner support
+    timeout = int(args["<timeout>"])
+    sampling_interval = int(args["<step>"])
+    params = {TIMEOUT_PARAM: timeout, SAMPLING_INTERVAL_PARAM: sampling_interval }
+    return worker.TimeWorker, create_simulation(args, params)
 
 
 def create_simulation(args: Dict[str, str], params: Dict[str, Any]):
-    budgets = parse_budgets(args)
-    logger.debug("Budgets: %s", budgets)
-
     order = list(product(run_config.problems, run_config.algorithms))
 
     logger.debug("Available problems * algorithms: %s", order)
@@ -88,7 +98,9 @@ def parse_algorithms(args):
 
 
 def parse_budgets(args):
-    return sorted([int(budget) for budget in args["<budget>"].split(",")])
+    budgets = sorted([int(budget) for budget in args["<budget>"].split(",")])
+    logger.debug("Budgets: %s", budgets)
+    return budgets
 
 
 def prepare(algo: str, problem: str):
@@ -102,11 +114,11 @@ def prepare(algo: str, problem: str):
 
 
 def prepare_with_driver(
-    algo: str,
-    problem: str,
-    driver=None,
-    all_drivers: List[str] = None,
-    driver_pos: int = 0,
+        algo: str,
+        problem: str,
+        driver=None,
+        all_drivers: List[str] = None,
+        driver_pos: int = 0,
 ):
     logger.debug("Starting preparation")
 
@@ -206,12 +218,12 @@ def load_init_population(problem_mod, config: Dict[str, str]):
 
 
 def custom_init(
-    algo: str,
-    problem_mod: str,
-    config: Dict[str, str],
-    all_drivers: List[str] = None,
-    driver_pos: int = None,
-    problem: str = None,
+        algo: str,
+        problem_mod: str,
+        config: Dict[str, str],
+        all_drivers: List[str] = None,
+        driver_pos: int = None,
+        problem: str = None,
 ):
     """
     Custom initialization functions for algorithm (and optional sub-drivers or problems)
@@ -231,7 +243,7 @@ def custom_init(
     with suppress(AttributeError):
         key = "init_alg___" + algo
         if all_drivers:
-            key += "__" + "_".join(all_drivers[driver_pos + 1 :])
+            key += "__" + "_".join(all_drivers[driver_pos + 1:])
         if problem:
             key += "____" + problem
         logger.debug("Try %s(…)", key)
@@ -244,11 +256,11 @@ def custom_init(
 
 
 def load_problem_config(
-    algo: str,
-    problem: str,
-    config: Dict[str, str],
-    all_drivers: List[str] = None,
-    driver_pos: int = 0,
+        algo: str,
+        problem: str,
+        config: Dict[str, str],
+        all_drivers: List[str] = None,
+        driver_pos: int = 0,
 ):
     """
     Algorithm (with optional sub-drivers) + problem config
@@ -265,7 +277,7 @@ def load_problem_config(
     """
     all_drivers = [] if all_drivers is None else all_drivers
     with suppress(KeyError):
-        key = (algo, *tuple(all_drivers[driver_pos + 1 :]), problem)
+        key = (algo, *tuple(all_drivers[driver_pos + 1:]), problem)
         logger.debug("Try cust_base[%s]", key)
         update = run_config.cust_base[key]
         logger.debug(
@@ -281,7 +293,7 @@ def load_problem_config(
 
 
 def load_algorithm_with_subdrivers_config(
-    algo: str, all_drivers: List[str], driver_pos: int, config: Dict[str, str]
+        algo: str, all_drivers: List[str], driver_pos: int, config: Dict[str, str]
 ):
     """
     Algorithm + sub-drivers config
@@ -290,7 +302,7 @@ def load_algorithm_with_subdrivers_config(
         example key: (IMGA,  (HGS, SPEA2))
     """
     with suppress(KeyError):
-        key = (algo, tuple(all_drivers[driver_pos + 1 :]))
+        key = (algo, tuple(all_drivers[driver_pos + 1:]))
         logger.debug("Try algo_base[%s]", key)
         update = run_config.algo_base[key]
         logger.debug(
