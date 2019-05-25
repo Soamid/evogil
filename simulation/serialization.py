@@ -39,8 +39,8 @@ class ResultsExtractor:
                     results_path,
                     model.get_simulation_id(run_id, run_date),
                 )
-                run_no += 1
                 yield (simulation_case, run_no)
+                run_no += 1
             except AttributeError:
                 pass
 

@@ -12,8 +12,8 @@ Usage:
   evogil.py table
   evogil.py summary
   evogil.py pictures [options]
-  evogil.py pictures_summary [--selected <algo_name>]
-  evogil.py best_fronts
+  evogil.py pictures_summary [options]
+  evogil.py best_fronts [options]
   evogil.py violin [options]
 
 Commands:
@@ -71,7 +71,9 @@ Options:
         Renice workers. Works on UNIX & derivatives.
   -d <results_dir>, --dir <results_dir>
         Directory where simulation results will be stored. If not specified, serialization.RESULTS_DIR is set.
-
+  -o <plots_dir>
+        Directory where generated plots will be stored. If not specified, pictures.PLOTS_DIR is set.
+  
 Pictures Summary Options:
   --selected <algo_name>
         Select and highlight specified algorithms on plots.
@@ -89,7 +91,8 @@ import simulation.run_parallel
 import statistic.ranking
 import statistic.stats
 import statistic.summary
-from simulation import run_config, log_helper, factory
+from plots import pictures
+from simulation import run_config, log_helper, factory, serialization
 from simulation.timing import system_time, log_time
 
 
@@ -124,14 +127,21 @@ def main_worker():
         "summary": statistic.summary.analyse_results,
         "list": all_algos_problems,
     }
+    set_default_options(argv)
 
-    print(argv)
     for k, v in run_dict.items():
         logger.debug("run_dict: k,v = %s,%s", k, v)
         if argv[k]:
             logger.debug("run_dict match. argv[k]=%s", argv[k])
             v(argv)
             break
+
+
+def set_default_options(argv):
+    if not argv["--dir"]:
+        argv["--dir"] = serialization.RESULTS_DIR
+    if not argv["-o"]:
+        argv["-o"] = pictures.PLOTS_DIR
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import pickle
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 from simulation.model import SimulationCase
 
@@ -13,20 +14,22 @@ class Result:
 
 
 class ResultWithMetadata(Result):
-    def __init__(self, result: Result, path: Path, run_no: int, simulation_case: SimulationCase):
+    def __init__(
+        self, result: Result, path: Path, run_no: int, simulation_case: SimulationCase
+    ):
         super().__init__(result.population, result.fitnesses, **result.additional_data)
         self.path = path
-        self.name = path.with_suffix('').name
+        self.name = path.with_suffix("").name
         self.run_no = run_no
         self.simulation_case = simulation_case
 
 
-def load_file(path):
+def load_file(path: Path):
     with path.open(mode="rb") as fh:
         return pickle.load(fh)
 
 
-def save_file(path, obj):
+def save_file(path: Path, obj: Any):
     with path.open(mode="wb") as fh:
         pickle.dump(obj, fh)
 

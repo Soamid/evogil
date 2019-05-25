@@ -16,7 +16,6 @@ from simulation.serializer import ResultWithMetadata
 
 
 def yield_metrics(result_list: List[ResultWithMetadata], problem_mod):
-    cache = defaultdict(list)
     for result in result_list:
         result.non_dominated_fitnesses = metrics.filter_not_dominated(result.fitnesses)
 
@@ -61,6 +60,7 @@ def yield_metrics(result_list: List[ResultWithMetadata], problem_mod):
         partial(hypervolume, result=result, pareto=problem_mod.pareto_front)
         for result in result_list
     ]
+    cache = defaultdict(list)
     yield "pdi", "pareto dominance indicator", [
         partial(pareto_dominance_indicator, result=result, cache=cache)
         for result in result_list

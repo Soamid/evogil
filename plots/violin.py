@@ -1,17 +1,18 @@
 # base
-from contextlib import contextmanager, suppress
-
 # numpy + matplotlib
 import collections
-import matplotlib.pyplot as plt
 import sys
+from contextlib import contextmanager, suppress
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 from numpy.linalg import LinAlgError
 
 # self
-from plots.pictures import algos, algos_order, PLOTS_DIR
+from plots.pictures import algos, algos_order
 from simulation import serialization
+from simulation.serialization import BudgetResultsExtractor
 from statistic.ranking import best_func
-from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
 from statistic.stats_bootstrap import find_acceptable_result_for_budget
 
 
@@ -31,9 +32,11 @@ def violin(args):
     global_data = collections.defaultdict(dict)
 
     boot_size = int(args["--bootstrap"])
+    results_dir = args["--dir"]
+    plots_dir = Path(args["-o"])
 
     for problem_name, problem_mod, algorithms in serialization.each_result(
-        BudgetResultsExtractor(), RESULTS_DIR
+        BudgetResultsExtractor(), results_dir
     ):
         for algo_name, results in algorithms:
             max_result = find_acceptable_result_for_budget(list(results), boot_size)
@@ -106,12 +109,12 @@ def violin(args):
                     problem_moea = problem.replace("emoa", "moea")
                     metric_short = metric.replace("distance from Pareto front", "dst")
                     fig_path = (
-                        PLOTS_DIR
+                        plots_dir
                         / "plots_violin"
                         / "figures_violin_{}_{}.eps".format(problem_moea, metric_short)
                     )
                     fig_path_pdf = (
-                        PLOTS_DIR
+                        plots_dir
                         / "plots_violin"
                         / "figures_violin_{}_{}.pdf".format(problem_moea, metric_short)
                     )

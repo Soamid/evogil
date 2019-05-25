@@ -22,7 +22,7 @@ import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 from evotools import ea_utils
 from simulation import serialization
-from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
+from simulation.serialization import BudgetResultsExtractor
 from simulation.timing import log_time, process_time
 from statistic import ranking
 from statistic.ranking import best_func
@@ -195,7 +195,7 @@ algos_groups = {
 }
 
 
-def plot_pareto_fronts():
+def plot_pareto_fronts(plots_dir):
     problems = [
         (zdt1, "ZDT1"),
         (zdt2, "ZDT2"),
@@ -211,26 +211,26 @@ def plot_pareto_fronts():
     for problem in problems:
         problem, name = problem
         pareto_front = problem.pareto_front
-        plot_front(pareto_front, name)
+        plot_front(pareto_front, name, plots_dir)
 
-    plot_splitted(zdt3, "ZDT3", 0.05)
-    plot_front(uf5.pareto_front, "UF5", scattered=True)
-    plot_splitted(uf6, "UF6", 0.01)
-    plot_front(uf8.pareto_front, "UF8", scattered=True)
-    plot_front(uf9.pareto_front, "UF9", scattered=True)
+    plot_splitted(zdt3, "ZDT3", 0.05, plots_dir)
+    plot_front(uf5.pareto_front, "UF5", plots_dir, scattered=True)
+    plot_splitted(uf6, "UF6", 0.01, plots_dir)
+    plot_front(uf8.pareto_front, "UF8", plots_dir, scattered=True)
+    plot_front(uf9.pareto_front, "UF9", plots_dir, scattered=True)
 
 
-def plot_splitted(problem, name, eps):
+def plot_splitted(problem, name, eps, plots_dir):
     problem_front = problem.pareto_front
     fronts = ea_utils.split_front(problem_front, eps)
     fig = None
     for front in fronts[:-1]:
-        fig = plot_front(front, None, figure=fig, save=False)
+        fig = plot_front(front, None, plots_dir, figure=fig, save=False)
 
-    plot_front(fronts[-1], name, figure=fig, save=True)
+    plot_front(fronts[-1], name, plots_dir, figure=fig, save=True)
 
 
-def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
+def plot_front(pareto_front, name, plots_dir, scattered=False, figure=None, save=True):
     if figure:
         f = figure
     else:
@@ -262,7 +262,7 @@ def plot_front(pareto_front, name, scattered=False, figure=None, save=True):
     frame.axes.get_yaxis().set_ticklabels([])
 
     if save:
-        path = PLOTS_DIR / "pareto_fronts" / (name + ".eps")
+        path = plots_dir / "pareto_fronts" / (name + ".eps")
         with suppress(FileExistsError):
             path.parent.mkdir(parents=True)
         plt.savefig(str(path))
@@ -396,7 +396,7 @@ def align_to_error(result, error):
     return rounded
 
 
-def plot_legend(series):
+def plot_legend(series, plots_dir):
     figlegend = plt.figure(
         num=None, figsize=(8.267 / 2.0, 11.692 / 4.0), facecolor="w", edgecolor="k"
     )
@@ -413,15 +413,15 @@ def plot_legend(series):
         ncol=2,
     )
 
-    path = PLOTS_DIR / "metrics" / "figures_metrics_legend.eps"
-    path2 = PLOTS_DIR / "metrics" / "figures_metrics_legend.pdf"
+    path = plots_dir / "metrics" / "figures_metrics_legend.eps"
+    path2 = plots_dir / "metrics" / "figures_metrics_legend.pdf"
     with suppress(FileExistsError):
         path.parent.mkdir(parents=True)
     figlegend.savefig(str(path), bbox_extra_artists=(lgd,), bbox_inches="tight")
     figlegend.savefig(str(path2), bbox_extra_artists=(lgd,), bbox_inches="tight")
 
 
-def plot_results(results):
+def plot_results(results, plots_dir):
     logger = logging.getLogger(__name__)
     legend_saved = False
     to_plot = collections.defaultdict(list)
@@ -490,14 +490,14 @@ def plot_results(results):
         # plt.tight_layout()
         metric_short = metric.replace("distance from Pareto front", "dst")
         path = (
-            PLOTS_DIR
+            plots_dir
             / "metrics"
             / "figures_metrics_{}_{}.pdf".format(
                 problem_moea, metric_short + str(group)
             )
         )
         path2 = (
-            PLOTS_DIR
+            plots_dir
             / "metrics"
             / "figures_metrics_{}_{}.eps".format(
                 problem_moea, metric_short + str(group)
@@ -513,7 +513,7 @@ def plot_results(results):
         # plt.legend(loc='best', fontsize=6)
         # plt.show()
         if not legend_saved:
-            plot_legend(last_plt)
+            plot_legend(last_plt, plots_dir)
             legend_saved = True
 
 
@@ -524,11 +524,13 @@ def pictures_from_stats(args):
     logger.debug("pictures from stats")
 
     boot_size = int(args["--bootstrap"])
+    results_dir = args["--dir"]
+    plots_dir = Path(args["-o"])
 
     results = collections.defaultdict(list)
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
         for problem_name, problem_mod, algorithms in serialization.each_result(
-            BudgetResultsExtractor(), RESULTS_DIR
+            BudgetResultsExtractor(), results_dir
         ):
             for algo_name, budgets in algorithms:
                 for result in budgets:
@@ -560,10 +562,10 @@ def pictures_from_stats(args):
 
                             for key in keys:
                                 results[key].append(value)
-    plot_results(results)
+    plot_results(results, plots_dir)
 
 
-def plot_results_summary(problems, scoring, selected):
+def plot_results_summary(problems, scoring, selected, plots_dir):
     for metric_name in scoring:
         metric_score = scoring[metric_name]
 
@@ -597,10 +599,10 @@ def plot_results_summary(problems, scoring, selected):
         lgd = plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
         path = (
-            PLOTS_DIR / "plots_summary" / "figures_summary_{}.eps".format(metric_name)
+            plots_dir / "plots_summary" / "figures_summary_{}.eps".format(metric_name)
         )
         path2 = (
-            PLOTS_DIR / "plots_summary" / "figures_summary_{}.pdf".format(metric_name)
+            plots_dir / "plots_summary" / "figures_summary_{}.pdf".format(metric_name)
         )
 
         with suppress(FileExistsError):
@@ -616,6 +618,8 @@ def pictures_summary(args):
 
     selected = set(args["--selected"].upper().split(","))
     boot_size = int(args["--bootstrap"])
+    results_dir = args["--dir"]
+    plots_dir = Path(args["-o"])
 
     logger.debug("Plotting summary with selected algos: " + ",".join(selected))
 
@@ -624,7 +628,7 @@ def pictures_summary(args):
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
         for problem_name, problem_mod, algorithms in serialization.each_result(
-            BudgetResultsExtractor(), RESULTS_DIR
+            BudgetResultsExtractor(), results_dir
         ):
             problems.add(problem_name)
             problem_score = collections.defaultdict(list)
@@ -666,4 +670,4 @@ def pictures_summary(args):
                         ):
                             scoring[metric_name][algo_name][problem_name] /= max_score
 
-    plot_results_summary(problems, scoring, selected)
+    plot_results_summary(problems, scoring, selected, plots_dir)
