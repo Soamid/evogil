@@ -22,7 +22,7 @@ import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 from evotools import ea_utils
 from simulation import serialization
-from simulation.serialization import BudgetResultsExtractor
+from simulation.serialization import BudgetResultsExtractor, TimeResultsExtractor
 from simulation.timing import log_time, process_time
 from statistic import ranking
 from statistic.ranking import best_func
@@ -421,7 +421,7 @@ def plot_legend(series, plots_dir):
     figlegend.savefig(str(path2), bbox_extra_artists=(lgd,), bbox_inches="tight")
 
 
-def plot_results(results, plots_dir):
+def plot_results(results, plots_dir, plot_range):
     logger = logging.getLogger(__name__)
     legend_saved = False
     to_plot = collections.defaultdict(list)
@@ -449,9 +449,10 @@ def plot_results(results, plots_dir):
         # plt.title(plot_name)
         (problem, metric, group) = plot_name
         logger.debug("plt.ylabel = %s", metric)
-        plt.xlim(500, 4500)
-        # if problem.startswith("UF"):
-        #     plt.ylim(0, 0.5)
+
+        min_x, max_x = plot_range
+        plt.xlim(min_x, max_x)
+
         plt.ylabel(metric, fontsize=30)
         plt.xlabel("calls to fitness function", fontsize=25)
         plt.tick_params(axis="both", labelsize=25)
@@ -559,10 +560,51 @@ def pictures_from_stats(args):
                                 for group in algos_groups[algo_name]
                             ]
                             value = (budget, budget_err, score, score_err)
+                            print("PLOT: " + str(value))
 
                             for key in keys:
                                 results[key].append(value)
-    plot_results(results, plots_dir)
+    plot_results(results, plots_dir, (500, 4500))
+
+
+def pictures_time(args):
+    logger = logging.getLogger(__name__)
+    logger.debug("pictures from stats")
+
+    boot_size = int(args["--bootstrap"])
+    results_dir = args["--dir"]
+    plots_dir = Path(args["-o"])
+
+    plot_data = collections.defaultdict(list)
+    with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
+        for problem_name, problem_mod, algorithms in serialization.each_result(
+            TimeResultsExtractor(), results_dir
+        ):
+            for algo_name, results in algorithms:
+                for result in results:
+                    time = result["time"]
+
+                    for metric_name, metric_name_long, data_process in result[
+                        "analysis"
+                    ]:
+                        if metric_name in best_func:
+                            if metric_name == "dst from pareto":
+                                metric_name = "dst"
+                            data_process = list(x() for x in data_process)
+
+                            data_analysis = yield_analysis(data_process, boot_size)
+
+                            score = data_analysis["btstrpd"]["metrics"]
+                            score_err = data_analysis["stdev"]
+
+                            keys = [
+                                (problem_name, algo_name, metric_name, group)
+                                for group in algos_groups[algo_name]
+                            ]
+                            value = (time, 0, score, score_err)
+                            for key in keys:
+                                plot_data[key].append(value)
+    plot_results(plot_data, plots_dir, (0, 10))
 
 
 def plot_results_summary(problems, scoring, selected, plots_dir):

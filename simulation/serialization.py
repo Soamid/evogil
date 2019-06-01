@@ -45,39 +45,57 @@ class ResultsExtractor:
                 pass
 
 
-class BudgetResultsExtractor(ResultsExtractor):
-    def load_result(self, runs):
-        by_budget = defaultdict(list)
-        for simulation_case, run_no in runs:
-            for runbudget in self.load_budget_results(simulation_case, run_no):
-                by_budget[int(runbudget.name)].append(runbudget)
-        return [(by_budget[budget], {"budget": budget}) for budget in sorted(by_budget)]
+class NumberMeasuredResultExtractor(ResultsExtractor):
+    def __init__(self, property_name):
+        self.property_name = property_name
 
-    def load_budget_results(self, simulation_case, run_no):
-        budgets = []
+    def load_result(self, runs):
+        by_number = defaultdict(list)
+        for simulation_case, run_no in runs:
+            for runbudget in self.load_number_measured_results(simulation_case, run_no):
+                by_number[int(runbudget.name)].append(runbudget)
+        return [
+            (by_number[number], {self.property_name: number})
+            for number in sorted(by_number)
+        ]
+
+    def load_number_measured_results(self, simulation_case, run_no):
+        numbers = []
         serializer = Serializer(simulation_case)
         with suppress(FileNotFoundError):
             for candidate in sorted(serializer.path.iterdir()):
                 try:
-                    match = re.fullmatch("(?P<budget>[0-9]+)\.pickle", candidate.name)
+                    match = re.fullmatch(f"(?P<{self.property_name}>[0-9]+)\.pickle", candidate.name)
 
-                    budget = int(match.groupdict()["budget"])
-                    population_pickle = serializer.load(budget)
+                    number = int(match.groupdict()[self.property_name])
+                    population_pickle = serializer.load(number)
 
                     res = ResultWithMetadata(
                         population_pickle, candidate, run_no, simulation_case
                     )
-                    budgets.append(res)
+                    numbers.append(res)
                 except (AttributeError, IsADirectoryError):
                     pass
-        return budgets
+        return numbers
+
+
+class BudgetResultsExtractor(NumberMeasuredResultExtractor):
+    def __init__(self):
+        super().__init__("budget")
+
+
+class TimeResultsExtractor(NumberMeasuredResultExtractor):
+    def __init__(self):
+        super().__init__("time")
 
 
 def each_result(result_extractor: ResultsExtractor, results_path=RESULTS_DIR):
     def f_algo(problem_path, algo_path, problem_mod):
         algo_name = algo_path.name
         problem_name = problem_path.name
-        for results, config in result_extractor.load(algo_name, problem_name, results_path):
+        for results, config in result_extractor.load(
+            algo_name, problem_name, results_path
+        ):
             yield {
                 "problem": problem_name,
                 "algo": algo_name,
@@ -96,4 +114,3 @@ def each_result(result_extractor: ResultsExtractor, results_path=RESULTS_DIR):
             problem_mod = ".".join(["problems", problem.name, "problem"])
             problem_mod = import_module(problem_mod)
             yield problem.name, problem_mod, f_problem(problem, problem_mod)
-

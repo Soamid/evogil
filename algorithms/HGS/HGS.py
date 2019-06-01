@@ -85,7 +85,7 @@ class HGS(ComplexDriver):
 
     def finalized_population(self):
         merged_population = []
-        for node in self.driver.nodes:
+        for node in self.nodes:
             merged_population.extend(node.population)
         return merged_population
 

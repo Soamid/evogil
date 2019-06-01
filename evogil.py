@@ -120,7 +120,7 @@ def main_worker():
         "rank": statistic.ranking.rank,
         "table": statistic.ranking.table_rank,
         "rank_details": statistic.ranking.detailed_rank,
-        "pictures": plots.pictures.pictures_from_stats,
+        "pictures": plots.pictures.pictures_time,
         "pictures_summary": plots.pictures.pictures_summary,
         "best_fronts": plots.best_fronts.best_fronts,
         "violin": plots.violin.violin,

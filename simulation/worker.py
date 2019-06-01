@@ -158,7 +158,7 @@ class TimeWorker(SimulationWorker):
             time_elapsed = time.time() - time_run.start_time
             time_slot = snap_to_time_slot(time_elapsed)
 
-            serializer.store(Result(finalpop, finalpop_fit), str(time_slot))
+            serializer.store(Result(finalpop, finalpop_fit, cost=driver.cost), str(time_slot))
             results.append((driver.cost, finalpop))
             slots_filled.add(time_slot)
 
