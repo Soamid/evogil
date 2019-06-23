@@ -1,18 +1,19 @@
-import collections
-import math
 import random
 import time
 
-import floatextras
+import math
 import numpy as np
 import rx
 import rx.operators as ops
 from rx import Observable
-from rx.concurrency import NewThreadScheduler
+from thespian.actors import ActorSystem
 
-from algorithms.base import drivertools
+from algorithms.HGS import tools
+from algorithms.HGS.actors import HgsNodeSupervisor, HgsConfig
+from algorithms.HGS.message import HgsMessage, HgsOperation
 from algorithms.base.driver import StepsRun, ComplexDriver
 from algorithms.base.hv import HyperVolume
+from evotools import rxtools
 
 EPSILON = np.finfo(float).eps
 
@@ -40,107 +41,126 @@ class HGS(ComplexDriver):
         comparison_multipliers=(1.0, 0.1, 0.01),
         population_sizes=(64, 16, 4),
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
-        self.driver = driver
+        self.hgs_config = HgsConfig()
 
-        self.dims = dims
-        self.reference_point = reference_point
-        self.fitnesses = fitnesses
+        self.hgs_config.driver = driver
+        self.hgs_config.population = population
 
-        self.fitness_errors = fitness_errors
-        self.cost_modifiers = cost_modifiers
+        self.hgs_config.dims = dims
+        self.hgs_config.reference_point = reference_point
+        self.hgs_config.fitnesses = fitnesses
+
+        self.hgs_config.fitness_errors = fitness_errors
+        self.hgs_config.cost_modifiers = cost_modifiers
 
         corner_a = np.array([x for x, _ in dims])
         corner_b = np.array([x for _, x in dims])
         corner_dist = np.linalg.norm(corner_a - corner_b)
-        self.min_dists = [x * corner_dist for x in comparison_multipliers]
+        self.hgs_config.min_dists = [x * corner_dist for x in comparison_multipliers]
 
-        self.metaepoch_len = metaepoch_len
-        self.max_level = max_level
-        self.max_sprouts_no = max_sprouts_no
-        self.sproutiveness = sproutiveness
-        self.min_progress_ratio = min_progress_ratio
+        self.hgs_config.metaepoch_len = metaepoch_len
+        self.hgs_config.max_level = max_level
+        self.hgs_config.max_sprouts_no = max_sprouts_no
+        self.hgs_config.sproutiveness = sproutiveness
+        self.hgs_config.min_progress_ratio = min_progress_ratio
 
-        self.mutation_etas = mutation_etas
-        self.mutation_rates = mutation_rates
-        self.crossover_etas = crossover_etas
-        self.crossover_rates = crossover_rates
-        self.population_sizes = population_sizes
+        self.hgs_config.mutation_etas = mutation_etas
+        self.hgs_config.mutation_rates = mutation_rates
+        self.hgs_config.crossover_etas = crossover_etas
+        self.hgs_config.crossover_rates = crossover_rates
+        self.hgs_config.population_sizes = population_sizes
 
-        self.mantissa_bits = mantissa_bits
-        self.global_fitness_archive = [ResultArchive() for _ in range(3)]
+        self.hgs_config.mantissa_bits = mantissa_bits
+        self.hgs_config.driver_message_adapter_factory = (
+            self.driver_message_adapter_factory
+        )
+
+        # TODO this is shared variable which is a problem in actor model
+        self.hgs_config.global_fitness_archive = [
+            tools.ResultArchive() for _ in range(3)
+        ]
 
         # TODO add preconditions checking if message adapter is HGS message adapter
 
-        self.root = HGS.Node(
-            self, 0, random.sample(population, self.population_sizes[0])
-        )
-        self.nodes = [self.root]
-        self.level_nodes = {0: [self.root], 1: [], 2: []}
+        print("HGS CREATED")
+        self.hgs_system = ActorSystem("multiprocTCPBase")
+        self.node_supervisor = self.hgs_system.createActor(HgsNodeSupervisor)
 
+        self.hgs_system.ask(
+            self.node_supervisor, HgsMessage(HgsOperation.START, self.hgs_config)
+        )
+        self.hgs_system.tell(
+            self.node_supervisor, HgsMessage(HgsOperation.CHECK_ALL_ALIVE)
+        )
+        node_states = self.hgs_system.listen()
+        print("STATES: " + str(node_states))
         self.cost = 0
 
-    def finalized_population(self):
-        merged_population = []
-        for node in self.nodes:
-            merged_population.extend(node.population)
-        return merged_population
+    def shutdown(self):
+        ActorSystem().shutdown()
 
-    def step(self):
-        # TODO: status debug print
-        print(
-            "nodes:",
-            len(self.nodes),
-            len([x for x in self.nodes if x.alive]),
-            len([x for x in self.nodes if x.ripe]),
-            "   zer:",
-            len(self.level_nodes[0]),
-            len([x for x in self.level_nodes[0] if x.alive]),
-            len([x for x in self.level_nodes[0] if x.ripe]),
-            "   one:",
-            len(self.level_nodes[1]),
-            len([x for x in self.level_nodes[1] if x.alive]),
-            len([x for x in self.level_nodes[1] if x.ripe]),
-            "   two:",
-            len(self.level_nodes[2]),
-            len([x for x in self.level_nodes[2] if x.alive]),
-            len([x for x in self.level_nodes[2] if x.ripe]),
+    def finalized_population(self):
+        return (
+            ActorSystem()
+            .ask(self.node_supervisor, HgsMessage(HgsOperation.POPULATION))
+            .data
         )
 
-        self.run_metaepoch()
-        self.trim_sprouts()
-        self.release_new_sprouts()
-        self.revive_root()
-        print("Nodes:")
-        for i in range(3):
-            print(
-                "level {} : {} / {}".format(
-                    i + 1,
-                    len([n for n in self.level_nodes[i] if n.ripe]),
-                    len(self.level_nodes[i]),
-                )
-            )
+    def step(self):
+        ActorSystem().tell(self.node_supervisor, HgsMessage(HgsOperation.NEW_METAEPOCH))
+        epoch_end_message = ActorSystem().listen()
+        self.cost += epoch_end_message.data
+        print(f"step finished, current cost = {self.cost}")
+        # TODO: status debug print
+        # print(
+        #     "nodes:",
+        #     len(self.nodes),
+        #     len([x for x in self.nodes if x.alive]),
+        #     len([x for x in self.nodes if x.ripe]),
+        #     "   zer:",
+        #     len(self.level_nodes[0]),
+        #     len([x for x in self.level_nodes[0] if x.alive]),
+        #     len([x for x in self.level_nodes[0] if x.ripe]),
+        #     "   one:",
+        #     len(self.level_nodes[1]),
+        #     len([x for x in self.level_nodes[1] if x.alive]),
+        #     len([x for x in self.level_nodes[1] if x.ripe]),
+        #     "   two:",
+        #     len(self.level_nodes[2]),
+        #     len([x for x in self.level_nodes[2] if x.alive]),
+        #     len([x for x in self.level_nodes[2] if x.ripe]),
+        # )
+        #
+        # self.run_metaepoch()
+        # self.trim_sprouts()
+        # self.release_new_sprouts()
+        # self.revive_root()
+        # print("Nodes:")
+        # for i in range(3):
+        #     print(
+        #         "level {} : {} / {}".format(
+        #             i + 1,
+        #             len([n for n in self.level_nodes[i] if n.ripe]),
+        #             len(self.level_nodes[i]),
+        #         )
+        #     )
 
     def run_metaepoch(self):
         node_jobs = []
         for node in self.level_nodes[2]:
-            node_jobs.append(node.run_metaepoch())
+            node_jobs.append(node.run_metaepoch)
         for node in self.level_nodes[1]:
-            node_jobs.append(node.run_metaepoch())
+            node_jobs.append(node.run_metaepoch)
         for node in self.level_nodes[0]:
-            node_jobs.append(node.run_metaepoch())
+            node_jobs.append(node.run_metaepoch)
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
-        rx.merge(*node_jobs).pipe(
-            ops.subscribe_on(NewThreadScheduler()),
-            ops.do_action(on_next=lambda message: self._update_cost(message)),
+        rxtools.multiprocess_observable(node_jobs).pipe(
+            ops.do_action(on_next=lambda message: self._update_cost(message))
         ).run()
-
-    def _update_cost(self, message):
-        print("update cost")
-        self.cost += self.cost_modifiers[message.level] * message.epoch_cost
 
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
@@ -177,7 +197,9 @@ class HGS(ComplexDriver):
             for another_sprout in to_compare:
                 if not sprout.alive:
                     break
-                if (another_sprout.ripe or another_sprout in processed) and redundant(
+                if (
+                    another_sprout.ripe or another_sprout in processed
+                ) and tools.redundant(
                     [another_sprout.center],
                     [sprout.center],
                     self.min_dists[sprout.level],
@@ -201,21 +223,6 @@ class HGS(ComplexDriver):
             # TODO: logging root revival
             print("!!!   RESURRECTION")
 
-    def blurred_fitnesses(self, level):
-        def blurred(f):
-            def blurred_f(*args, **kwargs):
-                f_val = f(*args, **kwargs)
-                x = math.fabs(
-                    random.gauss(f_val, self.fitness_errors[level] * f_val / 3.0)
-                )
-
-                # print("level: {}, normal: {} blurred: {}, diff: {}".format(level, f_val, x, math.fabs(f_val - x)/f_val))
-                return x
-
-            return blurred_f
-
-        return [blurred(f) for f in self.fitnesses]
-
     class Node:
         def __init__(self, owner, level, population):
             self.alive = True
@@ -232,7 +239,7 @@ class HGS(ComplexDriver):
                 crossover_eta=owner.crossover_etas[self.level],
                 crossover_rate=owner.crossover_rates[self.level],
                 fitness_archive=self.owner.global_fitness_archive[self.level],
-                trim_function=lambda x: trim_vector(
+                trim_function=lambda x: tools.trim_vector(
                     x, self.owner.mantissa_bits[self.level]
                 ),
                 message_adapter_factory=owner.driver_message_adapter_factory,
@@ -252,6 +259,7 @@ class HGS(ComplexDriver):
         def run_metaepoch(self) -> Observable:
             if self.alive:
                 epoch_job = StepsRun(self.owner.metaepoch_len)
+
                 return epoch_job.create_job(self.driver).pipe(
                     ops.map(lambda message: self.fill_node_info(message)),
                     ops.do_action(lambda message: self.update_current_cost(message)),
@@ -307,7 +315,7 @@ class HGS(ComplexDriver):
 
                         if not any(
                             [
-                                redundant(
+                                tools.redundant(
                                     [delegate],
                                     [sprout.center],
                                     self.owner.min_dists[self.level + 1],
@@ -319,7 +327,7 @@ class HGS(ComplexDriver):
                                 ]
                             ]
                         ):
-                            candidate_population = population_from_delegate(
+                            candidate_population = tools.population_from_delegate(
                                 delegate,
                                 self.owner.population_sizes[self.level + 1],
                                 self.owner.dims,
@@ -338,80 +346,3 @@ class HGS(ComplexDriver):
                             # TODO: logging redundant candidates
                             # print("   CANDIDATE REDUNDANT")
                             pass
-
-
-def population_from_delegate(delegate, size, dims, rate, eta):
-    population = [[x for x in delegate]]
-    for _ in range(size - 1):
-        population.append(drivertools.mutate(delegate, dims, rate, eta))
-    return population
-
-
-def redundant(pop_a, pop_b, min_dist):
-    mean_pop_a = np.mean(pop_a, axis=0)
-    mean_pop_b = np.mean(pop_b, axis=0)
-
-    dist = np.linalg.norm(mean_pop_a - mean_pop_b)
-    return dist < min_dist
-
-
-def trim_vector(vector, bits_no):
-    return [trim_mantissa(x, bits_no) for x in vector]
-
-
-def trim_mantissa(value, bits_no):
-    sign, digits, exponent = floatextras.as_tuple(value)
-    digits = tuple([(d if i < bits_no else 0) for i, d in enumerate(digits)])
-    return floatextras.from_tuple((sign, digits, exponent))
-
-
-class TransformedDict(collections.MutableMapping):
-    """A dictionary that applies an arbitrary key-altering
-       function before accessing the keys"""
-
-    def __init__(self, *args, **kwargs):
-        self.store = dict()
-        self.update(dict(*args, **kwargs))  # use the free update to set keys
-
-    def __getitem__(self, key):
-        return self.store[self.__keytransform__(key)]
-
-    def __setitem__(self, key, value):
-        self.store[self.__keytransform__(key)] = value
-
-    def __delitem__(self, key):
-        del self.store[self.__keytransform__(key)]
-
-    def __iter__(self):
-        return iter(self.store)
-
-    def __len__(self):
-        return len(self.store)
-
-    def __keytransform__(self, key):
-        return key
-
-
-class ResultArchive(TransformedDict):
-    def __keytransform__(self, key):
-        return tuple(key)
-
-
-import matplotlib.pyplot as plt
-
-
-def _plot_node(node, color, dims, delegates=False):
-    if not delegates:
-        pop = node.population
-    else:
-        pop = node.delegates
-
-    if node.alive:
-        marker = "o"
-    else:
-        marker = "+"
-    plt.scatter([x[0] for x in pop], [x[1] for x in pop], color=color, marker=marker)
-    plt.xlim(dims[0][0], dims[0][1])
-    plt.ylim(dims[1][0], dims[1][1])
-    plt.savefig("plots/debug/{}.png".format(time.time()))
-    plt.close()

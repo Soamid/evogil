@@ -604,7 +604,8 @@ def pictures_time(args):
                             value = (time, 0, score, score_err)
                             for key in keys:
                                 plot_data[key].append(value)
-    plot_results(plot_data, plots_dir, (0, 10))
+    max_time = max(list(plot_data.values())[0])[0]
+    plot_results(plot_data, plots_dir, (0, max_time))
 
 
 def plot_results_summary(problems, scoring, selected, plots_dir):

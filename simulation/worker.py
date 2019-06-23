@@ -6,7 +6,7 @@ import time
 from types import ModuleType
 
 from rx import operators as ops
-from rx.concurrency import NewThreadScheduler
+from rx.scheduler import NewThreadScheduler
 
 from algorithms.base.driver import BudgetRun, Driver, TimeRun
 from algorithms.base.model import ProgressMessage
@@ -39,6 +39,7 @@ class SimulationWorker:
 
         self._init_random_seed(logger)
 
+        driver = None
         try:
             final_driver, problem_mod = factory.prepare(
                 self.simulation.algorithm_name, self.simulation.problem_name
@@ -75,6 +76,8 @@ class SimulationWorker:
             logger.exception("Some error", exc_info=e)
 
         finally:
+            if driver:
+                driver.shutdown()
             logger.debug("Finished processing. simulation case:%s", self.simulation)
 
     def run_driver(

@@ -162,20 +162,14 @@ def prepare_with_driver(
 
         load_init_population(problem_mod, config)
 
-        try:
-            algo_class(**config)
-        except Exception as e:
-            logger.exception("Class creation error.", exc_info=e)
-            raise e
-        else:
-            logger.debug(
-                "Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
-                algo,
-                problem,
-                show_partial(driver),
-                all_drivers,
-                driver_pos,
-            )
+        logger.debug(
+            "Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
+            algo,
+            problem,
+            show_partial(driver),
+            all_drivers,
+            driver_pos,
+        )
 
         instance = partial(algo_class, **config)
         logger.debug(

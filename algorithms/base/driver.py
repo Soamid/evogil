@@ -29,6 +29,9 @@ class Driver(object, metaclass=StepCountingDriver):
         self.step_no = 0
         self.message_adapter = message_adapter_factory(self)
 
+    def shutdown(self):
+        pass
+
     def finalized_population(self):
         raise NotImplementedError
 
@@ -69,7 +72,9 @@ class StepsRun(DriverRun):
         self.steps = steps
 
     def create_job(self, driver: Driver):
-        return rx.range(0, self.steps).pipe(ops.map(lambda _: driver.next_step()))
+        return rx.range(0, self.steps).pipe(
+            ops.map(lambda _: driver.next_step())
+        )
 
 
 class TimeRun(DriverRun):
