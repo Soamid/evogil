@@ -1,44 +1,52 @@
+import uuid
 from enum import Enum, auto, unique
 from typing import Any
 
 from algorithms.base.model import PopulationMessageAdapter
 
 
+class OperationType(Enum):
+    pass
+
+
 @unique
-class HgsOperation(Enum):
+class HgsOperation(OperationType):
     START = auto()
     NEW_METAEPOCH = auto()
     METAEPOCH_END = auto()
-    CHECK_ALL_ALIVE = auto()
+    CHECK_STATUS = auto()
     POPULATION = auto()
 
+
 @unique
-class NodeOperation(Enum):
+class NodeOperation(OperationType):
     RESET = auto()
     NEW_RESULT = auto()
     NEW_METAEPOCH = auto()
     METAEPOCH_END = auto()
-    CHECK_ALIVE = auto()
+    CHECK_STATUS = auto()
     CHECK_RIPE = auto()
     POPULATION = auto()
 
 
-class HgsMessage:
+class Message:
+    def __init__(self, operation: OperationType, data: Any = None):
+        self.operation = operation
+        self.data = data
+
+    def __str__(self):
+        return f"<{self.operation} : {self.data}>"
+
+
+class HgsMessage(Message):
     def __init__(self, operation: HgsOperation, data: Any = None):
-        self.operation = operation
-        self.data = data
-
-    def __str__(self):
-        return f"<{self.operation} : {self.data}>"
+        super().__init__(operation, data)
 
 
-class NodeMessage:
-    def __init__(self, operation: NodeOperation, data: Any = None):
-        self.operation = operation
-        self.data = data
-
-    def __str__(self):
-        return f"<{self.operation} : {self.data}>"
+class NodeMessage(Message):
+    def __init__(self, operation: NodeOperation, id: uuid, data: Any = None):
+        super().__init__(operation, data)
+        self.id = id
 
 
 class HGSMessageAdapter(PopulationMessageAdapter):

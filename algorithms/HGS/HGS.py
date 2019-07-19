@@ -94,7 +94,7 @@ class HGS(ComplexDriver):
             self.node_supervisor, HgsMessage(HgsOperation.START, self.hgs_config)
         )
         self.hgs_system.tell(
-            self.node_supervisor, HgsMessage(HgsOperation.CHECK_ALL_ALIVE)
+            self.node_supervisor, HgsMessage(HgsOperation.CHECK_STATUS)
         )
         node_states = self.hgs_system.listen()
         print("STATES: " + str(node_states))

@@ -1,4 +1,6 @@
 import random
+import uuid
+from typing import Callable, Dict, Any
 
 import rx
 import rx.operators as ops
@@ -6,7 +8,14 @@ from rx import Observable
 from thespian.actors import Actor
 
 from algorithms.HGS import tools
-from algorithms.HGS.message import NodeOperation, NodeMessage, HgsMessage, HgsOperation
+from algorithms.HGS.message import (
+    NodeOperation,
+    NodeMessage,
+    HgsMessage,
+    HgsOperation,
+    OperationType,
+    Message,
+)
 from algorithms.base.driver import StepsRun
 from algorithms.base.hv import HyperVolume
 
@@ -37,15 +46,117 @@ class NodeConfig:
         self.population = population
 
 
+class OperationSteps:
+    def __init__(self):
+        self.id = uuid.uuid4()
+        self.steps = {}
+        self.configure_steps(self.steps)
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        raise NotImplementedError()
+
+    def execute(self, message: Message):
+        self.steps[message.operation](message.data)
+
+
+class MetaepochSteps(OperationSteps):
+    def __init__(self, hgs_supervisor):
+        super().__init__()
+        self.hgs_supervisor = hgs_supervisor
+        self.nodes_finished = 0
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.NEW_METAEPOCH] = self.start_metaepoch
+        steps[NodeOperation.NEW_RESULT] = self.on_new_result
+        steps[NodeOperation.METAEPOCH_END] = self.finish_metaepoch
+
+    def start_metaepoch(self, params: Any):
+        for node in self.hgs_supervisor.nodes:
+            self.hgs_supervisor.send(
+                node, NodeMessage(NodeOperation.NEW_METAEPOCH, self.id)
+            )
+
+    def on_new_result(self, params: Any):
+        print("update cost")
+        self.hgs_supervisor.cost += (
+            self.hgs_supervisor.config.cost_modifiers[params.level] * params.epoch_cost
+        )
+
+    def finish_metaepoch(self, params: Any):
+        self.nodes_finished += 1
+        if self.nodes_finished == len(self.hgs_supervisor.nodes):
+            print("All nodes have ended their metaepochs")
+            self.hgs_supervisor.send(
+                self.hgs_supervisor.parent_actor,
+                HgsMessage(HgsOperation.METAEPOCH_END, self.hgs_supervisor.cost),
+            )
+
+
+class StatusSteps(OperationSteps):
+    def __init__(self, hgs_supervisor):
+        super().__init__()
+        self.hgs_supervisor = hgs_supervisor
+        self.nodes_states = []
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.CHECK_STATUS] = self.send_check
+        steps[NodeOperation.CHECK_STATUS] = self.finish_check
+
+    def send_check(self, params: Any):
+        for node in self.hgs_supervisor.nodes:
+            self.hgs_supervisor.send(
+                node, NodeMessage(NodeOperation.CHECK_STATUS, self.id)
+            )
+
+    def finish_check(self, params: Any):
+        self.nodes_states.append(params)
+        if len(self.nodes_states) == len(self.hgs_supervisor.nodes):
+            self.hgs_supervisor.send(
+                self.hgs_supervisor.parent_actor, self.nodes_states
+            )
+
+
+class PopulationSteps(OperationSteps):
+    def __init__(self, hgs_supervisor):
+        super().__init__()
+        self.hgs_supervisor = hgs_supervisor
+        self.merged_population = []
+        self.nodes_finished = 0
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.POPULATION] = self.get_nodes_populations
+        steps[NodeOperation.POPULATION] = self.receive_population
+
+    def get_nodes_populations(self, params: Any):
+        for node in self.hgs_supervisor.nodes:
+            self.hgs_supervisor.send(
+                node, NodeMessage(NodeOperation.POPULATION, self.id)
+            )
+
+    def receive_population(self, params: Any):
+        self.merged_population.extend(params)
+        self.nodes_finished += 1
+        if self.nodes_finished == len(self.hgs_supervisor.nodes):
+            self.send_merged_population()
+
+    def send_merged_population(self):
+        self.hgs_supervisor.send(
+            self.hgs_supervisor.parent_actor,
+            HgsMessage(HgsOperation.POPULATION, self.merged_population),
+        )
+
+
 class HgsNodeSupervisor(Actor):
     def __init__(self):
         self.nodes = None
         self.level_nodes = None
         self.config = None
-        self.nodes_states = []
-        self.merged_population = []
-        self.nodes_calculating = 0
         self.cost = 0
+        self.tasks: Dict[uuid, OperationSteps] = {}
+
+    def execute_new_task(self, msg: HgsMessage, operation: OperationSteps):
+        self.tasks[operation.id] = operation
+        operation.execute(msg)
 
     def receiveMessage(self, msg, sender):
         print("SUPERVISOR RECEIVED: " + str(msg))
@@ -55,45 +166,15 @@ class HgsNodeSupervisor(Actor):
                 self.parent_actor = sender
                 self.send(sender, "done")
             elif msg.operation == HgsOperation.NEW_METAEPOCH:
-                self.run_metaepoch()
-            elif msg.operation == HgsOperation.CHECK_ALL_ALIVE:
-                self.nodes_states = []
-                for node in self.nodes:
-                    self.send(node, NodeMessage(NodeOperation.CHECK_ALIVE))
+                self.execute_new_task(msg, MetaepochSteps(self))
+            elif msg.operation == HgsOperation.CHECK_STATUS:
+                self.execute_new_task(msg, StatusSteps(self))
             elif msg.operation == HgsOperation.POPULATION:
-                for node in self.nodes:
-                    self.merged_population = []
-                    self.nodes_calculating = 0
-                    self.send(node, NodeMessage(NodeOperation.POPULATION))
+                self.execute_new_task(msg, PopulationSteps(self))
 
         elif isinstance(msg, NodeMessage):
-            if msg.operation == NodeOperation.CHECK_ALIVE:
-                self.nodes_states.append(msg.data)
-                if len(self.nodes_states) == len(self.nodes):
-                    self.send(self.parent_actor, self.nodes_states)
-            elif msg.operation == NodeOperation.NEW_RESULT:
-                self._update_cost(msg.data)
-            elif msg.operation == NodeOperation.METAEPOCH_END:
-                self.nodes_calculating += 1
-                if self.nodes_calculating == len(self.nodes):
-                    print("All nodes have ended their metaepochs")
-                    self.send(
-                        self.parent_actor,
-                        HgsMessage(HgsOperation.METAEPOCH_END, self.cost),
-                    )
-            elif msg.operation == NodeOperation.POPULATION:
-                self.merged_population.extend(msg.data)
-                self.nodes_calculating += 1
-                if self.nodes_calculating == len(self.nodes):
-                    self.send(
-                        self.parent_actor,
-                        HgsMessage(HgsOperation.POPULATION, self.merged_population),
-                    )
-
-
-    def _update_cost(self, message):
-        print("update cost")
-        self.cost += self.config.cost_modifiers[message.level] * message.epoch_cost
+            operation = self.tasks[msg.id]
+            operation.execute(msg)
 
     def start(self, config: HgsConfig):
         print("STARTING HGS SUPERVISOR")
@@ -105,20 +186,20 @@ class HgsNodeSupervisor(Actor):
 
     def create_root_node(self):
         root = self.createActor(Node)
-        self.send(root, "is_alive")
         # time.sleep(10)
         root_config = NodeConfig(
             self.config,
             0,
             random.sample(self.config.population, self.config.population_sizes[0]),
         )
-        self.send(root, NodeMessage(NodeOperation.RESET, root_config))
+        self.send(root, NodeMessage(NodeOperation.RESET, None, root_config))
         return root
 
-    def run_metaepoch(self):
-        self.nodes_calculating = 0
-        for node in self.nodes:
-            self.send(node, NodeMessage(NodeOperation.NEW_METAEPOCH))
+
+class NodeState:
+    def __init__(self, alive, ripe):
+        self.alive = alive
+        self.ripe = ripe
 
 
 class Node(Actor):
@@ -148,24 +229,32 @@ class Node(Actor):
             if msg.operation == NodeOperation.RESET:
                 self.reset(msg.data)
                 self.send(sender, "done")
-            elif msg.operation == NodeOperation.CHECK_ALIVE:
-                self.send(sender, NodeMessage(NodeOperation.CHECK_ALIVE, self.alive))
-            elif msg.operation == NodeOperation.CHECK_RIPE:
-                self.send(sender, self.ripe)
+            elif msg.operation == NodeOperation.CHECK_STATUS:
+                self.send(
+                    sender,
+                    NodeMessage(
+                        NodeOperation.CHECK_STATUS,
+                        msg.id,
+                        NodeState(self.alive, self.ripe),
+                    ),
+                )
             elif msg.operation == NodeOperation.NEW_METAEPOCH:
                 self.run_metaepoch().pipe(
                     ops.do_action(
                         on_completed=lambda: self.send(
-                            sender, NodeMessage(NodeOperation.METAEPOCH_END)
+                            sender, NodeMessage(NodeOperation.METAEPOCH_END, msg.id)
                         )
                     )
                 ).subscribe(
                     lambda result: self.send(
-                        sender, NodeMessage(NodeOperation.NEW_RESULT, result)
+                        sender, NodeMessage(NodeOperation.NEW_RESULT, msg.id, result)
                     )
                 )
             elif msg.operation == NodeOperation.POPULATION:
-                self.send(sender, NodeMessage(NodeOperation.POPULATION, self.population))
+                self.send(
+                    sender,
+                    NodeMessage(NodeOperation.POPULATION, msg.id, self.population),
+                )
 
     def reset(self, config: NodeConfig):
         print("HAHA1")
