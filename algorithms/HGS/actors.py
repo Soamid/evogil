@@ -2,6 +2,7 @@ import random
 import uuid
 from typing import Callable, Dict, Any
 
+import numpy as np
 import rx
 import rx.operators as ops
 from rx import Observable
@@ -20,6 +21,9 @@ from algorithms.base.driver import StepsRun
 from algorithms.base.hv import HyperVolume
 
 
+EPSILON = np.finfo(float).eps
+
+
 class HgsConfig:
     driver = None
     population = None
@@ -33,6 +37,7 @@ class HgsConfig:
     crossover_etas = None
     crossover_rates = None
     cost_modifiers = None
+    min_progress_ratio = None
     global_fitness_archive = None
     mantissa_bits = None
     driver_message_adapter_factory = None
@@ -47,22 +52,22 @@ class NodeConfig:
 
 
 class OperationSteps:
-    def __init__(self):
+    def __init__(self, hgs_supervisor):
         self.id = uuid.uuid4()
+        self.hgs_supervisor = hgs_supervisor
         self.steps = {}
         self.configure_steps(self.steps)
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         raise NotImplementedError()
 
-    def execute(self, message: Message):
-        self.steps[message.operation](message.data)
+    def execute(self, message: Message, sender: Actor):
+        self.steps[message.operation](message.data, sender)
 
 
 class MetaepochSteps(OperationSteps):
     def __init__(self, hgs_supervisor):
-        super().__init__()
-        self.hgs_supervisor = hgs_supervisor
+        super().__init__(hgs_supervisor)
         self.nodes_finished = 0
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
@@ -70,19 +75,19 @@ class MetaepochSteps(OperationSteps):
         steps[NodeOperation.NEW_RESULT] = self.on_new_result
         steps[NodeOperation.METAEPOCH_END] = self.finish_metaepoch
 
-    def start_metaepoch(self, params: Any):
+    def start_metaepoch(self, params: Any, sender: Actor):
         for node in self.hgs_supervisor.nodes:
             self.hgs_supervisor.send(
                 node, NodeMessage(NodeOperation.NEW_METAEPOCH, self.id)
             )
 
-    def on_new_result(self, params: Any):
+    def on_new_result(self, params: Any, sender: Actor):
         print("update cost")
         self.hgs_supervisor.cost += (
             self.hgs_supervisor.config.cost_modifiers[params.level] * params.epoch_cost
         )
 
-    def finish_metaepoch(self, params: Any):
+    def finish_metaepoch(self, params: Any, sender: Actor):
         self.nodes_finished += 1
         if self.nodes_finished == len(self.hgs_supervisor.nodes):
             print("All nodes have ended their metaepochs")
@@ -94,21 +99,20 @@ class MetaepochSteps(OperationSteps):
 
 class StatusSteps(OperationSteps):
     def __init__(self, hgs_supervisor):
-        super().__init__()
-        self.hgs_supervisor = hgs_supervisor
+        super().__init__(hgs_supervisor)
         self.nodes_states = []
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.CHECK_STATUS] = self.send_check
         steps[NodeOperation.CHECK_STATUS] = self.finish_check
 
-    def send_check(self, params: Any):
+    def send_check(self, params: Any, sender: Actor):
         for node in self.hgs_supervisor.nodes:
             self.hgs_supervisor.send(
                 node, NodeMessage(NodeOperation.CHECK_STATUS, self.id)
             )
 
-    def finish_check(self, params: Any):
+    def finish_check(self, params: Any, sender: Actor):
         self.nodes_states.append(params)
         if len(self.nodes_states) == len(self.hgs_supervisor.nodes):
             self.hgs_supervisor.send(
@@ -118,8 +122,7 @@ class StatusSteps(OperationSteps):
 
 class PopulationSteps(OperationSteps):
     def __init__(self, hgs_supervisor):
-        super().__init__()
-        self.hgs_supervisor = hgs_supervisor
+        super().__init__(hgs_supervisor)
         self.merged_population = []
         self.nodes_finished = 0
 
@@ -127,13 +130,13 @@ class PopulationSteps(OperationSteps):
         steps[HgsOperation.POPULATION] = self.get_nodes_populations
         steps[NodeOperation.POPULATION] = self.receive_population
 
-    def get_nodes_populations(self, params: Any):
+    def get_nodes_populations(self, params: Any, sender: Actor):
         for node in self.hgs_supervisor.nodes:
             self.hgs_supervisor.send(
                 node, NodeMessage(NodeOperation.POPULATION, self.id)
             )
 
-    def receive_population(self, params: Any):
+    def receive_population(self, params: Any, sender: Actor):
         self.merged_population.extend(params)
         self.nodes_finished += 1
         if self.nodes_finished == len(self.hgs_supervisor.nodes):
@@ -146,17 +149,91 @@ class PopulationSteps(OperationSteps):
         )
 
 
+class TrimNotProgressingSteps(OperationSteps):
+    def __init__(self, hgs_supervisor):
+        super().__init__(hgs_supervisor)
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.TRIM_NOT_PROGRESSING] = self.send_trim_request
+
+    def send_trim_request(self, params: Any, sender: Actor):
+        for node in self.hgs_supervisor.nodes:
+            self.hgs_supervisor.send(
+                node, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING, self.id)
+            )
+
+
+class TrimRedundantSteps(OperationSteps):
+    def __init__(self, hgs_supervisor):
+        super().__init__(hgs_supervisor)
+        self.trim_infos = []
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.TRIM_REDUNDANT] = self.send_trim_request
+        steps[NodeOperation.TRIM_REDUNDANT] = self.receive_trim_confirmation
+
+    def send_trim_request(self, params: Any, sender: Actor):
+        for node in self.hgs_supervisor.nodes:
+            self.hgs_supervisor.send(
+                node, NodeMessage(NodeOperation.TRIM_REDUNDANT, self.id)
+            )
+
+    def receive_trim_confirmation(self, params: Any, sender: Actor):
+        self.trim_infos.append({"node": sender, **params})
+        if len(self.trim_infos) == len(self.hgs_supervisor.nodes):
+            self.trim_redundant()
+            self.hgs_supervisor.send(
+                self.hgs_supervisor.parent_actor,
+                HgsMessage(HgsOperation.TRIM_REDUNDANT, True),
+            )
+
+    def trim_redundant(self):
+        alive = [x for x in self.trim_infos if x["alive"]]
+        processed = []
+        dead = [x for x in self.trim_infos if not x["alive"]]
+        for sprout in alive:
+            to_compare = [x for x in dead]
+            to_compare.extend(processed)
+            for another_sprout in to_compare:
+                if not sprout["alive"]:
+                    break
+                if (
+                    another_sprout["ripe"] or another_sprout in processed
+                ) and tools.redundant(
+                    [another_sprout["center"]],
+                    [sprout["center"]],
+                    self.hgs_supervisor.min_dists[sprout["level"]],
+                ):
+                    self.hgs_supervisor.send(
+                        sprout["node"], NodeMessage(NodeOperation.KILL, self.id)
+                    )
+                    sprout["alive"] = False
+                    # TODO: logging killing redundant sprouts
+                    print("   KILL REDUNDANT")
+            processed.append(sprout)
+
+
 class HgsNodeSupervisor(Actor):
     def __init__(self):
+        super().__init__()
         self.nodes = None
         self.level_nodes = None
         self.config = None
         self.cost = 0
         self.tasks: Dict[uuid, OperationSteps] = {}
 
-    def execute_new_task(self, msg: HgsMessage, operation: OperationSteps):
-        self.tasks[operation.id] = operation
-        operation.execute(msg)
+        self.task_definitions = {
+            HgsOperation.NEW_METAEPOCH: MetaepochSteps,
+            HgsOperation.TRIM_NOT_PROGRESSING: TrimNotProgressingSteps,
+            HgsOperation.TRIM_REDUNDANT: TrimRedundantSteps,
+            HgsOperation.CHECK_STATUS: StatusSteps,
+            HgsOperation.POPULATION: PopulationSteps,
+        }
+
+    def execute_new_task(self, msg: HgsMessage, sender: Actor):
+        task = self.task_definitions[msg.operation](self)
+        self.tasks[task.id] = task
+        task.execute(msg, sender)
 
     def receiveMessage(self, msg, sender):
         print("SUPERVISOR RECEIVED: " + str(msg))
@@ -165,16 +242,12 @@ class HgsNodeSupervisor(Actor):
                 self.start(msg.data)
                 self.parent_actor = sender
                 self.send(sender, "done")
-            elif msg.operation == HgsOperation.NEW_METAEPOCH:
-                self.execute_new_task(msg, MetaepochSteps(self))
-            elif msg.operation == HgsOperation.CHECK_STATUS:
-                self.execute_new_task(msg, StatusSteps(self))
-            elif msg.operation == HgsOperation.POPULATION:
-                self.execute_new_task(msg, PopulationSteps(self))
+            else:
+                self.execute_new_task(msg, sender)
 
         elif isinstance(msg, NodeMessage):
             operation = self.tasks[msg.id]
-            operation.execute(msg)
+            operation.execute(msg, sender)
 
     def start(self, config: HgsConfig):
         print("STARTING HGS SUPERVISOR")
@@ -215,10 +288,12 @@ class Node(Actor):
     fitnesses = None
     old_average_fitnesses = None
     average_fitnesses = None
+    min_progress_ratio = None
     reference_point = None
     relative_hypervolume = None
     old_hypervolume = None
     hypervolume = None
+    center = None
 
     def __init__(self):
         print("NODE CREATED")
@@ -249,6 +324,23 @@ class Node(Actor):
                     lambda result: self.send(
                         sender, NodeMessage(NodeOperation.NEW_RESULT, msg.id, result)
                     )
+                )
+            elif msg.operation == NodeOperation.TRIM_NOT_PROGRESSING:
+                self.trim_not_progressing()
+            elif msg.operation == NodeOperation.TRIM_REDUNDANT:
+                center = np.mean(self.population, axis=0)
+                self.send(
+                    sender,
+                    NodeMessage(
+                        NodeOperation.TRIM_REDUNDANT,
+                        msg.id,
+                        {
+                            "alive": self.alive,
+                            "ripe": self.ripe,
+                            "center": center,
+                            "level": self.level,
+                        },
+                    ),
                 )
             elif msg.operation == NodeOperation.POPULATION:
                 self.send(
@@ -289,6 +381,7 @@ class Node(Actor):
         self.fitnesses = config.hgs_config.fitnesses
         self.old_average_fitnesses = [float("inf") for _ in config.hgs_config.fitnesses]
         self.average_fitnesses = [float("inf") for _ in config.hgs_config.fitnesses]
+        self.min_progress_ratio = config.hgs_config.min_progress_ratio[self.level]
 
         self.reference_point = config.hgs_config.reference_point
         self.relative_hypervolume = None
@@ -331,3 +424,18 @@ class Node(Actor):
             self.relative_hypervolume = hv.compute(fitness_values)
         else:
             self.hypervolume = hv.compute(fitness_values) - self.relative_hypervolume
+
+    def trim_not_progressing(self):
+        if (
+            self.alive
+            and self.old_hypervolume is not None
+            and self.old_hypervolume > 0.0
+            and ((self.hypervolume / (self.old_hypervolume + EPSILON)) - 1.0)
+            < (self.min_progress_ratio / 2 ** self.level)
+        ):
+            # TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
+            self.alive = False
+            self.center = np.mean(self.population, axis=0)
+            self.ripe = True
+            # TODO: logging killing not progressing sprouts
+            print("   KILL NOT PROGRESSING")

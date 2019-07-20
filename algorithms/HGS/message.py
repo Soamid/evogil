@@ -16,6 +16,8 @@ class HgsOperation(OperationType):
     METAEPOCH_END = auto()
     CHECK_STATUS = auto()
     POPULATION = auto()
+    TRIM_NOT_PROGRESSING = auto()
+    TRIM_REDUNDANT = auto()
 
 
 @unique
@@ -27,6 +29,9 @@ class NodeOperation(OperationType):
     CHECK_STATUS = auto()
     CHECK_RIPE = auto()
     POPULATION = auto()
+    TRIM_NOT_PROGRESSING = auto()
+    TRIM_REDUNDANT = auto()
+    KILL = auto()
 
 
 class Message:
