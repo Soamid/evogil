@@ -19,6 +19,10 @@ class HgsOperation(OperationType):
     TRIM_NOT_PROGRESSING = auto()
     TRIM_REDUNDANT = auto()
     HELLO = auto()
+    REGISTER_NODE = auto()
+    REGISTER_NODE_END = auto()
+    RELEASE_SPROUTS = auto()
+    RELEASE_SPROUTS_END = auto()
 
 
 @unique

@@ -16,7 +16,8 @@ from algorithms.HGS.node_tasks import (
     CheckStatusNodeTask,
     GetPopulationNodeTask,
     NewMetaepochNodeTask,
-    TrimNotProgressingNodeTask)
+    TrimNotProgressingNodeTask,
+    ReleaseSproutsNodeTask)
 from algorithms.HGS.tasks import (
     HgsOperationTask,
     MetaepochHgsTask,
@@ -25,7 +26,7 @@ from algorithms.HGS.tasks import (
     StatusHgsTask,
     PopulationHgsTask,
     OperationTask,
-)
+    ReleaseSproutsHgsTask)
 
 
 class HgsConfig:
@@ -44,6 +45,7 @@ class HgsConfig:
     crossover_etas = None
     crossover_rates = None
     cost_modifiers = None
+    min_dists = None
     min_progress_ratio = None
     global_fitness_archive = None
     mantissa_bits = None
@@ -72,11 +74,13 @@ class TaskActor(Actor):
         self.tasks[task.id] = task
         task.execute(msg, sender)
 
+
 class HgsNodeSupervisor(TaskActor):
     def __init__(self):
         super().__init__()
         self.nodes = None
         self.level_nodes = None
+        self.root = None
         self.config = None
         self.cost = 0
         self.tasks: Dict[uuid, HgsOperationTask] = {}
@@ -88,6 +92,7 @@ class HgsNodeSupervisor(TaskActor):
             HgsOperation.TRIM_REDUNDANT: TrimRedundantHgsTask,
             HgsOperation.CHECK_STATUS: StatusHgsTask,
             HgsOperation.POPULATION: PopulationHgsTask,
+            HgsOperation.RELEASE_SPROUTS: ReleaseSproutsHgsTask
         }
 
     def receiveMessage(self, msg, sender):
@@ -97,6 +102,13 @@ class HgsNodeSupervisor(TaskActor):
                 self.start(msg.data)
                 self.parent_actor = sender
                 self.send(sender, "done")
+            elif msg.operation == HgsOperation.REGISTER_NODE:
+                node = self.create_node(msg.data.level, msg.data.population)
+                self.nodes.append(node)
+                self.level_nodes[msg.data.level].append(node)
+                self.send(
+                    sender, HgsMessage(HgsOperation.REGISTER_NODE_END, msg.id, node)
+                )
             else:
                 self.execute_new_task(msg, sender)
 
@@ -113,22 +125,24 @@ class HgsNodeSupervisor(TaskActor):
         self.level_nodes = {0: [self.root], 1: [], 2: []}
 
     def create_root_node(self):
-        root = self.createActor(Node)
-        # time.sleep(10)
-        root_config = NodeConfig(
-            self.config,
-            0,
-            random.sample(self.config.population, self.config.population_sizes[0]),
+        return self.create_node(
+            0, random.sample(self.config.population, self.config.population_sizes[0])
         )
-        self.send(root, HgsMessage(HgsOperation.HELLO))
-        self.send(root, NodeMessage(NodeOperation.RESET, data=root_config))
-        return root
+
+    def create_node(self, level, population):
+        node = self.createActor(Node)
+        # time.sleep(10)
+        node_config = NodeConfig(self.config, level, population)
+        self.send(node, HgsMessage(HgsOperation.HELLO))
+        self.send(node, NodeMessage(NodeOperation.RESET, data=node_config))
+        return node
 
 
 class Node(TaskActor):
     alive = None
     ripe = None
     level = None
+    min_dists = None
     max_level = None
     max_hgs_sprouts_no = None
     current_cost = None
@@ -149,6 +163,11 @@ class Node(TaskActor):
     sproutiveness = None
     supervisor = None
 
+    hgs_population_sizes = None
+    hgs_dims = None
+    hgs_mutation_rates = None
+    hgs_mutation_etas = None
+
     def __init__(self):
         super().__init__()
         print("NODE CREATED")
@@ -159,6 +178,7 @@ class Node(TaskActor):
             NodeOperation.POPULATION: GetPopulationNodeTask,
             NodeOperation.NEW_METAEPOCH: NewMetaepochNodeTask,
             NodeOperation.TRIM_NOT_PROGRESSING: TrimNotProgressingNodeTask,
+            NodeOperation.RELEASE_SPROUTS: ReleaseSproutsNodeTask
         }
 
     def receiveMessage(self, msg, sender):
@@ -178,10 +198,15 @@ class Node(TaskActor):
         self.alive = True
         self.ripe = False
         self.level = config.level
+        self.min_dists = config.hgs_config.min_dists
         self.max_level = config.hgs_config.max_level
         self.max_hgs_sprouts_no = config.hgs_config.max_sprouts_no
         self.sproutiveness = config.hgs_config.sproutiveness
         self.current_cost = 0
+        self.hgs_population_sizes = config.hgs_config.population_sizes
+        self.hgs_dims = config.hgs_config.dims
+        self.hgs_mutation_rates = config.hgs_config.mutation_rates
+        self.hgs_mutation_etas = config.hgs_config.mutation_etas
         self.driver = config.hgs_config.driver(
             population=config.population,
             dims=config.hgs_config.dims,

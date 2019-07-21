@@ -87,18 +87,24 @@ class StatusHgsTask(HgsOperationTask):
         nodes_to_check = (
             self.hgs.level_nodes[nodes_lvl] if nodes_lvl else self.hgs.nodes
         )
-        for node in nodes_to_check:
-            self.hgs.send(node, NodeMessage(NodeOperation.CHECK_STATUS, self.id))
+        if nodes_to_check:
+            for node in nodes_to_check:
+                self.hgs.send(node, NodeMessage(NodeOperation.CHECK_STATUS, self.id))
+        else:
+            self.send_status()
 
     def finish_check(self, msg: NodeMessage, sender: Actor):
         self.nodes_states.append(msg.data)
         if len(self.nodes_states) == len(self.hgs.nodes):
-            self.hgs.send(
-                self.sender,
-                HgsMessage(
-                    HgsOperation.CHECK_STATUS, self.sender_task_id, self.nodes_states
-                ),
-            )
+            self.send_status()
+
+    def send_status(self):
+        self.hgs.send(
+            self.sender,
+            HgsMessage(
+                HgsOperation.CHECK_STATUS, self.sender_task_id, self.nodes_states
+            ),
+        )
 
 
 class PopulationHgsTask(HgsOperationTask):
@@ -198,3 +204,27 @@ class TrimRedundantHgsTask(HgsOperationTask):
                     # TODO: logging killing redundant sprouts
                     print("   KILL REDUNDANT")
             processed.append(sprout)
+
+
+class ReleaseSproutsHgsTask(HgsOperationTask):
+    def __init__(self, hgs):
+        super().__init__(hgs)
+        self.sender = None
+        self.sender_task_id = None
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.RELEASE_SPROUTS] = self.send_release_request
+        steps[NodeOperation.RELEASE_SPROUTS_END] = self.send_release_request
+
+    def send_release_request(self, msg: HgsMessage, sender: Actor):
+        self.sender = sender
+        self.sender_task_id = msg.id
+        self.hgs.send(
+            self.hgs.root, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
+        )
+
+    def receive_release_confirmation(self, msg: NodeMessage, sender: Actor):
+        self.hgs.send(
+            self.sender,
+            HgsMessage(HgsOperation.RELEASE_SPROUTS_END, self.sender_task_id),
+        )

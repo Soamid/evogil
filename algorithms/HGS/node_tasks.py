@@ -29,10 +29,11 @@ class NodeOperationTask(OperationTask):
 
 
 class NodeState:
-    def __init__(self, alive, ripe, center):
+    def __init__(self, alive, ripe, center, population_len):
         self.alive = alive
         self.ripe = ripe
         self.center = center
+        self.population_len = population_len
 
 
 class CheckStatusNodeTask(NodeOperationTask):
@@ -49,7 +50,7 @@ class CheckStatusNodeTask(NodeOperationTask):
             NodeMessage(
                 NodeOperation.CHECK_STATUS,
                 msg.id,
-                NodeState(self.node.alive, self.node.ripe, center),
+                NodeState(self.node.alive, self.node.ripe, center, len(self.node.population)),
             ),
         )
 
@@ -152,80 +153,120 @@ class TrimNotProgressingNodeTask(NodeOperationTask):
             print("   KILL NOT PROGRESSING")
 
 
-class ReleaseSproutsTask(NodeOperationTask):
-    def __init__(self,  node):
+class ReleaseSproutsNodeTask(NodeOperationTask):
+    def __init__(self, node):
         super().__init__(node)
+        self.sender = None
+        self.sender_task_id = None
         self.sprouts_children_finished = 0
+        self.alive_sprouts_count = 0
+        self.sprouts_states = None
+        self.released_sprouts = 0
+        self.current_delegate_index = 0
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[NodeOperation.RELEASE_SPROUTS] = self.pass_relase_request_to_children
         steps[
             NodeOperation.RELEASE_SPROUTS_END
         ] = self.receive_sprouts_info_from_children
-        steps[HgsOperation.CHECK_STATUS]
+        steps[HgsOperation.CHECK_STATUS] = self.check_next_level_nodes
+        steps[HgsOperation.REGISTER_NODE_END] = self.new_sprout_released
 
-    def pass_relase_request_to_children(self, params: Any, sender: Actor):
+    def pass_relase_request_to_children(self, msg: NodeMessage, sender: Actor):
+        self.sender = sender
+        self.sender_task_id = msg.id
         if self.node.ripe:
-            for sprout in self.node.sprouts:
-                self.node.send(
-                    sprout, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
-                )
+            if  self.node.sprouts:
+                for sprout in self.node.sprouts:
+                    self.node.send(
+                        sprout, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
+                    )
+            else:
+                self.check_next_level_nodes()
+        else:
+            self.finish()
 
-    def receive_sprouts_info_from_children(self, params: Any, sender: Actor):
+    def receive_sprouts_info_from_children(self, msg: NodeMessage, sender: Actor):
         self.sprouts_children_finished += 1
-        self.check_next_level_nodes()
+        self.alive_sprouts_count += 1 if msg.data else 0
+        if self.sprouts_children_finished == len(self.node.sprouts):
+            self.check_next_level_nodes()
 
     def check_next_level_nodes(self):
-        if self.sprouts_children_finished == len(self.node.sprouts):
-            self.node.send(
-                self.node.supervisor,
-                HgsMessage(HgsOperation.CHECK_STATUS, self.node.level + 1),
-            )
+        self.node.send(
+            self.node.supervisor,
+            HgsMessage(HgsOperation.CHECK_STATUS, self.id, self.node.level + 1),
+        )
 
-    def release_new_sprouts(self):
-        alive_sprouts_no = len([x for x in self.sprouts_infos if x.alive])
+    def receive_sprouts_states(self, msg: NodeMessage, sender: Actor):
+        self.sprouts_states = msg.data
+
         if (
             self.node.level < self.node.max_level
-            and alive_sprouts_no < self.node.max_sprouts_no
+            and self.alive_sprouts_count < self.node.max_sprouts_no
         ):
-            released_sprouts = 0
-            for delegate in self.node.delegates:
-                if (
-                    released_sprouts >= self.node.sproutiveness
-                    or alive_sprouts_no >= self.node.max_sprouts_no
-                ):
-                    break
+            self.release_next_sprout()
+        else:
+            self.finish()
 
-                if not any(
-                    [
-                        tools.redundant(
-                            [delegate],
-                            [sprout.center],
-                            self.owner.min_dists[self.level + 1],
-                        )
-                        for sprout in [
-                            x
-                            for x in self.node.level_nodes[self.level + 1]
-                            if len(x.population) > 0
-                        ]
-                    ]
-                ):
-                    candidate_population = tools.population_from_delegate(
-                        delegate,
-                        self.owner.population_sizes[self.level + 1],
-                        self.owner.dims,
-                        self.owner.mutation_rates[self.level + 1],
-                        self.owner.mutation_etas[self.level + 1],
-                    )
+    def release_next_sprout(self):
+        if (
+            self.released_sprouts >= self.node.sproutiveness
+            or self.alive_sprouts_count >= self.node.max_sprouts_no
+        ):
+            self.finish()
+            return
 
-                    new_sprout = HGS.Node(
-                        self.owner, self.level + 1, candidate_population
-                    )
-                    self.sprouts.append(new_sprout)
-                    self.owner.nodes.append(new_sprout)
-                    self.owner.level_nodes[self.level + 1].append(new_sprout)
-                    released_sprouts += 1
-                else:
-                    # TODO: logging redundant candidates
-                    # print("   CANDIDATE REDUNDANT")
-                    pass
+        delegate = self.node.delegates[self.current_delegate_index]
+        self.current_delegate_index += 1
+
+        if not any(
+            [
+                tools.redundant(
+                    [delegate],
+                    [sprout.center],
+                    self.node.min_dists[self.node.level + 1],
+                )
+                for sprout in self.sprouts_states
+                if sprout.population_len > 0
+            ]
+        ):
+            candidate_population = tools.population_from_delegate(
+                delegate,
+                self.node.population_sizes[self.node.level + 1],
+                self.node.dims,
+                self.node.mutation_rates[self.node.level + 1],
+                self.node.mutation_etas[self.node.level + 1],
+            )
+
+            self.node.send(
+                self.node.supervisor,
+                HgsMessage(
+                    HgsOperation.REGISTER_NODE,
+                    data=(self.node.level + 1, candidate_population),
+                ),
+            )
+        else:
+            # TODO: logging redundant candidates
+            # print("   CANDIDATE REDUNDANT")
+            self.try_relase_next_sprout()
+
+    def try_relase_next_sprout(self):
+        if self.current_delegate_index < len(self.node.delegates):
+            self.release_next_sprout()
+        else:
+            self.finish()
+
+    def finish(self):
+        self.node.send(
+            self.sender,
+            NodeMessage(
+                NodeOperation.RELEASE_SPROUTS_END, self.sender_task_id, self.node.alive
+            ),
+        )
+
+    def new_sprout_released(self, msg: HgsMessage, sender: Actor):
+        self.node.sprouts.append(msg.data)
+        self.released_sprouts += 1
+
+        self.try_relase_next_sprout()
