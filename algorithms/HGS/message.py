@@ -30,7 +30,6 @@ class NodeOperation(OperationType):
     CHECK_RIPE = auto()
     POPULATION = auto()
     TRIM_NOT_PROGRESSING = auto()
-    TRIM_REDUNDANT = auto()
     KILL = auto()
 
 
