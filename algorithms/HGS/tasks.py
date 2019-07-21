@@ -1,5 +1,6 @@
+import itertools
 import uuid
-from typing import Dict, Callable, Any
+from typing import Dict, Callable, Any, List
 
 from thespian.actors import Actor
 
@@ -176,16 +177,19 @@ class TrimRedundantHgsTask(HgsOperationTask):
         trim_info.node = sender
         self.trim_infos.append(trim_info)
         if len(self.trim_infos) == len(self.hgs.nodes):
-            self.trim_redundant()
+            self.trim_infos.sort(reverse=True, key=lambda info: info.level)
+            for level, lvl_infos in itertools.groupby(self.trim_infos, key= lambda info: info.level):
+                print(f"trim lvl infos: {list(lvl_infos)} for lvl={level}")
+                self.trim_redundant(list(lvl_infos))
             self.hgs.send(
                 self.sender,
                 HgsMessage(HgsOperation.TRIM_REDUNDANT, self.sender_task_id, True),
             )
 
-    def trim_redundant(self):
-        alive = [x for x in self.trim_infos if x.alive]
+    def trim_redundant(self, lvl_infos):
+        alive = [x for x in lvl_infos if x.alive]
         processed = []
-        dead = [x for x in self.trim_infos if not x.alive]
+        dead = [x for x in lvl_infos if not x.alive]
         for sprout in alive:
             to_compare = [x for x in dead]
             to_compare.extend(processed)
@@ -214,7 +218,7 @@ class ReleaseSproutsHgsTask(HgsOperationTask):
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.RELEASE_SPROUTS] = self.send_release_request
-        steps[NodeOperation.RELEASE_SPROUTS_END] = self.send_release_request
+        steps[NodeOperation.RELEASE_SPROUTS_END] = self.receive_release_confirmation
 
     def send_release_request(self, msg: HgsMessage, sender: Actor):
         self.sender = sender

@@ -29,7 +29,8 @@ class NodeOperationTask(OperationTask):
 
 
 class NodeState:
-    def __init__(self, alive, ripe, center, population_len):
+    def __init__(self, level, alive, ripe, center, population_len):
+        self.level = level
         self.alive = alive
         self.ripe = ripe
         self.center = center
@@ -50,7 +51,7 @@ class CheckStatusNodeTask(NodeOperationTask):
             NodeMessage(
                 NodeOperation.CHECK_STATUS,
                 msg.id,
-                NodeState(self.node.alive, self.node.ripe, center, len(self.node.population)),
+                NodeState(self.node.level, self.node.alive, self.node.ripe, center, len(self.node.population)),
             ),
         )
 
@@ -176,6 +177,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         self.sender = sender
         self.sender_task_id = msg.id
         if self.node.ripe:
+            print("current sprouts: " + str(self.node.sprouts))
             if  self.node.sprouts:
                 for sprout in self.node.sprouts:
                     self.node.send(
@@ -184,6 +186,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             else:
                 self.check_next_level_nodes()
         else:
+            print("finishing because ripe")
             self.finish()
 
     def receive_sprouts_info_from_children(self, msg: NodeMessage, sender: Actor):
@@ -193,12 +196,14 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             self.check_next_level_nodes()
 
     def check_next_level_nodes(self):
+        print("sending check next level")
         self.node.send(
             self.node.supervisor,
             HgsMessage(HgsOperation.CHECK_STATUS, self.id, self.node.level + 1),
         )
 
     def receive_sprouts_states(self, msg: NodeMessage, sender: Actor):
+        print("receiving next level states")
         self.sprouts_states = msg.data
 
         if (
@@ -207,6 +212,15 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         ):
             self.release_next_sprout()
         else:
+            print("finishing because max lvl reached")
+            self.finish()
+
+    def try_relase_next_sprout(self):
+        print("trying next sprout")
+        if self.current_delegate_index < len(self.node.delegates):
+            self.release_next_sprout()
+        else:
+            print("finishing because all delegates checked")
             self.finish()
 
     def release_next_sprout(self):
@@ -214,11 +228,13 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             self.released_sprouts >= self.node.sproutiveness
             or self.alive_sprouts_count >= self.node.max_sprouts_no
         ):
+            print("finishing because max sprouts reached")
             self.finish()
             return
 
         delegate = self.node.delegates[self.current_delegate_index]
         self.current_delegate_index += 1
+        print(f"checking next delegate: {delegate}, index: {self.current_delegate_index}")
 
         if not any(
             [
@@ -239,6 +255,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
                 self.node.mutation_etas[self.node.level + 1],
             )
 
+            print("releasing new sprout!")
             self.node.send(
                 self.node.supervisor,
                 HgsMessage(
@@ -251,12 +268,6 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             # print("   CANDIDATE REDUNDANT")
             self.try_relase_next_sprout()
 
-    def try_relase_next_sprout(self):
-        if self.current_delegate_index < len(self.node.delegates):
-            self.release_next_sprout()
-        else:
-            self.finish()
-
     def finish(self):
         self.node.send(
             self.sender,
@@ -266,6 +277,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         )
 
     def new_sprout_released(self, msg: HgsMessage, sender: Actor):
+        print("new sprout registered")
         self.node.sprouts.append(msg.data)
         self.released_sprouts += 1
 

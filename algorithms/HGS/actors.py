@@ -188,6 +188,7 @@ class Node(TaskActor):
                 self.reset(msg.data)
                 self.send(sender, "done")
             else:
+                print("sender: " + str(sender))
                 self.execute_new_task(msg, sender)
         elif isinstance(msg, HgsMessage):
             if msg.operation == HgsOperation.HELLO:
