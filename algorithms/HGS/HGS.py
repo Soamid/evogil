@@ -91,7 +91,7 @@ class HGS(ComplexDriver):
         self.node_supervisor = self.hgs_system.createActor(HgsNodeSupervisor)
 
         self.hgs_system.ask(
-            self.node_supervisor, HgsMessage(HgsOperation.START, self.hgs_config)
+            self.node_supervisor, HgsMessage(HgsOperation.START, data=self.hgs_config)
         )
         self.hgs_system.tell(
             self.node_supervisor, HgsMessage(HgsOperation.CHECK_STATUS)

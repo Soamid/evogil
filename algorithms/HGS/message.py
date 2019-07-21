@@ -18,11 +18,13 @@ class HgsOperation(OperationType):
     POPULATION = auto()
     TRIM_NOT_PROGRESSING = auto()
     TRIM_REDUNDANT = auto()
+    HELLO = auto()
 
 
 @unique
 class NodeOperation(OperationType):
     RESET = auto()
+    KILL = auto()
     NEW_RESULT = auto()
     NEW_METAEPOCH = auto()
     METAEPOCH_END = auto()
@@ -30,12 +32,14 @@ class NodeOperation(OperationType):
     CHECK_RIPE = auto()
     POPULATION = auto()
     TRIM_NOT_PROGRESSING = auto()
-    KILL = auto()
+    RELEASE_SPROUTS = auto()
+    RELEASE_SPROUTS_END = auto()
 
 
 class Message:
-    def __init__(self, operation: OperationType, data: Any = None):
+    def __init__(self, operation: OperationType, id: uuid, data: Any = None):
         self.operation = operation
+        self.id = id if id else uuid.uuid4()
         self.data = data
 
     def __str__(self):
@@ -43,14 +47,13 @@ class Message:
 
 
 class HgsMessage(Message):
-    def __init__(self, operation: HgsOperation, data: Any = None):
-        super().__init__(operation, data)
+    def __init__(self, operation: HgsOperation, id: uuid=None, data: Any = None):
+        super().__init__(operation, id, data)
 
 
 class NodeMessage(Message):
-    def __init__(self, operation: NodeOperation, id: uuid, data: Any = None):
-        super().__init__(operation, data)
-        self.id = id
+    def __init__(self, operation: NodeOperation, id: uuid=None, data: Any = None):
+        super().__init__(operation, id, data)
 
 
 class HGSMessageAdapter(PopulationMessageAdapter):

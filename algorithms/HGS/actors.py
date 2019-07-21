@@ -2,7 +2,6 @@ import random
 import uuid
 from typing import Dict
 
-import numpy as np
 from thespian.actors import Actor
 
 from algorithms.HGS import tools
@@ -14,18 +13,17 @@ from algorithms.HGS.message import (
     Message,
 )
 from algorithms.HGS.node_tasks import (
-    CheckStatusTask,
-    GetPopulationTask,
-    NewMetaepochTask,
-    TrimNotProgressing,
-    NodeOperationTask)
+    CheckStatusNodeTask,
+    GetPopulationNodeTask,
+    NewMetaepochNodeTask,
+    TrimNotProgressingNodeTask)
 from algorithms.HGS.tasks import (
     HgsOperationTask,
-    MetaepochTask,
-    TrimNotProgressingTask,
-    TrimRedundantTask,
-    StatusTask,
-    PopulationTask,
+    MetaepochHgsTask,
+    TrimNotProgressingHgsTask,
+    TrimRedundantHgsTask,
+    StatusHgsTask,
+    PopulationHgsTask,
     OperationTask,
 )
 
@@ -38,6 +36,9 @@ class HgsConfig:
     metaepoch_len = None
     fitnesses = None
     fitness_errors = None
+    max_level = None
+    max_sprouts_no = None
+    sproutiveness = None
     mutation_etas = None
     mutation_rates = None
     crossover_etas = None
@@ -82,11 +83,11 @@ class HgsNodeSupervisor(TaskActor):
 
     def configure_tasks(self):
         return {
-            HgsOperation.NEW_METAEPOCH: MetaepochTask,
-            HgsOperation.TRIM_NOT_PROGRESSING: TrimNotProgressingTask,
-            HgsOperation.TRIM_REDUNDANT: TrimRedundantTask,
-            HgsOperation.CHECK_STATUS: StatusTask,
-            HgsOperation.POPULATION: PopulationTask,
+            HgsOperation.NEW_METAEPOCH: MetaepochHgsTask,
+            HgsOperation.TRIM_NOT_PROGRESSING: TrimNotProgressingHgsTask,
+            HgsOperation.TRIM_REDUNDANT: TrimRedundantHgsTask,
+            HgsOperation.CHECK_STATUS: StatusHgsTask,
+            HgsOperation.POPULATION: PopulationHgsTask,
         }
 
     def receiveMessage(self, msg, sender):
@@ -119,7 +120,8 @@ class HgsNodeSupervisor(TaskActor):
             0,
             random.sample(self.config.population, self.config.population_sizes[0]),
         )
-        self.send(root, NodeMessage(NodeOperation.RESET, None, root_config))
+        self.send(root, HgsMessage(HgsOperation.HELLO))
+        self.send(root, NodeMessage(NodeOperation.RESET, data=root_config))
         return root
 
 
@@ -127,6 +129,8 @@ class Node(TaskActor):
     alive = None
     ripe = None
     level = None
+    max_level = None
+    max_hgs_sprouts_no = None
     current_cost = None
     driver = None
     metaepoch_len = None
@@ -142,6 +146,8 @@ class Node(TaskActor):
     old_hypervolume = None
     hypervolume = None
     center = None
+    sproutiveness = None
+    supervisor = None
 
     def __init__(self):
         super().__init__()
@@ -149,10 +155,10 @@ class Node(TaskActor):
 
     def configure_tasks(self):
         return {
-            NodeOperation.CHECK_STATUS: CheckStatusTask,
-            NodeOperation.POPULATION: GetPopulationTask,
-            NodeOperation.NEW_METAEPOCH: NewMetaepochTask,
-            NodeOperation.TRIM_NOT_PROGRESSING: TrimNotProgressing,
+            NodeOperation.CHECK_STATUS: CheckStatusNodeTask,
+            NodeOperation.POPULATION: GetPopulationNodeTask,
+            NodeOperation.NEW_METAEPOCH: NewMetaepochNodeTask,
+            NodeOperation.TRIM_NOT_PROGRESSING: TrimNotProgressingNodeTask,
         }
 
     def receiveMessage(self, msg, sender):
@@ -163,12 +169,18 @@ class Node(TaskActor):
                 self.send(sender, "done")
             else:
                 self.execute_new_task(msg, sender)
+        elif isinstance(msg, HgsMessage):
+            if msg.operation == HgsOperation.HELLO:
+                self.supervisor = sender
 
     def reset(self, config: NodeConfig):
         print("HAHA1")
         self.alive = True
         self.ripe = False
         self.level = config.level
+        self.max_level = config.hgs_config.max_level
+        self.max_hgs_sprouts_no = config.hgs_config.max_sprouts_no
+        self.sproutiveness = config.hgs_config.sproutiveness
         self.current_cost = 0
         self.driver = config.hgs_config.driver(
             population=config.population,

@@ -7,7 +7,14 @@ import rx
 import rx.operators as ops
 from thespian.actors import Actor
 
-from algorithms.HGS.message import OperationType, NodeOperation, NodeMessage
+from algorithms.HGS import tools
+from algorithms.HGS.message import (
+    OperationType,
+    NodeOperation,
+    NodeMessage,
+    HgsMessage,
+    HgsOperation,
+)
 from algorithms.HGS.tasks import OperationTask
 from algorithms.base.driver import StepsRun
 from algorithms.base.hv import HyperVolume
@@ -20,9 +27,6 @@ class NodeOperationTask(OperationTask):
         super().__init__()
         self.node = node
 
-    def execute(self, message: NodeMessage, sender: Actor):
-        self.steps[message.operation](message.data, message.id, sender)
-
 
 class NodeState:
     def __init__(self, alive, ripe, center):
@@ -31,55 +35,55 @@ class NodeState:
         self.center = center
 
 
-class CheckStatusTask(NodeOperationTask):
+class CheckStatusNodeTask(NodeOperationTask):
     def __init__(self, node):
         super().__init__(node)
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[NodeOperation.CHECK_STATUS] = self.send_status
 
-    def send_status(self, params: Any, task_id: uuid, sender: Actor):
+    def send_status(self, msg: NodeMessage, sender: Actor):
         center = np.mean(self.node.population, axis=0) if self.node.population else None
         self.node.send(
             sender,
             NodeMessage(
                 NodeOperation.CHECK_STATUS,
-                task_id,
+                msg.id,
                 NodeState(self.node.alive, self.node.ripe, center),
             ),
         )
 
 
-class GetPopulationTask(NodeOperationTask):
+class GetPopulationNodeTask(NodeOperationTask):
     def __init__(self, node):
         super().__init__(node)
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[NodeOperation.POPULATION] = self.send_population
 
-    def send_population(self, params: Any, task_id: uuid, sender: Actor):
+    def send_population(self, msg: NodeMessage, sender: Actor):
         self.node.send(
-            sender, NodeMessage(NodeOperation.POPULATION, task_id, self.node.population)
+            sender, NodeMessage(NodeOperation.POPULATION, msg.id, self.node.population)
         )
 
 
-class NewMetaepochTask(NodeOperationTask):
+class NewMetaepochNodeTask(NodeOperationTask):
     def __init__(self, node):
         super().__init__(node)
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[NodeOperation.NEW_METAEPOCH] = self.stream_metaepoch_results
 
-    def stream_metaepoch_results(self, params: Any, task_id: uuid, sender: Actor):
+    def stream_metaepoch_results(self, msg: NodeMessage, sender: Actor):
         self.run_metaepoch().pipe(
             ops.do_action(
                 on_completed=lambda: self.node.send(
-                    sender, NodeMessage(NodeOperation.METAEPOCH_END, task_id)
+                    sender, NodeMessage(NodeOperation.METAEPOCH_END, msg.id)
                 )
             )
         ).subscribe(
             lambda result: self.node.send(
-                sender, NodeMessage(NodeOperation.NEW_RESULT, task_id, result)
+                sender, NodeMessage(NodeOperation.NEW_RESULT, msg.id, result)
             )
         )
 
@@ -125,14 +129,14 @@ class NewMetaepochTask(NodeOperationTask):
             )
 
 
-class TrimNotProgressing(NodeOperationTask):
+class TrimNotProgressingNodeTask(NodeOperationTask):
     def __init__(self, node):
         super().__init__(node)
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[NodeOperation.TRIM_NOT_PROGRESSING] = self.trim_not_progressing
 
-    def trim_not_progressing(self, params: Any, task_id: uuid, sender: Actor):
+    def trim_not_progressing(self, msg: NodeMessage, sender: Actor):
         if (
             self.node.alive
             and self.node.old_hypervolume is not None
@@ -146,3 +150,82 @@ class TrimNotProgressing(NodeOperationTask):
             self.node.ripe = True
             # TODO: logging killing not progressing sprouts
             print("   KILL NOT PROGRESSING")
+
+
+class ReleaseSproutsTask(NodeOperationTask):
+    def __init__(self,  node):
+        super().__init__(node)
+        self.sprouts_children_finished = 0
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[NodeOperation.RELEASE_SPROUTS] = self.pass_relase_request_to_children
+        steps[
+            NodeOperation.RELEASE_SPROUTS_END
+        ] = self.receive_sprouts_info_from_children
+        steps[HgsOperation.CHECK_STATUS]
+
+    def pass_relase_request_to_children(self, params: Any, sender: Actor):
+        if self.node.ripe:
+            for sprout in self.node.sprouts:
+                self.node.send(
+                    sprout, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
+                )
+
+    def receive_sprouts_info_from_children(self, params: Any, sender: Actor):
+        self.sprouts_children_finished += 1
+        self.check_next_level_nodes()
+
+    def check_next_level_nodes(self):
+        if self.sprouts_children_finished == len(self.node.sprouts):
+            self.node.send(
+                self.node.supervisor,
+                HgsMessage(HgsOperation.CHECK_STATUS, self.node.level + 1),
+            )
+
+    def release_new_sprouts(self):
+        alive_sprouts_no = len([x for x in self.sprouts_infos if x.alive])
+        if (
+            self.node.level < self.node.max_level
+            and alive_sprouts_no < self.node.max_sprouts_no
+        ):
+            released_sprouts = 0
+            for delegate in self.node.delegates:
+                if (
+                    released_sprouts >= self.node.sproutiveness
+                    or alive_sprouts_no >= self.node.max_sprouts_no
+                ):
+                    break
+
+                if not any(
+                    [
+                        tools.redundant(
+                            [delegate],
+                            [sprout.center],
+                            self.owner.min_dists[self.level + 1],
+                        )
+                        for sprout in [
+                            x
+                            for x in self.node.level_nodes[self.level + 1]
+                            if len(x.population) > 0
+                        ]
+                    ]
+                ):
+                    candidate_population = tools.population_from_delegate(
+                        delegate,
+                        self.owner.population_sizes[self.level + 1],
+                        self.owner.dims,
+                        self.owner.mutation_rates[self.level + 1],
+                        self.owner.mutation_etas[self.level + 1],
+                    )
+
+                    new_sprout = HGS.Node(
+                        self.owner, self.level + 1, candidate_population
+                    )
+                    self.sprouts.append(new_sprout)
+                    self.owner.nodes.append(new_sprout)
+                    self.owner.level_nodes[self.level + 1].append(new_sprout)
+                    released_sprouts += 1
+                else:
+                    # TODO: logging redundant candidates
+                    # print("   CANDIDATE REDUNDANT")
+                    pass
