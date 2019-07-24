@@ -51,7 +51,13 @@ class CheckStatusNodeTask(NodeOperationTask):
             NodeMessage(
                 NodeOperation.CHECK_STATUS,
                 msg.id,
-                NodeState(self.node.level, self.node.alive, self.node.ripe, center, len(self.node.population)),
+                NodeState(
+                    self.node.level,
+                    self.node.alive,
+                    self.node.ripe,
+                    center,
+                    len(self.node.population),
+                ),
             ),
         )
 
@@ -93,6 +99,10 @@ class NewMetaepochNodeTask(NodeOperationTask):
         if self.node.alive:
             print("ALIVE SO RUN EPOCH")
             epoch_job = StepsRun(self.node.metaepoch_len)
+
+            print(
+                f"starting metaepoch, len={self.node.metaepoch_len}, pop_len={len(self.node.driver.population)} "
+            )
 
             return epoch_job.create_job(self.node.driver).pipe(
                 ops.map(lambda message: self.fill_node_info(message)),
@@ -170,7 +180,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         steps[
             NodeOperation.RELEASE_SPROUTS_END
         ] = self.receive_sprouts_info_from_children
-        steps[HgsOperation.CHECK_STATUS] = self.check_next_level_nodes
+        steps[HgsOperation.CHECK_STATUS] = self.receive_sprouts_states
         steps[HgsOperation.REGISTER_NODE_END] = self.new_sprout_released
 
     def pass_relase_request_to_children(self, msg: NodeMessage, sender: Actor):
@@ -178,7 +188,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         self.sender_task_id = msg.id
         if self.node.ripe:
             print("current sprouts: " + str(self.node.sprouts))
-            if  self.node.sprouts:
+            if self.node.sprouts:
                 for sprout in self.node.sprouts:
                     self.node.send(
                         sprout, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
@@ -208,7 +218,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
 
         if (
             self.node.level < self.node.max_level
-            and self.alive_sprouts_count < self.node.max_sprouts_no
+            and self.alive_sprouts_count < self.node.max_hgs_sprouts_no
         ):
             self.release_next_sprout()
         else:
@@ -226,7 +236,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
     def release_next_sprout(self):
         if (
             self.released_sprouts >= self.node.sproutiveness
-            or self.alive_sprouts_count >= self.node.max_sprouts_no
+            or self.alive_sprouts_count >= self.node.max_hgs_sprouts_no
         ):
             print("finishing because max sprouts reached")
             self.finish()
@@ -234,7 +244,9 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
 
         delegate = self.node.delegates[self.current_delegate_index]
         self.current_delegate_index += 1
-        print(f"checking next delegate: {delegate}, index: {self.current_delegate_index}")
+        print(
+            f"checking next delegate: {delegate}, index: {self.current_delegate_index}"
+        )
 
         if not any(
             [
@@ -249,10 +261,10 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         ):
             candidate_population = tools.population_from_delegate(
                 delegate,
-                self.node.population_sizes[self.node.level + 1],
-                self.node.dims,
-                self.node.mutation_rates[self.node.level + 1],
-                self.node.mutation_etas[self.node.level + 1],
+                self.node.hgs_population_sizes[self.node.level + 1],
+                self.node.hgs_dims,
+                self.node.hgs_mutation_rates[self.node.level + 1],
+                self.node.hgs_mutation_etas[self.node.level + 1],
             )
 
             print("releasing new sprout!")
@@ -260,7 +272,8 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
                 self.node.supervisor,
                 HgsMessage(
                     HgsOperation.REGISTER_NODE,
-                    data=(self.node.level + 1, candidate_population),
+                    self.id,
+                    (self.node.level + 1, candidate_population),
                 ),
             )
         else:

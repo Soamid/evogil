@@ -111,7 +111,7 @@ class HGS(ComplexDriver):
     def step(self):
         ActorSystem().tell(self.node_supervisor, HgsMessage(HgsOperation.NEW_METAEPOCH))
         epoch_end_message = ActorSystem().listen()
-        self.cost += epoch_end_message.data
+        self.cost = epoch_end_message.data
 
         ActorSystem().tell(self.node_supervisor, HgsMessage(HgsOperation.TRIM_NOT_PROGRESSING))
         ActorSystem().ask(self.node_supervisor, HgsMessage(HgsOperation.TRIM_REDUNDANT))

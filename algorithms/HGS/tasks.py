@@ -53,7 +53,7 @@ class MetaepochHgsTask(HgsOperationTask):
             self.hgs.send(node, NodeMessage(NodeOperation.NEW_METAEPOCH, self.id))
 
     def on_new_result(self, msg: NodeMessage, sender: Actor):
-        print("update cost")
+        print(f"update cost {msg.data.epoch_cost}, modifier= {self.hgs.config.cost_modifiers[msg.data.level]}")
         self.hgs.cost += (
             self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
         )
@@ -86,8 +86,9 @@ class StatusHgsTask(HgsOperationTask):
         self.sender = sender
         self.sender_task_id = msg.id
         nodes_to_check = (
-            self.hgs.level_nodes[nodes_lvl] if nodes_lvl else self.hgs.nodes
+            self.hgs.level_nodes[nodes_lvl] if nodes_lvl is not None else self.hgs.nodes
         )
+        print(f'nodes to check: {nodes_to_check}')
         if nodes_to_check:
             for node in nodes_to_check:
                 self.hgs.send(node, NodeMessage(NodeOperation.CHECK_STATUS, self.id))

@@ -103,9 +103,10 @@ class HgsNodeSupervisor(TaskActor):
                 self.parent_actor = sender
                 self.send(sender, "done")
             elif msg.operation == HgsOperation.REGISTER_NODE:
-                node = self.create_node(msg.data.level, msg.data.population)
+                level, population = msg.data
+                node = self.create_node(level, population)
                 self.nodes.append(node)
-                self.level_nodes[msg.data.level].append(node)
+                self.level_nodes[level].append(node)
                 self.send(
                     sender, HgsMessage(HgsOperation.REGISTER_NODE_END, msg.id, node)
                 )
@@ -183,7 +184,9 @@ class Node(TaskActor):
 
     def receiveMessage(self, msg, sender):
         print("MESSAGE RECEIVED " + str(msg))
-        if isinstance(msg, NodeMessage):
+        if msg.id in self.tasks:
+            self.tasks[msg.id].execute(msg, sender)
+        elif isinstance(msg, NodeMessage):
             if msg.operation == NodeOperation.RESET:
                 self.reset(msg.data)
                 self.send(sender, "done")
