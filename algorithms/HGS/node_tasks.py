@@ -27,6 +27,9 @@ class NodeOperationTask(OperationTask):
         super().__init__()
         self.node = node
 
+    def log(self, msg):
+        print(f"({self.node.level}) {self.node} :  {msg}")
+
 
 class NodeState:
     def __init__(self, level, alive, ripe, center, population_len):
@@ -97,10 +100,10 @@ class NewMetaepochNodeTask(NodeOperationTask):
 
     def run_metaepoch(self):
         if self.node.alive:
-            print("ALIVE SO RUN EPOCH")
+            self.log("ALIVE SO RUN EPOCH")
             epoch_job = StepsRun(self.node.metaepoch_len)
 
-            print(
+            self.log(
                 f"starting metaepoch, len={self.node.metaepoch_len}, pop_len={len(self.node.driver.population)} "
             )
 
@@ -109,7 +112,7 @@ class NewMetaepochNodeTask(NodeOperationTask):
                 ops.do_action(lambda message: self.update_current_cost(message)),
                 ops.do_action(on_completed=lambda: self._after_metaepoch()),
             )
-        print("DEAD SO EMPTY MSG")
+        self.log("DEAD SO EMPTY MSG")
         return rx.empty()
 
     def fill_node_info(self, driver_message):
@@ -161,7 +164,9 @@ class TrimNotProgressingNodeTask(NodeOperationTask):
             self.node.center = np.mean(self.node.population, axis=0)
             self.node.ripe = True
             # TODO: logging killing not progressing sprouts
-            print("   KILL NOT PROGRESSING")
+            self.log("   KILL NOT PROGRESSING")
+
+        self.node.send(sender, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING_END, msg.id))
 
 
 class ReleaseSproutsNodeTask(NodeOperationTask):
@@ -169,6 +174,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         super().__init__(node)
         self.sender = None
         self.sender_task_id = None
+        self.requests_count = None
         self.sprouts_children_finished = 0
         self.alive_sprouts_count = 0
         self.sprouts_states = None
@@ -187,8 +193,10 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         self.sender = sender
         self.sender_task_id = msg.id
         if self.node.ripe:
-            print("current sprouts: " + str(self.node.sprouts))
+            self.log("current sprouts: " + str(self.node.sprouts))
             if self.node.sprouts:
+                self.log(f"sending sprouting request to {len(self.node.sprouts)} sprouts")
+                self.requests_count = len(self.node.sprouts)
                 for sprout in self.node.sprouts:
                     self.node.send(
                         sprout, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
@@ -196,24 +204,25 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             else:
                 self.check_next_level_nodes()
         else:
-            print("finishing because ripe")
+            self.log("finishing because ripe")
             self.finish()
 
     def receive_sprouts_info_from_children(self, msg: NodeMessage, sender: Actor):
         self.sprouts_children_finished += 1
         self.alive_sprouts_count += 1 if msg.data else 0
-        if self.sprouts_children_finished == len(self.node.sprouts):
+        self.log(f"sprouts finished: {self.sprouts_children_finished} / {len(self.node.sprouts)}")
+        if self.sprouts_children_finished == self.requests_count:
             self.check_next_level_nodes()
 
     def check_next_level_nodes(self):
-        print("sending check next level")
+        self.log("sending check next level")
         self.node.send(
             self.node.supervisor,
             HgsMessage(HgsOperation.CHECK_STATUS, self.id, self.node.level + 1),
         )
 
     def receive_sprouts_states(self, msg: NodeMessage, sender: Actor):
-        print("receiving next level states")
+        self.log("receiving next level states")
         self.sprouts_states = msg.data
 
         if (
@@ -222,15 +231,15 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         ):
             self.release_next_sprout()
         else:
-            print("finishing because max lvl reached")
+            self.log("finishing because max lvl reached")
             self.finish()
 
     def try_relase_next_sprout(self):
-        print("trying next sprout")
+        self.log("trying next sprout")
         if self.current_delegate_index < len(self.node.delegates):
             self.release_next_sprout()
         else:
-            print("finishing because all delegates checked")
+            self.log("finishing because all delegates checked")
             self.finish()
 
     def release_next_sprout(self):
@@ -238,15 +247,15 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             self.released_sprouts >= self.node.sproutiveness
             or self.alive_sprouts_count >= self.node.max_hgs_sprouts_no
         ):
-            print("finishing because max sprouts reached")
+            self.log("finishing because max sprouts reached")
             self.finish()
             return
 
         delegate = self.node.delegates[self.current_delegate_index]
-        self.current_delegate_index += 1
-        print(
+        self.log(
             f"checking next delegate: {delegate}, index: {self.current_delegate_index}"
         )
+        self.current_delegate_index += 1
 
         if not any(
             [
@@ -267,7 +276,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
                 self.node.hgs_mutation_etas[self.node.level + 1],
             )
 
-            print("releasing new sprout!")
+            self.log("releasing new sprout!")
             self.node.send(
                 self.node.supervisor,
                 HgsMessage(
@@ -278,7 +287,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             )
         else:
             # TODO: logging redundant candidates
-            # print("   CANDIDATE REDUNDANT")
+            # self.log("   CANDIDATE REDUNDANT")
             self.try_relase_next_sprout()
 
     def finish(self):
@@ -290,7 +299,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         )
 
     def new_sprout_released(self, msg: HgsMessage, sender: Actor):
-        print("new sprout registered")
+        self.log("new sprout registered")
         self.node.sprouts.append(msg.data)
         self.released_sprouts += 1
 

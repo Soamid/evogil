@@ -183,7 +183,7 @@ class Node(TaskActor):
         }
 
     def receiveMessage(self, msg, sender):
-        print("MESSAGE RECEIVED " + str(msg))
+        print(f"({self.level}) {self} : MESSAGE RECEIVED {msg}")
         if msg.id in self.tasks:
             self.tasks[msg.id].execute(msg, sender)
         elif isinstance(msg, NodeMessage):

@@ -33,6 +33,9 @@ class HgsOperationTask(OperationTask):
         super().__init__()
         self.hgs = hgs
 
+    def log(self, msg):
+        print(f"SUPERVISOR :  {msg}")
+
 
 class MetaepochHgsTask(HgsOperationTask):
     def __init__(self, hgs):
@@ -40,6 +43,7 @@ class MetaepochHgsTask(HgsOperationTask):
         self.nodes_finished = 0
         self.sender = None
         self.sender_task_id = None
+        self.requests_count = None
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.NEW_METAEPOCH] = self.start_metaepoch
@@ -47,21 +51,28 @@ class MetaepochHgsTask(HgsOperationTask):
         steps[NodeOperation.METAEPOCH_END] = self.finish_metaepoch
 
     def start_metaepoch(self, msg: HgsMessage, sender: Actor):
+        self.log("New metaepoch, nodes: ")
+        for lvl, nodes in self.hgs.level_nodes.items():
+            self.log(f"{lvl} : {nodes}")
+
         self.sender = sender
         self.sender_task_id = msg.id
+        self.requests_count = len(self.hgs.nodes)
         for node in self.hgs.nodes:
             self.hgs.send(node, NodeMessage(NodeOperation.NEW_METAEPOCH, self.id))
 
     def on_new_result(self, msg: NodeMessage, sender: Actor):
-        print(f"update cost {msg.data.epoch_cost}, modifier= {self.hgs.config.cost_modifiers[msg.data.level]}")
+        self.log(
+            f"update cost {msg.data.epoch_cost}, modifier= {self.hgs.config.cost_modifiers[msg.data.level]}"
+        )
         self.hgs.cost += (
             self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
         )
 
     def finish_metaepoch(self, msg: NodeMessage, sender: Actor):
         self.nodes_finished += 1
-        if self.nodes_finished == len(self.hgs.nodes):
-            print("All nodes have ended their metaepochs")
+        if self.nodes_finished == self.requests_count:
+            self.log("All nodes have ended their metaepochs")
             self.hgs.send(
                 self.sender,
                 HgsMessage(
@@ -73,31 +84,38 @@ class MetaepochHgsTask(HgsOperationTask):
 class StatusHgsTask(HgsOperationTask):
     def __init__(self, hgs):
         super().__init__(hgs)
+        self.nodes_to_check = None
         self.nodes_states = []
         self.sender = None
         self.sender_task_id = None
+        self.nodes_lvl = None
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.CHECK_STATUS] = self.send_check
         steps[NodeOperation.CHECK_STATUS] = self.finish_check
 
     def send_check(self, msg: HgsMessage, sender: Actor):
-        nodes_lvl = msg.data
+        self.nodes_lvl = msg.data
         self.sender = sender
         self.sender_task_id = msg.id
-        nodes_to_check = (
-            self.hgs.level_nodes[nodes_lvl] if nodes_lvl is not None else self.hgs.nodes
-        )
-        print(f'nodes to check: {nodes_to_check}')
-        if nodes_to_check:
-            for node in nodes_to_check:
+        self.nodes_to_check = self.get_nodes_to_check()
+        self.log(f"nodes to check: {self.nodes_to_check}")
+        if self.nodes_to_check:
+            for node in self.nodes_to_check:
                 self.hgs.send(node, NodeMessage(NodeOperation.CHECK_STATUS, self.id))
         else:
             self.send_status()
 
+    def get_nodes_to_check(self):
+        if self.nodes_lvl is not None:
+            if self.nodes_lvl <= self.hgs.config.max_level:
+                return self.hgs.level_nodes[self.nodes_lvl]
+            return []
+        return self.hgs.nodes
+
     def finish_check(self, msg: NodeMessage, sender: Actor):
         self.nodes_states.append(msg.data)
-        if len(self.nodes_states) == len(self.hgs.nodes):
+        if len(self.nodes_states) == len(self.nodes_to_check):
             self.send_status()
 
     def send_status(self):
@@ -116,6 +134,7 @@ class PopulationHgsTask(HgsOperationTask):
         self.nodes_finished = 0
         self.sender = None
         self.sender_task_id = None
+        self.requests_count = None
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.POPULATION] = self.get_nodes_populations
@@ -124,13 +143,14 @@ class PopulationHgsTask(HgsOperationTask):
     def get_nodes_populations(self, msg: HgsMessage, sender: Actor):
         self.sender = sender
         self.sender_task_id = msg.id
+        self.requests_count = len(self.hgs.nodes)
         for node in self.hgs.nodes:
             self.hgs.send(node, NodeMessage(NodeOperation.POPULATION, self.id))
 
     def receive_population(self, msg: NodeMessage, sender: Actor):
         self.merged_population.extend(msg.data)
         self.nodes_finished += 1
-        if self.nodes_finished == len(self.hgs.nodes):
+        if self.nodes_finished == self.requests_count:
             self.send_merged_population()
 
     def send_merged_population(self):
@@ -145,14 +165,30 @@ class PopulationHgsTask(HgsOperationTask):
 class TrimNotProgressingHgsTask(HgsOperationTask):
     def __init__(self, hgs):
         super().__init__(hgs)
+        self.sender = None
+        self.sender_task_id = None
+        self.requests_count = None
+        self.nodes_finished = 0
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.TRIM_NOT_PROGRESSING] = self.send_trim_request
+        steps[NodeOperation.TRIM_NOT_PROGRESSING_END] = self.receive_trim_confirmation
 
     def send_trim_request(self, msg: HgsMessage, sender: Actor):
+        self.sender = sender
+        self.sender_task_id = msg.id
+        self.requests_count = len(self.hgs.nodes)
         for node in self.hgs.nodes:
             self.hgs.send(
                 node, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING, self.id)
+            )
+
+    def receive_trim_confirmation(self, msg: NodeMessage, sender: Actor):
+        self.nodes_finished += 1
+        if self.nodes_finished == self.requests_count:
+            self.hgs.send(
+                self.sender,
+                HgsMessage(HgsOperation.TRIM_NOT_PROGRESSING_END, self.sender_task_id),
             )
 
 
@@ -162,6 +198,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
         self.trim_infos = []
         self.sender = None
         self.sender_task_id = None
+        self.requests_count = None
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.TRIM_REDUNDANT] = self.send_trim_request
@@ -170,6 +207,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
     def send_trim_request(self, msg: HgsMessage, sender: Actor):
         self.sender = sender
         self.sender_task_id = msg.id
+        self.requests_count = len(self.hgs.nodes)
         for node in self.hgs.nodes:
             self.hgs.send(node, NodeMessage(NodeOperation.CHECK_STATUS, self.id))
 
@@ -177,14 +215,16 @@ class TrimRedundantHgsTask(HgsOperationTask):
         trim_info = msg.data
         trim_info.node = sender
         self.trim_infos.append(trim_info)
-        if len(self.trim_infos) == len(self.hgs.nodes):
+        if len(self.trim_infos) == self.requests_count:
             self.trim_infos.sort(reverse=True, key=lambda info: info.level)
-            for level, lvl_infos in itertools.groupby(self.trim_infos, key= lambda info: info.level):
-                print(f"trim lvl infos: {list(lvl_infos)} for lvl={level}")
+            for level, lvl_infos in itertools.groupby(
+                self.trim_infos, key=lambda info: info.level
+            ):
+                self.log(f"trim lvl infos: {list(lvl_infos)} for lvl={level}")
                 self.trim_redundant(list(lvl_infos))
             self.hgs.send(
                 self.sender,
-                HgsMessage(HgsOperation.TRIM_REDUNDANT, self.sender_task_id, True),
+                HgsMessage(HgsOperation.TRIM_REDUNDANT_END, self.sender_task_id, True),
             )
 
     def trim_redundant(self, lvl_infos):
@@ -207,7 +247,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
                     self.hgs.send(sprout.node, NodeMessage(NodeOperation.KILL, self.id))
                     sprout.alive = False
                     # TODO: logging killing redundant sprouts
-                    print("   KILL REDUNDANT")
+                    self.log("   KILL REDUNDANT")
             processed.append(sprout)
 
 

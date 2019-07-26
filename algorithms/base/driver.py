@@ -1,3 +1,4 @@
+import threading
 import time
 
 import rx
@@ -80,14 +81,20 @@ class StepsRun(DriverRun):
 class TimeRun(DriverRun):
     def __init__(self, timeout: int):
         self.timeout = timeout
+        self.lock = threading.Lock()
+        self.time_elapsed = 0
 
     def create_job(self, driver: Driver) -> Observable:
         return rx.create(lambda observer, scheduler=None: self._start(driver, observer))
 
     def _start(self, driver: Driver, observer: Observer):
-        self.start_time = time.time()
-        while time.time() - self.start_time < self.timeout:
+        while self.time_elapsed < self.timeout:
+            self.lock.acquire()
+            step_start_time = time.time()
             observer.on_next(driver.next_step())
+            self.time_elapsed += time.time() - step_start_time
+            self.lock.release()
+            time.sleep(0.2)
         observer.on_completed()
 
 

@@ -17,7 +17,9 @@ class HgsOperation(OperationType):
     CHECK_STATUS = auto()
     POPULATION = auto()
     TRIM_NOT_PROGRESSING = auto()
+    TRIM_NOT_PROGRESSING_END = auto()
     TRIM_REDUNDANT = auto()
+    TRIM_REDUNDANT_END = auto()
     HELLO = auto()
     REGISTER_NODE = auto()
     REGISTER_NODE_END = auto()
@@ -36,6 +38,7 @@ class NodeOperation(OperationType):
     CHECK_RIPE = auto()
     POPULATION = auto()
     TRIM_NOT_PROGRESSING = auto()
+    TRIM_NOT_PROGRESSING_END = auto()
     RELEASE_SPROUTS = auto()
     RELEASE_SPROUTS_END = auto()
 

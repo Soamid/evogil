@@ -153,17 +153,20 @@ class TimeWorker(SimulationWorker):
 
         slots_filled = set()
 
+        time_run = TimeRun(timeout)
+
         def process_results(msg: ProgressMessage):
+            time_run.lock.acquire()
             finalpop = driver.finalized_population()
-            print(f"result: {finalpop}")
+            print(f"final pop result: {finalpop}")
             finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
 
-            time_elapsed = time.time() - time_run.start_time
-            time_slot = snap_to_time_slot(time_elapsed)
+            time_slot = snap_to_time_slot(time_run.time_elapsed)
 
             serializer.store(Result(finalpop, finalpop_fit, cost=driver.cost), str(time_slot))
             results.append((driver.cost, finalpop))
             slots_filled.add(time_slot)
+            time_run.lock.release()
 
         def snap_to_time_slot(time_elapsed):
             return min(
@@ -181,8 +184,6 @@ class TimeWorker(SimulationWorker):
                         last_slot + sampling_interval, time_slot + 1, sampling_interval
                     ):
                         serializer.store(result_to_fill, str(missing_slot))
-
-        time_run = TimeRun(timeout)
 
         time_run.create_job(driver).pipe(
             ops.subscribe_on(NewThreadScheduler()),
