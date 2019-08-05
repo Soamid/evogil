@@ -66,11 +66,17 @@ class TaskActor(Actor):
         self.tasks: Dict[uuid, OperationTask] = {}
         self.task_definitions = self.configure_tasks()
 
+    def send(self, targetAddr, msg):
+        print(f"{self}: Sending to {targetAddr} : {msg}")
+        super().send(targetAddr, msg)
+
     def configure_tasks(self):
         raise NotImplementedError()
 
     def execute_new_task(self, msg: Message, sender: Actor):
         task = self.task_definitions[msg.operation](self)
+        if task.id in self.tasks:
+            print("DUPLICATE RANDOM ID, WE' RE ALL GONNA DIE")
         self.tasks[task.id] = task
         task.execute(msg, sender)
 
@@ -96,7 +102,7 @@ class HgsNodeSupervisor(TaskActor):
         }
 
     def receiveMessage(self, msg, sender):
-        print("SUPERVISOR RECEIVED: " + str(msg))
+        print(f"SUPERVISOR RECEIVED: {msg} from: {sender}")
         if isinstance(msg, HgsMessage):
             if msg.operation == HgsOperation.START:
                 self.start(msg.data)
@@ -183,7 +189,7 @@ class Node(TaskActor):
         }
 
     def receiveMessage(self, msg, sender):
-        print(f"({self.level}) {self} : MESSAGE RECEIVED {msg}")
+        print(f"({self.level}) {self} : MESSAGE RECEIVED {msg} from {sender}")
         if msg.id in self.tasks:
             self.tasks[msg.id].execute(msg, sender)
         elif isinstance(msg, NodeMessage):

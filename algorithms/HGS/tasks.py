@@ -14,7 +14,6 @@ from algorithms.HGS.message import (
     Message,
 )
 
-
 class OperationTask:
     def __init__(self):
         self.id = uuid.uuid4()
@@ -66,7 +65,7 @@ class MetaepochHgsTask(HgsOperationTask):
             f"update cost {msg.data.epoch_cost}, modifier= {self.hgs.config.cost_modifiers[msg.data.level]}"
         )
         self.hgs.cost += (
-            self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
+                self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
         )
 
     def finish_metaepoch(self, msg: NodeMessage, sender: Actor):
@@ -89,6 +88,7 @@ class StatusHgsTask(HgsOperationTask):
         self.sender = None
         self.sender_task_id = None
         self.nodes_lvl = None
+        self.checked = set()
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.CHECK_STATUS] = self.send_check
@@ -109,12 +109,17 @@ class StatusHgsTask(HgsOperationTask):
     def get_nodes_to_check(self):
         if self.nodes_lvl is not None:
             if self.nodes_lvl <= self.hgs.config.max_level:
-                return self.hgs.level_nodes[self.nodes_lvl]
+                return list(self.hgs.level_nodes[self.nodes_lvl])
             return []
-        return self.hgs.nodes
+        return list(self.hgs.nodes)
 
     def finish_check(self, msg: NodeMessage, sender: Actor):
+        if sender not in self.nodes_to_check or str(sender) in self.checked:
+            self.log(f"unexpected node checked: {sender}")
         self.nodes_states.append(msg.data)
+        self.checked.add(str(sender))
+        self.log(
+            f"status check {len(self.nodes_states)} / {len(self.nodes_to_check)} for {self.sender}, current: {sender}, already checked: {self.checked}")
         if len(self.nodes_states) == len(self.nodes_to_check):
             self.send_status()
 
@@ -218,7 +223,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
         if len(self.trim_infos) == self.requests_count:
             self.trim_infos.sort(reverse=True, key=lambda info: info.level)
             for level, lvl_infos in itertools.groupby(
-                self.trim_infos, key=lambda info: info.level
+                    self.trim_infos, key=lambda info: info.level
             ):
                 self.log(f"trim lvl infos: {list(lvl_infos)} for lvl={level}")
                 self.trim_redundant(list(lvl_infos))
@@ -238,7 +243,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
                 if not sprout.alive:
                     break
                 if (
-                    another_sprout.ripe or another_sprout in processed
+                        another_sprout.ripe or another_sprout in processed
                 ) and tools.redundant(
                     [another_sprout.center],
                     [sprout.center],
