@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 import rx.operators as ops
-from rx.concurrency import NewThreadScheduler
+from rx.scheduler import NewThreadScheduler
 
 from algorithms.base.driver import StepsRun
 from algorithms.base.model import ProgressMessage

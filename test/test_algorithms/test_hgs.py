@@ -1,8 +1,5 @@
 import unittest
 
-import rx
-from rx.concurrency import NewThreadScheduler
-
 from algorithms.base.driver import StepsRun
 from simulation.factory import prepare
 
