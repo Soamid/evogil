@@ -17,7 +17,7 @@ from algorithms.HGS.node_tasks import (
     GetPopulationNodeTask,
     NewMetaepochNodeTask,
     TrimNotProgressingNodeTask,
-    ReleaseSproutsNodeTask)
+    ReleaseSproutsNodeTask, ReviveNodeTask)
 from algorithms.HGS.tasks import (
     HgsOperationTask,
     MetaepochHgsTask,
@@ -26,7 +26,7 @@ from algorithms.HGS.tasks import (
     StatusHgsTask,
     PopulationHgsTask,
     OperationTask,
-    ReleaseSproutsHgsTask)
+    ReleaseSproutsHgsTask, ReviveHgsTask)
 
 
 class HgsConfig:
@@ -90,6 +90,7 @@ class HgsNodeSupervisor(TaskActor):
         self.config = None
         self.cost = 0
         self.tasks: Dict[uuid, HgsOperationTask] = {}
+        self.node_states = []
 
     def configure_tasks(self):
         return {
@@ -98,7 +99,8 @@ class HgsNodeSupervisor(TaskActor):
             HgsOperation.TRIM_REDUNDANT: TrimRedundantHgsTask,
             HgsOperation.CHECK_STATUS: StatusHgsTask,
             HgsOperation.POPULATION: PopulationHgsTask,
-            HgsOperation.RELEASE_SPROUTS: ReleaseSproutsHgsTask
+            HgsOperation.RELEASE_SPROUTS: ReleaseSproutsHgsTask,
+            HgsOperation.REVIVE: ReviveHgsTask
         }
 
     def receiveMessage(self, msg, sender):
@@ -161,7 +163,6 @@ class Node(TaskActor):
     fitnesses = None
     old_average_fitnesses = None
     average_fitnesses = None
-    min_progress_ratio = None
     reference_point = None
     relative_hypervolume = None
     old_hypervolume = None
@@ -185,7 +186,8 @@ class Node(TaskActor):
             NodeOperation.POPULATION: GetPopulationNodeTask,
             NodeOperation.NEW_METAEPOCH: NewMetaepochNodeTask,
             NodeOperation.TRIM_NOT_PROGRESSING: TrimNotProgressingNodeTask,
-            NodeOperation.RELEASE_SPROUTS: ReleaseSproutsNodeTask
+            NodeOperation.RELEASE_SPROUTS: ReleaseSproutsNodeTask,
+            NodeOperation.REVIVE: ReviveNodeTask
         }
 
     def receiveMessage(self, msg, sender):
@@ -244,7 +246,6 @@ class Node(TaskActor):
         self.fitnesses = config.hgs_config.fitnesses
         self.old_average_fitnesses = [float("inf") for _ in config.hgs_config.fitnesses]
         self.average_fitnesses = [float("inf") for _ in config.hgs_config.fitnesses]
-        self.min_progress_ratio = config.hgs_config.min_progress_ratio[self.level]
 
         self.reference_point = config.hgs_config.reference_point
         self.relative_hypervolume = None

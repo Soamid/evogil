@@ -121,6 +121,10 @@ class HGS(ComplexDriver):
         ActorSystem().ask(
             self.node_supervisor, HgsMessage(HgsOperation.RELEASE_SPROUTS)
         )
+
+        ActorSystem().ask(
+            self.node_supervisor, HgsMessage(HgsOperation.REVIVE)
+        )
         print(f"step finished, current cost = {self.cost}")
         # TODO: status debug print
         # print(

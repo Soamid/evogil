@@ -40,6 +40,11 @@ class NodeState:
         self.population_len = population_len
 
 
+def create_node_state(level, alive, ripe, population):
+    center = np.mean(population, axis=0) if population else None
+    return NodeState(level, alive, ripe, center, len(population))
+
+
 class CheckStatusNodeTask(NodeOperationTask):
     def __init__(self, node):
         super().__init__(node)
@@ -48,21 +53,23 @@ class CheckStatusNodeTask(NodeOperationTask):
         steps[NodeOperation.CHECK_STATUS] = self.send_status
 
     def send_status(self, msg: NodeMessage, sender: Actor):
-        center = np.mean(self.node.population, axis=0) if self.node.population else None
-        self.node.send(
-            sender,
-            NodeMessage(
-                NodeOperation.CHECK_STATUS,
-                msg.id,
-                NodeState(
-                    self.node.level,
-                    self.node.alive,
-                    self.node.ripe,
-                    center,
-                    len(self.node.population),
-                ),
-            ),
+        state = create_node_state(
+            self.node.level, self.node.alive, self.node.ripe, self.node.population
         )
+        self.node.send(sender, NodeMessage(NodeOperation.CHECK_STATUS, msg.id, state))
+
+
+class ReviveNodeTask(NodeOperationTask):
+    def __init__(self, node):
+        super().__init__(node)
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[NodeOperation.REVIVE] = self.revive
+
+    def revive(self, msg: NodeMessage, sender: Actor):
+        self.node.ripe = False
+        self.node.alive = True
+        self.node.send(sender, NodeMessage(NodeOperation.REVIVE, msg.id))
 
 
 class GetPopulationNodeTask(NodeOperationTask):
@@ -152,12 +159,13 @@ class TrimNotProgressingNodeTask(NodeOperationTask):
         steps[NodeOperation.TRIM_NOT_PROGRESSING] = self.trim_not_progressing
 
     def trim_not_progressing(self, msg: NodeMessage, sender: Actor):
+        min_progress_ratio = msg.data
         if (
             self.node.alive
             and self.node.old_hypervolume is not None
             and self.node.old_hypervolume > 0.0
             and ((self.node.hypervolume / (self.node.old_hypervolume + EPSILON)) - 1.0)
-            < (self.node.min_progress_ratio / 2 ** self.node.level)
+            < (min_progress_ratio / 2 ** self.node.level)
         ):
             # TODO: kij wie, czy współczynnik kurczący wymagany progress jest potrzebny (to / X**sprout.level)
             self.node.alive = False
@@ -166,7 +174,9 @@ class TrimNotProgressingNodeTask(NodeOperationTask):
             # TODO: logging killing not progressing sprouts
             self.log("   KILL NOT PROGRESSING")
 
-        self.node.send(sender, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING_END, msg.id))
+        self.node.send(
+            sender, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING_END, msg.id)
+        )
 
 
 class ReleaseSproutsNodeTask(NodeOperationTask):
@@ -174,60 +184,48 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
         super().__init__(node)
         self.sender = None
         self.sender_task_id = None
-        self.requests_count = None
-        self.sprouts_children_finished = 0
         self.alive_sprouts_count = 0
-        self.sprouts_states = None
+        self.next_lvl_sprouts_states = None
+        self.sprouts_checked = 0
         self.released_sprouts = 0
         self.current_delegate_index = 0
+        self.created_sprouts_states = []
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
-        steps[NodeOperation.RELEASE_SPROUTS] = self.pass_relase_request_to_children
-        steps[
-            NodeOperation.RELEASE_SPROUTS_END
-        ] = self.receive_sprouts_info_from_children
-        steps[HgsOperation.CHECK_STATUS] = self.receive_sprouts_states
+        steps[NodeOperation.RELEASE_SPROUTS] = self.receive_sprouting_request
+        steps[NodeOperation.CHECK_STATUS] = self.receive_sprout_state
         steps[HgsOperation.REGISTER_NODE_END] = self.new_sprout_released
 
-    def pass_relase_request_to_children(self, msg: NodeMessage, sender: Actor):
+    def receive_sprouting_request(self, msg: NodeMessage, sender: Actor):
+        self.log("receiving next level states")
         self.sender = sender
         self.sender_task_id = msg.id
+        self.next_lvl_sprouts_states = msg.data
+
         if self.node.ripe:
-            self.log("current sprouts: " + str(self.node.sprouts))
             if self.node.sprouts:
-                self.log(f"sending sprouting request to {len(self.node.sprouts)} sprouts")
-                self.requests_count = len(self.node.sprouts)
                 for sprout in self.node.sprouts:
                     self.node.send(
-                        sprout, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
+                        sprout, NodeMessage(NodeOperation.CHECK_STATUS, self.id)
                     )
             else:
-                self.check_next_level_nodes()
+                self.start_sprouting()
         else:
-            self.log("finishing because ripe")
+            self.log("finishing because not ripe")
             self.finish()
 
-    def receive_sprouts_info_from_children(self, msg: NodeMessage, sender: Actor):
-        self.sprouts_children_finished += 1
-        self.alive_sprouts_count += 1 if msg.data else 0
-        self.log(f"sprouts finished: {self.sprouts_children_finished} / {len(self.node.sprouts)}")
-        if self.sprouts_children_finished == self.requests_count:
-            self.check_next_level_nodes()
+    def receive_sprout_state(self, msg: NodeMessage, sender: Actor):
+        self.sprouts_checked += 1
+        self.alive_sprouts_count += 1 if msg.data.alive else 0
 
-    def check_next_level_nodes(self):
-        self.log("sending check next level")
-        self.node.send(
-            self.node.supervisor,
-            HgsMessage(HgsOperation.CHECK_STATUS, self.id, self.node.level + 1),
-        )
+        if self.sprouts_checked == len(self.node.sprouts):
+            self.start_sprouting()
 
-    def receive_sprouts_states(self, msg: NodeMessage, sender: Actor):
-        self.log("receiving next level states")
-        self.sprouts_states = msg.data
-
+    def start_sprouting(self):
         if (
             self.node.level < self.node.max_level
             and self.alive_sprouts_count < self.node.max_hgs_sprouts_no
+            and self.node.delegates
         ):
             self.release_next_sprout()
         else:
@@ -264,7 +262,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
                     [sprout.center],
                     self.node.min_dists[self.node.level + 1],
                 )
-                for sprout in self.sprouts_states
+                for sprout in self.next_lvl_sprouts_states
                 if sprout.population_len > 0
             ]
         ):
@@ -277,6 +275,11 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             )
 
             self.log("releasing new sprout!")
+            new_sprout_state = create_node_state(
+                self.node.level + 1, True, False, candidate_population
+            )
+            self.created_sprouts_states.append(new_sprout_state)
+            self.next_lvl_sprouts_states.append(new_sprout_state)
             self.node.send(
                 self.node.supervisor,
                 HgsMessage(
@@ -291,10 +294,15 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             self.try_relase_next_sprout()
 
     def finish(self):
+        my_state = create_node_state(
+            self.node.level, self.node.alive, self.node.ripe, self.node.population
+        )
         self.node.send(
             self.sender,
             NodeMessage(
-                NodeOperation.RELEASE_SPROUTS_END, self.sender_task_id, self.node.alive
+                NodeOperation.RELEASE_SPROUTS_END,
+                self.sender_task_id,
+                (my_state, self.created_sprouts_states),
             ),
         )
 

@@ -25,12 +25,15 @@ class HgsOperation(OperationType):
     REGISTER_NODE_END = auto()
     RELEASE_SPROUTS = auto()
     RELEASE_SPROUTS_END = auto()
+    REVIVE = auto()
+    REVIVE_END = auto()
 
 
 @unique
 class NodeOperation(OperationType):
     RESET = auto()
     KILL = auto()
+    REVIVE = auto()
     NEW_RESULT = auto()
     NEW_METAEPOCH = auto()
     METAEPOCH_END = auto()

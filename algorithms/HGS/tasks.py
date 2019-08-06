@@ -14,6 +14,7 @@ from algorithms.HGS.message import (
     Message,
 )
 
+
 class OperationTask:
     def __init__(self):
         self.id = uuid.uuid4()
@@ -65,7 +66,7 @@ class MetaepochHgsTask(HgsOperationTask):
             f"update cost {msg.data.epoch_cost}, modifier= {self.hgs.config.cost_modifiers[msg.data.level]}"
         )
         self.hgs.cost += (
-                self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
+            self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
         )
 
     def finish_metaepoch(self, msg: NodeMessage, sender: Actor):
@@ -119,7 +120,8 @@ class StatusHgsTask(HgsOperationTask):
         self.nodes_states.append(msg.data)
         self.checked.add(str(sender))
         self.log(
-            f"status check {len(self.nodes_states)} / {len(self.nodes_to_check)} for {self.sender}, current: {sender}, already checked: {self.checked}")
+            f"status check {len(self.nodes_states)} / {len(self.nodes_to_check)} for {self.sender}, current: {sender}, already checked: {self.checked}"
+        )
         if len(self.nodes_states) == len(self.nodes_to_check):
             self.send_status()
 
@@ -183,10 +185,11 @@ class TrimNotProgressingHgsTask(HgsOperationTask):
         self.sender = sender
         self.sender_task_id = msg.id
         self.requests_count = len(self.hgs.nodes)
-        for node in self.hgs.nodes:
-            self.hgs.send(
-                node, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING, self.id)
-            )
+        for lvl, nodes in self.hgs.level_nodes.items():
+            for node in nodes:
+                self.hgs.send(
+                    node, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING, self.id, data=self.hgs.config.min_progress_ratio[lvl])
+                )
 
     def receive_trim_confirmation(self, msg: NodeMessage, sender: Actor):
         self.nodes_finished += 1
@@ -223,7 +226,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
         if len(self.trim_infos) == self.requests_count:
             self.trim_infos.sort(reverse=True, key=lambda info: info.level)
             for level, lvl_infos in itertools.groupby(
-                    self.trim_infos, key=lambda info: info.level
+                self.trim_infos, key=lambda info: info.level
             ):
                 self.log(f"trim lvl infos: {list(lvl_infos)} for lvl={level}")
                 self.trim_redundant(list(lvl_infos))
@@ -243,7 +246,7 @@ class TrimRedundantHgsTask(HgsOperationTask):
                 if not sprout.alive:
                     break
                 if (
-                        another_sprout.ripe or another_sprout in processed
+                    another_sprout.ripe or another_sprout in processed
                 ) and tools.redundant(
                     [another_sprout.center],
                     [sprout.center],
@@ -262,19 +265,91 @@ class ReleaseSproutsHgsTask(HgsOperationTask):
         self.sender = None
         self.sender_task_id = None
 
+        self.current_lvl = self.find_leaf()
+        self.lvl_index = 0
+        self.current_lvl_states = []
+        self.next_lvl_states = []
+
+    def find_leaf(self):
+        for lvl in range(self.hgs.config.max_level, -1, -1):
+            if self.hgs.level_nodes[lvl]:
+                return lvl
+
     def configure_steps(self, steps: Dict[OperationType, Callable]):
-        steps[HgsOperation.RELEASE_SPROUTS] = self.send_release_request
+        steps[HgsOperation.RELEASE_SPROUTS] = self.send_first_request
         steps[NodeOperation.RELEASE_SPROUTS_END] = self.receive_release_confirmation
 
-    def send_release_request(self, msg: HgsMessage, sender: Actor):
+    def send_first_request(self, msg: HgsMessage, sender: Actor):
         self.sender = sender
         self.sender_task_id = msg.id
+        self.send_next_request()
+
+    def send_next_request(self):
+        current_node = self.hgs.level_nodes[self.current_lvl][self.lvl_index]
         self.hgs.send(
-            self.hgs.root, NodeMessage(NodeOperation.RELEASE_SPROUTS, self.id)
+            current_node,
+            NodeMessage(
+                NodeOperation.RELEASE_SPROUTS, self.id, data=self.next_lvl_states
+            ),
         )
 
     def receive_release_confirmation(self, msg: NodeMessage, sender: Actor):
+        self.hgs.node_states.append((sender, msg.data[0]))
+        self.current_lvl_states.append(msg.data[0])
+        self.next_lvl_states.extend(msg.data[1])
+
+        self.lvl_index += 1
+        if self.lvl_index >= len(self.hgs.level_nodes[self.current_lvl]):
+            self.current_lvl -= 1
+            self.lvl_index = 0
+            self.next_lvl_states = self.current_lvl_states
+            self.current_lvl_states = []
+            if self.current_lvl < 0:
+                self.hgs.send(
+                    self.sender,
+                    HgsMessage(HgsOperation.RELEASE_SPROUTS_END, self.sender_task_id),
+                )
+                return
+
+        self.send_next_request()
+
+
+class ReviveHgsTask(HgsOperationTask):
+    def __init__(self, hgs):
+        super().__init__(hgs)
+        self.nodes_finished = 0
+        self.ripe_nodes_count = 0
+        self.sender = None
+        self.sender_task_id = None
+
+    def configure_steps(self, steps: Dict[OperationType, Callable]):
+        steps[HgsOperation.REVIVE] = self.send_revive_request
+        steps[NodeOperation.REVIVE] = self.receive_revive_confirmation
+
+    def send_revive_request(self, msg: HgsMessage, sender: Actor):
+        self.sender = sender
+        self.sender_task_id = msg.id
+
+        if len([node for node, state in self.hgs.node_states if state.alive]) == 0:
+            ripe_nodes = [node for node, state in self.hgs.node_states if state.ripe]
+            self.ripe_nodes_count = len(ripe_nodes)
+
+            for ripe_node in ripe_nodes:
+                self.hgs.send(ripe_node, NodeMessage(NodeOperation.REVIVE, self.id))
+            for i in range(self.hgs.config.max_level + 1):
+                self.hgs.config.min_progress_ratio[i] /= 2
+
+            # TODO: logging root revival
+            print("!!!   RESURRECTION")
+        else:
+            self.finish()
+
+    def receive_revive_confirmation(self, msg: NodeMessage, sender: Actor):
+        self.nodes_finished += 1
+        if self.nodes_finished == self.ripe_nodes_count:
+            self.finish()
+
+    def finish(self):
         self.hgs.send(
-            self.sender,
-            HgsMessage(HgsOperation.RELEASE_SPROUTS_END, self.sender_task_id),
+            self.sender, HgsMessage(HgsOperation.REVIVE_END, self.sender_task_id)
         )
