@@ -1,6 +1,6 @@
+import logging
 import random
-import uuid
-from typing import Any, Dict, Callable
+from typing import Dict, Callable
 
 import numpy as np
 import rx
@@ -8,14 +8,14 @@ import rx.operators as ops
 from thespian.actors import Actor
 
 from algorithms.HGS import tools
-from algorithms.HGS.message import (
+from algorithms.HGS.distributed.message import (
     OperationType,
     NodeOperation,
     NodeMessage,
     HgsMessage,
     HgsOperation,
 )
-from algorithms.HGS.tasks import OperationTask
+from algorithms.HGS.distributed.hgs_tasks import OperationTask
 from algorithms.base.driver import StepsRun
 from algorithms.base.hv import HyperVolume
 
@@ -27,12 +27,12 @@ class NodeOperationTask(OperationTask):
         super().__init__()
         self.node = node
 
-    def log(self, msg):
-        print(f"({self.node.level}) {self.node} :  {msg}")
-
+    def log(self, msg, lvl=logging.DEBUG):
+        self.node.log(msg, lvl)
 
 class NodeState:
-    def __init__(self, level, alive, ripe, center, population_len):
+    def __init__(self, address, level, alive, ripe, center, population_len):
+        self.address = address
         self.level = level
         self.alive = alive
         self.ripe = ripe
@@ -40,9 +40,9 @@ class NodeState:
         self.population_len = population_len
 
 
-def create_node_state(level, alive, ripe, population):
+def create_node_state(address, level, alive, ripe, population):
     center = np.mean(population, axis=0) if population else None
-    return NodeState(level, alive, ripe, center, len(population))
+    return NodeState(address, level, alive, ripe, center, len(population))
 
 
 class CheckStatusNodeTask(NodeOperationTask):
@@ -53,7 +53,7 @@ class CheckStatusNodeTask(NodeOperationTask):
         steps[NodeOperation.CHECK_STATUS] = self.send_status
 
     def send_status(self, msg: NodeMessage, sender: Actor):
-        state = create_node_state(
+        state = create_node_state(sender,
             self.node.level, self.node.alive, self.node.ripe, self.node.population
         )
         self.node.send(sender, NodeMessage(NodeOperation.CHECK_STATUS, msg.id, state))
@@ -275,7 +275,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             )
 
             self.log("releasing new sprout!")
-            new_sprout_state = create_node_state(
+            new_sprout_state = create_node_state(self.node.myAddress,
                 self.node.level + 1, True, False, candidate_population
             )
             self.created_sprouts_states.append(new_sprout_state)
@@ -294,7 +294,7 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             self.try_relase_next_sprout()
 
     def finish(self):
-        my_state = create_node_state(
+        my_state = create_node_state(self.node.myAddress,
             self.node.level, self.node.alive, self.node.ripe, self.node.population
         )
         self.node.send(

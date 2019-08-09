@@ -1,4 +1,4 @@
-from algorithms.HGS.message import HGSMessageAdapter
+from algorithms.HGS.distributed.message import HGSMessageAdapter
 from algorithms.IMGA.message import IMGAMessageAdapter
 from algorithms.base.model import SubPopulation
 

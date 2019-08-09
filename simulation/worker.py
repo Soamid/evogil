@@ -25,7 +25,7 @@ class SimulationWorker:
     def run(self):
         log_helper.init()
         logger = logging.getLogger(__name__)
-        logger.debug(
+        logger.info(
             "Starting the worker. PID: %d, simulation case: %s",
             os.getpid(),
             self.simulation,

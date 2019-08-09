@@ -46,6 +46,7 @@ algo_base = {
     "IMGA": {"islands_number": 3, "migrants_number": 5, "epoch_length": 5},
     "NSLS": {"local_search_mu": 0.5, "local_search_sigma": 0.5},
     "HGS": {
+        "hgs_type": "classic",
         "fitness_errors": (0, 0, 0.0),
         "cost_modifiers": (0.1, 0.5, 1.0),
         "mutation_etas": (10.0, 12.0, 15.0),

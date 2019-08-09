@@ -1,11 +1,12 @@
 import itertools
+import logging
 import uuid
-from typing import Dict, Callable, Any, List
+from typing import Dict, Callable
 
 from thespian.actors import Actor
 
 from algorithms.HGS import tools
-from algorithms.HGS.message import (
+from algorithms.HGS.distributed.message import (
     NodeOperation,
     NodeMessage,
     HgsMessage,
@@ -33,8 +34,8 @@ class HgsOperationTask(OperationTask):
         super().__init__()
         self.hgs = hgs
 
-    def log(self, msg):
-        print(f"SUPERVISOR :  {msg}")
+    def log(self, msg, lvl=logging.DEBUG):
+        self.hgs.log(msg, lvl)
 
 
 class MetaepochHgsTask(HgsOperationTask):
@@ -54,6 +55,7 @@ class MetaepochHgsTask(HgsOperationTask):
         self.log("New metaepoch, nodes: ")
         for lvl, nodes in self.hgs.level_nodes.items():
             self.log(f"{lvl} : {nodes}")
+        self.hgs.node_states.clear()
 
         self.sender = sender
         self.sender_task_id = msg.id
@@ -161,12 +163,22 @@ class PopulationHgsTask(HgsOperationTask):
             self.send_merged_population()
 
     def send_merged_population(self):
+        self.log_hgs_state()
         self.hgs.send(
             self.sender,
             HgsMessage(
                 HgsOperation.POPULATION, self.sender_task_id, self.merged_population
             ),
         )
+
+    def log_hgs_state(self):
+        nodes_state_text = "\n".join(
+            [
+                f"level {lvl+1} : {len([node for node in self.hgs.node_states if node.level == lvl and node.ripe] )} / {len(self.hgs.level_nodes[lvl])}"
+                for lvl in range(0, self.hgs.config.max_level + 1)
+            ]
+        )
+        self.log(f"HGS state:\n {nodes_state_text}", lvl=logging.INFO)
 
 
 class TrimNotProgressingHgsTask(HgsOperationTask):
@@ -188,7 +200,12 @@ class TrimNotProgressingHgsTask(HgsOperationTask):
         for lvl, nodes in self.hgs.level_nodes.items():
             for node in nodes:
                 self.hgs.send(
-                    node, NodeMessage(NodeOperation.TRIM_NOT_PROGRESSING, self.id, data=self.hgs.config.min_progress_ratio[lvl])
+                    node,
+                    NodeMessage(
+                        NodeOperation.TRIM_NOT_PROGRESSING,
+                        self.id,
+                        data=self.hgs.config.min_progress_ratio[lvl],
+                    ),
                 )
 
     def receive_trim_confirmation(self, msg: NodeMessage, sender: Actor):
@@ -294,9 +311,11 @@ class ReleaseSproutsHgsTask(HgsOperationTask):
         )
 
     def receive_release_confirmation(self, msg: NodeMessage, sender: Actor):
-        self.hgs.node_states.append((sender, msg.data[0]))
         self.current_lvl_states.append(msg.data[0])
         self.next_lvl_states.extend(msg.data[1])
+
+        self.hgs.node_states.append(msg.data[0])
+        self.hgs.node_states.extend(msg.data[1])
 
         self.lvl_index += 1
         if self.lvl_index >= len(self.hgs.level_nodes[self.current_lvl]):
@@ -330,8 +349,8 @@ class ReviveHgsTask(HgsOperationTask):
         self.sender = sender
         self.sender_task_id = msg.id
 
-        if len([node for node, state in self.hgs.node_states if state.alive]) == 0:
-            ripe_nodes = [node for node, state in self.hgs.node_states if state.ripe]
+        if len([state for state in self.hgs.node_states if state.alive]) == 0:
+            ripe_nodes = [state.address for state in self.hgs.node_states if state.ripe]
             self.ripe_nodes_count = len(ripe_nodes)
 
             for ripe_node in ripe_nodes:
@@ -340,7 +359,7 @@ class ReviveHgsTask(HgsOperationTask):
                 self.hgs.config.min_progress_ratio[i] /= 2
 
             # TODO: logging root revival
-            print("!!!   RESURRECTION")
+            self.log("!!!   RESURRECTION", lvl=logging.INFO)
         else:
             self.finish()
 

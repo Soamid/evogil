@@ -1,3 +1,4 @@
+import logging
 import random
 import uuid
 from typing import Dict
@@ -5,20 +6,20 @@ from typing import Dict
 from thespian.actors import Actor
 
 from algorithms.HGS import tools
-from algorithms.HGS.message import (
+from algorithms.HGS.distributed.message import (
     NodeOperation,
     NodeMessage,
     HgsMessage,
     HgsOperation,
     Message,
 )
-from algorithms.HGS.node_tasks import (
+from algorithms.HGS.distributed.node_tasks import (
     CheckStatusNodeTask,
     GetPopulationNodeTask,
     NewMetaepochNodeTask,
     TrimNotProgressingNodeTask,
     ReleaseSproutsNodeTask, ReviveNodeTask)
-from algorithms.HGS.tasks import (
+from algorithms.HGS.distributed.hgs_tasks import (
     HgsOperationTask,
     MetaepochHgsTask,
     TrimNotProgressingHgsTask,
@@ -28,6 +29,7 @@ from algorithms.HGS.tasks import (
     OperationTask,
     ReleaseSproutsHgsTask, ReviveHgsTask)
 
+logger = logging.getLogger(__name__)
 
 class HgsConfig:
     driver = None
@@ -67,7 +69,7 @@ class TaskActor(Actor):
         self.task_definitions = self.configure_tasks()
 
     def send(self, targetAddr, msg):
-        print(f"{self}: Sending to {targetAddr} : {msg}")
+        self.log(f"{self}: Sending to {targetAddr} : {msg}")
         super().send(targetAddr, msg)
 
     def configure_tasks(self):
@@ -76,9 +78,20 @@ class TaskActor(Actor):
     def execute_new_task(self, msg: Message, sender: Actor):
         task = self.task_definitions[msg.operation](self)
         if task.id in self.tasks:
-            print("DUPLICATE RANDOM ID, WE' RE ALL GONNA DIE")
+            self.log("DUPLICATE RANDOM ID, WE' RE ALL GONNA DIE", lvl=logging.ERROR)
         self.tasks[task.id] = task
         task.execute(msg, sender)
+
+    def log(self, msg, lvl=logging.DEBUG):
+        logger.log(lvl, f"{self.get_task_owner_name()} :  {msg}")
+
+    def get_task_owner_name(self):
+        raise NotImplementedError()
+
+    def __str__(self):
+        address = self.myAddress if hasattr(self, '_myRef') else "*NEW ACTOR*"
+        return '{A:' + self.__class__.__name__ + \
+            ' @ ' + str(address) + '}'
 
 
 class HgsNodeSupervisor(TaskActor):
@@ -92,6 +105,9 @@ class HgsNodeSupervisor(TaskActor):
         self.tasks: Dict[uuid, HgsOperationTask] = {}
         self.node_states = []
 
+    def get_task_owner_name(self):
+        return "SUPERVISOR"
+
     def configure_tasks(self):
         return {
             HgsOperation.NEW_METAEPOCH: MetaepochHgsTask,
@@ -104,7 +120,7 @@ class HgsNodeSupervisor(TaskActor):
         }
 
     def receiveMessage(self, msg, sender):
-        print(f"SUPERVISOR RECEIVED: {msg} from: {sender}")
+        self.log(f"SUPERVISOR RECEIVED: {msg} from: {sender}")
         if isinstance(msg, HgsMessage):
             if msg.operation == HgsOperation.START:
                 self.start(msg.data)
@@ -126,10 +142,10 @@ class HgsNodeSupervisor(TaskActor):
             operation.execute(msg, sender)
 
     def start(self, config: HgsConfig):
-        print("STARTING HGS SUPERVISOR")
+        self.log("STARTING HGS SUPERVISOR")
         self.config = config
         self.root = self.create_root_node()
-        print("ROOT CREATED")
+        self.log("ROOT CREATED")
         self.nodes = [self.root]
         self.level_nodes = {0: [self.root], 1: [], 2: []}
 
@@ -178,7 +194,7 @@ class Node(TaskActor):
 
     def __init__(self):
         super().__init__()
-        print("NODE CREATED")
+        self.log("NODE CREATED")
 
     def configure_tasks(self):
         return {
@@ -190,8 +206,11 @@ class Node(TaskActor):
             NodeOperation.REVIVE: ReviveNodeTask
         }
 
+    def get_task_owner_name(self):
+        return f"({self.level}) {self}"
+
     def receiveMessage(self, msg, sender):
-        print(f"({self.level}) {self} : MESSAGE RECEIVED {msg} from {sender}")
+        self.log(f"({self.level}) {self} : MESSAGE RECEIVED {msg} from {sender}")
         if msg.id in self.tasks:
             self.tasks[msg.id].execute(msg, sender)
         elif isinstance(msg, NodeMessage):
@@ -199,14 +218,12 @@ class Node(TaskActor):
                 self.reset(msg.data)
                 self.send(sender, "done")
             else:
-                print("sender: " + str(sender))
                 self.execute_new_task(msg, sender)
         elif isinstance(msg, HgsMessage):
             if msg.operation == HgsOperation.HELLO:
                 self.supervisor = sender
 
     def reset(self, config: NodeConfig):
-        print("HAHA1")
         self.alive = True
         self.ripe = False
         self.level = config.level
@@ -237,7 +254,6 @@ class Node(TaskActor):
             ),
             message_adapter_factory=config.hgs_config.driver_message_adapter_factory,
         )
-        print("HAHA " + str(type(self.driver)))
         self.metaepoch_len = config.hgs_config.metaepoch_len
         self.population = []
         self.sprouts = []

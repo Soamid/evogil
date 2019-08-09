@@ -7,8 +7,8 @@ from datetime import datetime
 import rx
 from rx import operators as ops
 
-# from evotools import rxtools
-from simulation import factory, worker
+from evotools import rxtools
+from simulation import factory
 from simulation.timing import log_time
 from simulation.timing import system_time
 
@@ -24,7 +24,7 @@ def run_parallel(args):
     logger.debug("Creating the pool")
 
     processes_no = int(args["-j"])
-    # rxtools.configure_default_executor(processes_no)
+    rxtools.configure_default_executor(processes_no)
 
     wall_time = []
     start_time = datetime.now()
@@ -40,10 +40,10 @@ def run_parallel(args):
 
         rx.from_iterable(range(len(simulation_cases))).pipe(
             ops.map(lambda i: worker_factory(simulation_cases[i], i)),
-            ops.flat_map(lambda w: rx.from_callable(lambda: w.run())),
+            ops.flat_map(lambda w: rxtools.from_process(w.run)),
         ).pipe(ops.do_action(on_next=process_result)).run()
     log_summary(args, results, simulation_cases, wall_time)
-    # rxtools.shutdown_default_executor()
+    rxtools.shutdown_default_executor()
 
 
 def log_simulation_stats(start_time, simulation_id, simultations_count):
@@ -80,7 +80,12 @@ def log_summary(args, results, simulation_cases, wall_time):
     if errors:
         logger.error("Errors encountered:")
         for (probl, algo), runid in errors:
-            logger.error("  %9s :: %14s :: runID=%d ", probl, algo, runid)
+            logger.error(
+                "  %9s :: %14s :: runID=%d ",
+                probl,
+                algo,
+                runid
+            )
     summary = collections.defaultdict(float)
     for simulation, subres in zip(simulation_cases, results):
         if subres:
