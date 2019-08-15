@@ -1,6 +1,7 @@
+import random
+
 import matplotlib.pyplot as plt
 
-from algorithms.HGS.HGS import *
 from algorithms.HGS.HGS_optional import *
 
 
