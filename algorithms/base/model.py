@@ -19,6 +19,12 @@ class ProgressMessage:
         self.step_no = step_no
 
 
+class TimeProgressMessage(ProgressMessage):
+    def __init__(self, elapsed_time: int, progress: ProgressMessage):
+        super().__init__(progress.step_no, progress.cost)
+        self.elapsed_time = elapsed_time
+
+
 class PopulationMessage(ProgressMessage):
     def __init__(self, population: Population, progress: ProgressMessage):
         super().__init__(progress.step_no, progress.cost)

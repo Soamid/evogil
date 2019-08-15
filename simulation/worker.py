@@ -6,10 +6,9 @@ import time
 from types import ModuleType
 
 from rx import operators as ops
-from rx.scheduler import NewThreadScheduler
 
 from algorithms.base.driver import BudgetRun, Driver, TimeRun
-from algorithms.base.model import ProgressMessage
+from algorithms.base.model import TimeProgressMessage
 from simulation import factory, log_helper
 from simulation.model import SimulationCase
 from simulation.run_config import NotViableConfiguration
@@ -116,7 +115,9 @@ class BudgetWorker(SimulationWorker):
         def process_results(budget: int):
             finalpop = driver.finalized_population()
             finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
-            serializer.store(Result(finalpop, finalpop_fit, cost=driver.cost), str(budget))
+            serializer.store(
+                Result(finalpop, finalpop_fit, cost=driver.cost), str(budget)
+            )
             results.append((driver.cost, finalpop))
 
         driver.max_budget = self.budgets[-1]
@@ -153,42 +154,22 @@ class TimeWorker(SimulationWorker):
 
         slots_filled = set()
 
-        time_run = TimeRun(timeout)
+        time_run = TimeRun(sampling_interval, timeout)
 
-        def process_results(msg: ProgressMessage):
-            time_run.lock.acquire()
+        def process_results(msg: TimeProgressMessage):
             finalpop = driver.finalized_population()
             print(f"final pop result: {finalpop}")
             finalpop_fit = [[fit(x) for fit in problem_mod.fitnesses] for x in finalpop]
 
-            time_slot = snap_to_time_slot(time_run.time_elapsed)
+            time_slot = msg.elapsed_time
 
-            serializer.store(Result(finalpop, finalpop_fit, cost=driver.cost), str(time_slot))
+            serializer.store(
+                Result(finalpop, finalpop_fit, cost=driver.cost), str(time_slot)
+            )
             results.append((driver.cost, finalpop))
             slots_filled.add(time_slot)
-            time_run.lock.release()
 
-        def snap_to_time_slot(time_elapsed):
-            return min(
-                int(time_elapsed // sampling_interval) * sampling_interval, timeout
-            )
 
-        def fill_remaining_results():
-            last_slot = None
-            for time_slot in range(sampling_interval, timeout + 1, sampling_interval):
-                if time_slot in slots_filled:
-                    last_slot = time_slot
-                elif last_slot:
-                    result_to_fill = serializer.load(last_slot)
-                    for missing_slot in range(
-                        last_slot + sampling_interval, time_slot + 1, sampling_interval
-                    ):
-                        serializer.store(result_to_fill, str(missing_slot))
-
-        time_run.create_job(driver).pipe(
-            ops.subscribe_on(NewThreadScheduler()),
-            ops.sample(sampling_interval),
-            ops.do_action(on_next=process_results, on_completed=fill_remaining_results),
-        ).run()
+        time_run.create_job(driver).pipe(ops.do_action(on_next=process_results)).run()
 
         return results

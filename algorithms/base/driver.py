@@ -6,7 +6,11 @@ from rx import Observable
 from rx import operators as ops
 from rx.core.typing import Observer
 
-from algorithms.base.model import ProgressMessageAdapter, ProgressMessage
+from algorithms.base.model import (
+    ProgressMessageAdapter,
+    ProgressMessage,
+    TimeProgressMessage,
+)
 
 
 class StepCountingDriver(type):
@@ -73,28 +77,37 @@ class StepsRun(DriverRun):
         self.steps = steps
 
     def create_job(self, driver: Driver):
-        return rx.range(0, self.steps).pipe(
-            ops.map(lambda _: driver.next_step())
-        )
+        return rx.range(0, self.steps).pipe(ops.map(lambda _: driver.next_step()))
 
 
 class TimeRun(DriverRun):
-    def __init__(self, timeout: int):
+    def __init__(self, step: int, timeout: int):
         self.timeout = timeout
-        self.lock = threading.Lock()
+        self.step = step
+        self.step_no = 0
         self.time_elapsed = 0
 
     def create_job(self, driver: Driver) -> Observable:
         return rx.create(lambda observer, scheduler=None: self._start(driver, observer))
 
     def _start(self, driver: Driver, observer: Observer):
+        last_emission_time = time.time()
+        previous_result = None
         while self.time_elapsed < self.timeout:
-            self.lock.acquire()
             step_start_time = time.time()
-            observer.on_next(driver.next_step())
+            result = driver.next_step()
+            time_elapsed_since_last_emission = time.time() - last_emission_time
             self.time_elapsed += time.time() - step_start_time
-            self.lock.release()
-            time.sleep(0.2)
+
+            if previous_result:
+                for _ in range(0, int(time_elapsed_since_last_emission // self.step)):
+                    self.step_no += 1
+                    observer.on_next(
+                        TimeProgressMessage(self.step_no * self.step, previous_result)
+                    )
+                    last_emission_time = time.time()
+            previous_result = result
+
         observer.on_completed()
 
 
