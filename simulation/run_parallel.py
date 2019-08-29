@@ -40,7 +40,8 @@ def run_parallel(args):
 
         rx.from_iterable(range(len(simulation_cases))).pipe(
             ops.map(lambda i: worker_factory(simulation_cases[i], i)),
-            ops.flat_map(lambda w: rxtools.from_process(w.run)),
+            ops.map(lambda w: rxtools.from_process(w.run)),
+            ops.merge(max_concurrent=1)
         ).pipe(ops.do_action(on_next=process_result)).run()
     log_summary(args, results, simulation_cases, wall_time)
     rxtools.shutdown_default_executor()

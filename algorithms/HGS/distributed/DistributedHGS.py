@@ -57,6 +57,7 @@ class DistributedHGS(ComplexDriver):
         corner_b = np.array([x for _, x in dims])
         corner_dist = np.linalg.norm(corner_a - corner_b)
         self.hgs_config.min_dists = [x * corner_dist for x in comparison_multipliers]
+        logger.info(f'multipliers: {comparison_multipliers}, min dists: {self.hgs_config.min_dists}')
 
         self.hgs_config.metaepoch_len = metaepoch_len
         self.hgs_config.max_level = max_level

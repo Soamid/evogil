@@ -91,21 +91,20 @@ class TimeRun(DriverRun):
         return rx.create(lambda observer, scheduler=None: self._start(driver, observer))
 
     def _start(self, driver: Driver, observer: Observer):
-        last_emission_time = time.time()
         previous_result = None
         while self.time_elapsed < self.timeout:
             step_start_time = time.time()
             result = driver.next_step()
-            time_elapsed_since_last_emission = time.time() - last_emission_time
             self.time_elapsed += time.time() - step_start_time
-
+            time_elapsed_since_last_emission = self.time_elapsed - (self.step * self.step_no)
             if previous_result:
                 for _ in range(0, int(time_elapsed_since_last_emission // self.step)):
                     self.step_no += 1
-                    observer.on_next(
-                        TimeProgressMessage(self.step_no * self.step, previous_result)
-                    )
-                    last_emission_time = time.time()
+                    emission_time = self.step_no * self.step
+                    if emission_time <= self.timeout:
+                        observer.on_next(
+                            TimeProgressMessage(self.step_no * self.step, previous_result)
+                        )
             previous_result = result
 
         observer.on_completed()

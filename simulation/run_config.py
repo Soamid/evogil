@@ -23,6 +23,7 @@ problems = [
     "UF7",
     "UF8",
     "UF9",
+    "UF12"
 ]
 
 DEFAULT_POPULATION_SIZE = 64
@@ -46,18 +47,18 @@ algo_base = {
     "IMGA": {"islands_number": 3, "migrants_number": 5, "epoch_length": 5},
     "NSLS": {"local_search_mu": 0.5, "local_search_sigma": 0.5},
     "HGS": {
-        "hgs_type": "distributed",
+        "hgs_type": "classic",
         "fitness_errors": (0, 0, 0.0),
-        "cost_modifiers": (0.1, 0.5, 1.0),
+        "cost_modifiers": (1.0, 1.0, 1.0),
         "mutation_etas": (10.0, 12.0, 15.0),
         "crossover_etas": (15.0, 20.0, 25.0),
-        "population_sizes": (64, 20, 10),
+        "population_sizes": (64, 64, 64),
         "comparison_multipliers": (1.0, 0.08, 0.020),
         "mantissa_bits": (4, 16, 64),
         "max_sprouts_no": 16,
         "sproutiveness": 3,
         "metaepoch_len": 5,
-        "min_progress_ratio": [0.0, 0.00001, 0.0001],
+        "min_progress_ratio": [0.0000001, 0.00001, 0.0001],
     },
 }
 

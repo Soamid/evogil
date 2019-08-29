@@ -433,11 +433,11 @@ def plot_results(results, plots_dir, plot_range):
         yerr = []
         values = sorted(values, key=lambda x: x[0])
         for b, be, s, se in values:
-            if b < 5500:
-                xs.append(b)
-                xerr.append(be)
-                ys.append(s)
-                yerr.append(se)
+            # if b < 5500:
+            xs.append(b)
+            xerr.append(be)
+            ys.append(s)
+            yerr.append(se)
         to_plot[(problem, metric, group)].append((algo, ((xs, xerr), (ys, yerr))))
 
     logger.debug("to_plot = %s", list(to_plot.items()))
