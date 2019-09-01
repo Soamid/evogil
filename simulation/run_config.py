@@ -1,12 +1,14 @@
 from itertools import product
 
-_drivers = ["SPEA2", "IBEA", "NSGAII", "OMOPSO", "NSGAIII", "JGBL", "SMSEMOA", "NSLS"]
+drivers = ["SPEA2", "IBEA", "NSGAII", "OMOPSO", "NSGAIII", "JGBL", "SMSEMOA", "NSLS"]
 
-_metaalgorithms = ["IMGA", "HGS"]
+metaalgorithms = ["IMGA", "HGS", "DHGS"]
 
 algorithms = [
-    "{}+{}".format(meta, algo) for meta, algo in product(_metaalgorithms, _drivers)
-] + _drivers
+    "{}+{}".format(meta, algo) for meta, algo in product(metaalgorithms, drivers)
+] + drivers
+
+custom_paths = {"DHGS": ("algorithms.HGS.HGS", "HGS")}
 
 problems = [
     "ZDT1",
@@ -23,7 +25,7 @@ problems = [
     "UF7",
     "UF8",
     "UF9",
-    "UF12"
+    "UF12",
 ]
 
 DEFAULT_POPULATION_SIZE = 64
@@ -48,7 +50,7 @@ algo_base = {
     "NSLS": {"local_search_mu": 0.5, "local_search_sigma": 0.5},
     "HGS": {
         "hgs_type": "classic",
-        "fitness_errors": (0, 0, 0.0),
+        "fitness_errors": (0.0, 0.0, 0.0),
         "cost_modifiers": (1.0, 1.0, 1.0),
         "mutation_etas": (10.0, 12.0, 15.0),
         "crossover_etas": (15.0, 20.0, 25.0),
@@ -57,8 +59,22 @@ algo_base = {
         "mantissa_bits": (4, 16, 64),
         "max_sprouts_no": 16,
         "sproutiveness": 3,
-        "metaepoch_len": 5,
-        "min_progress_ratio": [0.0000001, 0.00001, 0.0001],
+        "metaepoch_len": [5, 10, 20],
+        "min_progress_ratio": [0.0000001, 0.00001, 0.0001]
+    },
+    "DHGS": {
+        "hgs_type": "distributed",
+        "fitness_errors": (0.0, 0.0, 0.0),
+        "cost_modifiers": (1.0, 1.0, 1.0),
+        "mutation_etas": (10.0, 12.0, 15.0),
+        "crossover_etas": (15.0, 20.0, 25.0),
+        "population_sizes": (64, 64, 64),
+        "comparison_multipliers": (1.0, 0.08, 0.020),
+        "mantissa_bits": (4, 16, 64),
+        "max_sprouts_no": 16,
+        "sproutiveness": 3,
+        "metaepoch_len": [5, 10, 20],
+        "min_progress_ratio": [0.0000001, 0.000001, 0.00001]
     },
 }
 
@@ -75,6 +91,7 @@ def init_alg___HGS(algo_config, problem_mod):
         }
     )
 
+init_alg___DHGS = init_alg___HGS
 
 def init_alg___IBEA(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)

@@ -144,6 +144,9 @@ class HgsNodeSupervisor(TaskActor):
     def start(self, config: HgsConfig):
         self.log("STARTING HGS SUPERVISOR")
         self.config = config
+
+        self.actors_cache = [self.createActor(Node) for _ in range(20)]
+
         self.root = self.create_root_node()
         self.log("ROOT CREATED")
         self.nodes = [self.root]
@@ -155,7 +158,7 @@ class HgsNodeSupervisor(TaskActor):
         )
 
     def create_node(self, level, population):
-        node = self.createActor(Node)
+        node = self.actors_cache.pop() if self.actors_cache else self.createActor(Node)
         # time.sleep(10)
         node_config = NodeConfig(self.config, level, population)
         self.send(node, HgsMessage(HgsOperation.HELLO))
@@ -254,7 +257,7 @@ class Node(TaskActor):
             ),
             message_adapter_factory=config.hgs_config.driver_message_adapter_factory,
         )
-        self.metaepoch_len = config.hgs_config.metaepoch_len
+        self.metaepoch_len = config.hgs_config.metaepoch_len[self.level]
         self.population = []
         self.sprouts = []
         self.delegates = []

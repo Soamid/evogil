@@ -10,3 +10,6 @@ class NSGAIIHGSMessageAdapter(DefaultHGSMessageAdapter):
     def nominate_delegates(self):
         self.driver.shutdown()
         return super().nominate_delegates()
+
+
+NSGAIIDHGSMessageAdapter = NSGAIIHGSMessageAdapter

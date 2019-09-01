@@ -21,7 +21,7 @@ import problems.ZDT3.problem as zdt3
 import problems.ZDT4.problem as zdt4
 import problems.ZDT6.problem as zdt6
 from evotools import ea_utils
-from simulation import serialization
+from simulation import serialization, run_config, log_helper
 from simulation.serialization import BudgetResultsExtractor, TimeResultsExtractor
 from simulation.timing import log_time, process_time
 from statistic import ranking
@@ -35,7 +35,9 @@ import matplotlib
 matplotlib.rcParams.update({"font.size": 8})
 import matplotlib.pyplot as plt
 
-SPEA_LS = []  # '-'
+logger = logging.getLogger('pictures')
+
+SPEA2_LS = []  # '-'
 NSGAII_LS = []  # '--'
 NSGAIII_LS = [5, 2]  # '-- --'
 IBEA_LS = [2, 2]  # '.....'
@@ -43,7 +45,7 @@ OMOPSO_LS = [10, 2, 5, 2]  # '-.'
 JGBL_LS = [2, 10]  # ':  :  :'
 NSLS_LS = [4, 30]  # ':    :     :'
 
-SPEA_M = "o"
+SPEA2_M = "o"
 NSGAII_M = "*"
 IBEA_M = "^"
 OMOPSO_M = ">"
@@ -54,80 +56,33 @@ NSLS_M = "x"
 BARE_CL = "0.8"
 IMGA_CL = "0.4"
 HGS_CL = "0.0"
+DHGS_CL = "r"
 
-algos = {
-    "SPEA2": ("SPEA2", SPEA_LS, SPEA_M, BARE_CL),
-    "NSGAII": ("NSGAII", NSGAII_LS, NSGAII_M, BARE_CL),
-    "IBEA": ("IBEA", IBEA_LS, IBEA_M, BARE_CL),
-    "OMOPSO": ("OMOPSO", OMOPSO_LS, OMOPSO_M, BARE_CL),
-    "NSGAIII": ("NSGAIII", NSGAIII_LS, NSGAIII_M, BARE_CL),
-    "JGBL": ("JGBL", JGBL_LS, JGBL_M, BARE_CL),
-    "NSLS": ("NSLS", NSLS_LS, NSLS_M, BARE_CL),
-    "IMGA+SPEA2": ("IMGA+SPEA2", SPEA_LS, SPEA_M, IMGA_CL),
-    "IMGA+NSGAII": ("IMGA+NSGAII", NSGAII_LS, NSGAII_M, IMGA_CL),
-    "IMGA+OMOPSO": ("IMGA+OMOPSO", OMOPSO_LS, OMOPSO_M, IMGA_CL),
-    "IMGA+IBEA": ("IMGA+IBEA", IBEA_LS, IBEA_M, IMGA_CL),
-    "IMGA+NSGAIII": ("IMGA+NSGAIII", NSGAIII_LS, NSGAIII_M, IMGA_CL),
-    "IMGA+JGBL": ("IMGA+JGBL", JGBL_LS, JGBL_M, IMGA_CL),
-    "IMGA+NSLS": ("IMGA+NSLS", NSLS_LS, NSLS_M, IMGA_CL),
-    "HGS+SPEA2": ("HGS+SPEA2", SPEA_LS, SPEA_M, HGS_CL),
-    "HGS+NSGAII": ("HGS+NSGAII", NSGAII_LS, NSGAII_M, HGS_CL),
-    "HGS+IBEA": ("HGS+IBEA", IBEA_LS, IBEA_M, HGS_CL),
-    "HGS+OMOPSO": ("HGS+OMOPSO", OMOPSO_LS, OMOPSO_M, HGS_CL),
-    "HGS+NSGAIII": ("HGS+NSGAIII", NSGAIII_LS, NSGAIII_M, HGS_CL),
-    "HGS+JGBL": ("HGS+JGBL", JGBL_LS, JGBL_M, HGS_CL),
-    "HGS+NSLS": ("HGS+NSLS", NSLS_LS, NSLS_M, HGS_CL),
-}
+algos = {}
 
-algos_order = [
-    "NSGAII",
-    "IBEA",
-    "OMOPSO",
-    "NSGAIII",
-    "JGBL",
-    "NSLS",
-    "IMGA+NSGAII",
-    "IMGA+IBEA",
-    "IMGA+OMOPSO",
-    "IMGA+NSGAIII",
-    "IMGA+JGBL",
-    "IMGA+NSLS",
-    "HGS+NSGAII",
-    "HGS+IBEA",
-    "HGS+OMOPSO",
-    "HGS+NSGAIII",
-    "HGS+JGBL",
-    "HGS+NSLS",
-]
+variables = globals()
+metaalgorithms = [*run_config.metaalgorithms, "BARE"]
+for meta in metaalgorithms:
+    for algo in run_config.drivers:
+        try:
+            algo_ls = variables[algo + "_LS"]
+            algo_m = variables[algo + "_M"]
+            meta_cl = variables[meta + "_CL"]
+            algo_name = f"{meta}+{algo}" if meta != "BARE" else algo
+            algos[algo_name] = (algo_name, algo_ls, algo_m, meta_cl)
+        except KeyError:
+            logger.warn(f"Missing plot config binding for: {meta}, {algo}")
+print(algos)
 
-algos_groups_configuration_all_together = {
-    (
-        "SPEA2",
-        "NSGAII",
-        "IBEA",
-        "OMOPSO",
-        "NSGAIII",
-        "SMSEMOA",
-        "JGBL",
-        "NSLS",
-        "IMGA+SPEA2",
-        "IMGA+NSGAII",
-        "IMGA+IBEA",
-        "IMGA+OMOPSO",
-        "IMGA+NSGAIII",
-        "IMGA+SMSEMOA",
-        "IMGA+JGBL",
-        "IMGA+NSLS",
-        "HGS+SPEA2",
-        "HGS+NSGAII",
-        "HGS+IBEA",
-        "HGS+OMOPSO",
-        "HGS+NSGAIII",
-        "HGS+SMSEMOA",
-        "HGS+JGBL",
-        "HGS+NSLS",
-    ): ("",)
-}
+
+algos_order = ["NSGAII", "IBEA", "OMOPSO", "NSGAIII", "JGBL", "NSLS"]
+
+algos_base = list(algos_order)
+for meta in run_config.metaalgorithms:
+    algos_order.extend([f"{meta}+{algo}" for algo in algos_base])
+print(algos_order)
+
+algos_groups_configuration_all_together = {tuple(algos_order): ("",)}
 
 algos_groups_configuration_splitted = {
     ("SPEA2", "NSGAII", "IBEA", "OMOPSO", "NSGAIII", "SMSEMOA", "JGBL", "NSLS"): (0, 1),

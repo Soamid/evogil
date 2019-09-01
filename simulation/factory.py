@@ -38,7 +38,7 @@ def create_budget_simulation(args: Dict[str, str]):
 def create_time_bound_simulation(args: Dict[str, str]):
     timeout = int(args["<timeout>"])
     sampling_interval = int(args["<step>"])
-    params = {TIMEOUT_PARAM: timeout, SAMPLING_INTERVAL_PARAM: sampling_interval }
+    params = {TIMEOUT_PARAM: timeout, SAMPLING_INTERVAL_PARAM: sampling_interval}
     return worker.TimeWorker, create_simulation(args, params)
 
 
@@ -114,11 +114,11 @@ def prepare(algo: str, problem: str):
 
 
 def prepare_with_driver(
-        algo: str,
-        problem: str,
-        driver=None,
-        all_drivers: List[str] = None,
-        driver_pos: int = 0,
+    algo: str,
+    problem: str,
+    driver=None,
+    all_drivers: List[str] = None,
+    driver_pos: int = 0,
 ):
     logger.debug("Starting preparation")
 
@@ -212,12 +212,12 @@ def load_init_population(problem_mod, config: Dict[str, str]):
 
 
 def custom_init(
-        algo: str,
-        problem_mod: str,
-        config: Dict[str, str],
-        all_drivers: List[str] = None,
-        driver_pos: int = None,
-        problem: str = None,
+    algo: str,
+    problem_mod: str,
+    config: Dict[str, str],
+    all_drivers: List[str] = None,
+    driver_pos: int = None,
+    problem: str = None,
 ):
     """
     Custom initialization functions for algorithm (and optional sub-drivers or problems)
@@ -237,7 +237,7 @@ def custom_init(
     with suppress(AttributeError):
         key = "init_alg___" + algo
         if all_drivers:
-            key += "__" + "_".join(all_drivers[driver_pos + 1:])
+            key += "__" + "_".join(all_drivers[driver_pos + 1 :])
         if problem:
             key += "____" + problem
         logger.debug("Try %s(…)", key)
@@ -250,11 +250,11 @@ def custom_init(
 
 
 def load_problem_config(
-        algo: str,
-        problem: str,
-        config: Dict[str, str],
-        all_drivers: List[str] = None,
-        driver_pos: int = 0,
+    algo: str,
+    problem: str,
+    config: Dict[str, str],
+    all_drivers: List[str] = None,
+    driver_pos: int = 0,
 ):
     """
     Algorithm (with optional sub-drivers) + problem config
@@ -271,7 +271,7 @@ def load_problem_config(
     """
     all_drivers = [] if all_drivers is None else all_drivers
     with suppress(KeyError):
-        key = (algo, *tuple(all_drivers[driver_pos + 1:]), problem)
+        key = (algo, *tuple(all_drivers[driver_pos + 1 :]), problem)
         logger.debug("Try cust_base[%s]", key)
         update = run_config.cust_base[key]
         logger.debug(
@@ -287,7 +287,7 @@ def load_problem_config(
 
 
 def load_algorithm_with_subdrivers_config(
-        algo: str, all_drivers: List[str], driver_pos: int, config: Dict[str, str]
+    algo: str, all_drivers: List[str], driver_pos: int, config: Dict[str, str]
 ):
     """
     Algorithm + sub-drivers config
@@ -296,7 +296,7 @@ def load_algorithm_with_subdrivers_config(
         example key: (IMGA,  (HGS, SPEA2))
     """
     with suppress(KeyError):
-        key = (algo, tuple(all_drivers[driver_pos + 1:]))
+        key = (algo, tuple(all_drivers[driver_pos + 1 :]))
         logger.debug("Try algo_base[%s]", key)
         update = run_config.algo_base[key]
         logger.debug(
@@ -346,9 +346,13 @@ def prepare_problem_class(problem: str):
 
 
 def prepare_algorithm_class(algo: str):
-    algo_mod = ".".join(["algorithms", algo, algo])
+    algo_mod, algo_class = (
+        run_config.custom_paths[algo]
+        if algo in run_config.custom_paths
+        else (".".join(["algorithms", algo, algo]), algo)
+    )
     algo_mod = import_module(algo_mod)
-    algo_class = getattr(algo_mod, algo)
+    algo_class = getattr(algo_mod, algo_class)
     return algo_class
 
 

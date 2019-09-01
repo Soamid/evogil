@@ -5,12 +5,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import plots
 from evotools import ea_utils
 from metrics import metrics
 from plots.pictures import algos, algos_order
 from simulation import serialization
-from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
+from simulation.serialization import BudgetResultsExtractor
 from statistic.stats_bootstrap import find_acceptable_result_for_budget
 
 PF_PLOTS_DIR = Path("fronts")

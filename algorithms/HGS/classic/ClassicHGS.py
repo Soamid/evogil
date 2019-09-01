@@ -237,6 +237,7 @@ class ClassicHGS(ComplexDriver):
                 ),
                 message_adapter_factory=owner.driver_message_adapter_factory,
             )
+            self.metaepoch_len = self.owner.metaepoch_len[self.level]
 
             self.population = []
             self.sprouts = []
@@ -251,7 +252,7 @@ class ClassicHGS(ComplexDriver):
 
         def run_metaepoch(self) -> Observable:
             if self.alive:
-                epoch_job = StepsRun(self.owner.metaepoch_len)
+                epoch_job = StepsRun(self.metaepoch_len)
                 return epoch_job.create_job(self.driver).pipe(
                     ops.map(lambda message: self.fill_node_info(message)),
                     ops.do_action(lambda message: self.update_current_cost(message)),
