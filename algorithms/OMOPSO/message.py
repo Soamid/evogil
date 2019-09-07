@@ -32,3 +32,6 @@ class OMOPSOHGSMessageAdapter(HGSMessageAdapter):
 
     def nominate_delegates(self):
         return self.get_population()
+
+
+OMOPSODHGSMessageAdapter = OMOPSOHGSMessageAdapter

@@ -6,9 +6,10 @@ from datetime import datetime
 
 import rx
 from rx import operators as ops
+from thespian.actors import ActorSystem
 
 from evotools import rxtools
-from simulation import factory
+from simulation import factory, log_helper
 from simulation.timing import log_time
 from simulation.timing import system_time
 
@@ -32,6 +33,8 @@ def run_parallel(args):
     logger.debug("Simulation cases: %s", simulation_cases)
     logger.debug("Work will be divided into %d processes", processes_no)
 
+    sys = ActorSystem("multiprocTCPBase", logDefs=log_helper.EVOGIL_LOG_CONFIG)
+
     with log_time(system_time, logger, "Pool evaluated in {time_res}s", out=wall_time):
 
         def process_result(subres):
@@ -40,12 +43,14 @@ def run_parallel(args):
 
         rx.from_iterable(range(len(simulation_cases))).pipe(
             ops.map(lambda i: worker_factory(simulation_cases[i], i)),
-            ops.map(lambda w: rxtools.from_process(w.run)),
-            ops.merge(max_concurrent=1)
-        ).pipe(ops.do_action(on_next=process_result)).run()
+            # ops.map(lambda w: rxtools.from_process(w.run)),
+            ops.map(lambda w : w.run()),
+            # ops.merge(max_concurrent=1)
+            ops.do_action(on_next=process_result)
+        ).run()
     log_summary(args, results, simulation_cases, wall_time)
     rxtools.shutdown_default_executor()
-
+    sys.shutdown()
 
 def log_simulation_stats(start_time, simulation_id, simultations_count):
     current_time = datetime.now()

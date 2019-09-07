@@ -145,7 +145,7 @@ class HgsNodeSupervisor(TaskActor):
         self.log("STARTING HGS SUPERVISOR")
         self.config = config
 
-        self.actors_cache = [self.createActor(Node) for _ in range(20)]
+        self.actors_cache = [self.createActor(Node) for _ in range(64)]
 
         self.root = self.create_root_node()
         self.log("ROOT CREATED")

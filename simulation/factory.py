@@ -82,6 +82,8 @@ def parse_problems(args):
             if problem.lower() in problems_filter
         ]
         logger.debug("Selected: %s", problems)
+    else:
+        problems = run_config.problems
     return problems
 
 

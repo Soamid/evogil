@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from thespian.actors import ActorSystem
+from thespian.actors import ActorSystem, ActorExitRequest
 
 from algorithms.HGS import tools
 from algorithms.HGS.distributed.actors import HgsNodeSupervisor, HgsConfig
@@ -12,6 +12,7 @@ from simulation import log_helper
 EPSILON = np.finfo(float).eps
 
 logger = logging.getLogger(__name__)
+
 
 
 class DistributedHGS(ComplexDriver):
@@ -84,7 +85,7 @@ class DistributedHGS(ComplexDriver):
         # TODO add preconditions checking if message adapter is HGS message adapter
 
         logger.info("HGS CREATED")
-        self.hgs_system = ActorSystem("multiprocTCPBase", logDefs=log_helper.EVOGIL_LOG_CONFIG)
+        self.hgs_system = ActorSystem()
         self.node_supervisor = self.hgs_system.createActor(HgsNodeSupervisor)
 
         self.hgs_system.ask(
@@ -96,7 +97,7 @@ class DistributedHGS(ComplexDriver):
         self.cost = 0
 
     def shutdown(self):
-        ActorSystem().shutdown()
+        self.hgs_system.tell(self.node_supervisor, ActorExitRequest())
 
     def finalized_population(self):
         return (
