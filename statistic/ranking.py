@@ -32,7 +32,7 @@ best_func = {
     "pdi": max,
 }
 
-result_dirs = ["./results_k0", "./results_k1", "./results_k2"]
+result_dirs = ["./results_k0", "./results_k1", "../results_temp/results_k2"]
 
 
 def get_weak_winners(scoring, winner, error_rate):
@@ -69,31 +69,33 @@ def table_rank(args):
 
                     for i in range(len(results_data)):
                         original_budget = results_data[i]["budget"]
-                        result = find_acceptable_result_for_budget(
-                            results_data[: i + 1], boot_size
-                        )
-                        if result:
-                            print(
-                                "{} {} {} -> {}".format(
-                                    problem_name,
-                                    algo_name,
-                                    original_budget,
-                                    result["budget"],
+                        if original_budget == 40:
+                            result = results_data[i]
+                            # result = find_acceptable_result_for_budget(
+                            #     results_data[: i + 1], boot_size
+                            # )
+                            if result:
+                                print(
+                                    "{} {} {} -> {}".format(
+                                        problem_name,
+                                        algo_name,
+                                        original_budget,
+                                        result["budget"],
+                                    )
                                 )
-                            )
-                            for metric_name, metric_name_long, data_process in result[
-                                "analysis"
-                            ]:
-                                if metric_name in best_func:
-                                    data_process = list(x() for x in data_process)
-                                    data_analysis = yield_analysis(
-                                        data_process, boot_size
-                                    )
+                                for metric_name, metric_name_long, data_process in result[
+                                    "analysis"
+                                ]:
+                                    if metric_name in best_func:
+                                        data_process = list(x() for x in data_process)
+                                        data_analysis = yield_analysis(
+                                            data_process, boot_size
+                                        )
 
-                                    score = data_analysis["btstrpd"]["metrics"]
-                                    scoring[(original_budget, metric_name)].append(
-                                        (algo_name, score)
-                                    )
+                                        score = data_analysis["btstrpd"]["metrics"]
+                                        scoring[(original_budget, metric_name)].append(
+                                            (algo_name, score)
+                                        )
                 print("****{}****".format(problem_name))
                 for budget, metric_name in sorted(scoring):
                     metric_scoring = scoring[(budget, metric_name)]
