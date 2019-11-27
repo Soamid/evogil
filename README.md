@@ -20,6 +20,8 @@ True power of evogil lies in possibility of combining these methods in multi-dem
 
 HGS model is our own solution, you can find more about it [here](http://www.sciencedirect.com/science/article/pii/S1877750316300254) (denoted as MO-mHGS).
 
+In order to add your own algorithm as Evogil's driver, follow instruction in [Developer's Guide](doc/developer_guide.md).
+
 ### Quality indicators
 
 Metrics implemented in evogil:
