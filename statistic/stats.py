@@ -3,7 +3,8 @@ import multiprocessing
 from itertools import repeat
 
 from evotools.random_tools import close_and_join
-from simulation.serialization import RunResult
+from simulation import serialization
+from simulation.serialization import BudgetResultsExtractor
 from simulation.timing import process_time, log_time
 from statistic.stats_bootstrap import yield_analysis, average
 
@@ -81,7 +82,9 @@ def statistics(args):
         return True
 
     with close_and_join(multiprocessing.Pool(min(int(args["-j"]), 8))) as p:
-        for problem_name, problem_mod, algorithms in RunResult.each_result():
+        for problem_name, problem_mod, algorithms in serialization.each_result(
+            BudgetResultsExtractor()
+        ):
             for algo_name, budgets in algorithms:
                 header_just_printed = print_header()
 

@@ -4,7 +4,7 @@ import random
 
 import rx
 import rx.operators as ops
-from rx.concurrency import NewThreadScheduler
+from rx.scheduler import NewThreadScheduler
 
 from algorithms.IMGA.topology import TorusTopology, Topology
 from algorithms.base.driver import StepsRun, ComplexDriver

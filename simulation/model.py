@@ -15,19 +15,19 @@ class SimulationCase:
         self,
         problem_name: str,
         algorithm_name: str,
-        budgets: List[int],
         run_id: int,
         renice: str,
         results_dir: str,
         id=None,
+        **params
     ):
         self.problem_name = problem_name
         self.algorithm_name = algorithm_name
-        self.budgets = budgets
         self.run_id = run_id
         self.renice = renice
         self.results_dir = results_dir
         self.id = id if id else get_simulation_id(run_id)
+        self.params = params
 
     @property
     def config(self):

@@ -21,7 +21,10 @@ install:
 
   - conda env create -f environment.yaml python=$TRAVIS_PYTHON_VERSION
   - source activate evogil
-
+  -
+dist: xenial
+services:
+  - xvfb
 script:
   - python -m unittest discover test
   - pylint --errors-only --rcfile=.pylintrc evogil

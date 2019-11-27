@@ -11,6 +11,9 @@ dependencies:
     - scipy=1.0.1
     - pylint>=2.3.1
     - black>=19.3b0
+
     - pip:
       - git+git://github.com/ReactiveX/RxPY.git@master#egg=rx
       - floatextras==0.0.3
+      - thespian==3.9.9
+

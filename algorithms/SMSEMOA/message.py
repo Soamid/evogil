@@ -1,5 +1,5 @@
-from algorithms.HGS.message import HGSMessageAdapter, DefaultHGSMessageAdapter
-from algorithms.IMGA.message import IMGAMessageAdapter, DefaultIMGAMessageAdapter
+from algorithms.HGS.distributed.message import HGSMessageAdapter
+from algorithms.IMGA.message import IMGAMessageAdapter
 from algorithms.SMSEMOA.SMSEMOA import nd_sort
 from algorithms.base.model import SubPopulation
 
@@ -32,3 +32,5 @@ class SMSEMOAHGSMessageAdapter(HGSMessageAdapter):
 
     def nominate_delegates(self):
         return [i.value for i in nd_sort(self.driver.individuals)[1]]
+
+SMSEMOADHGSMessageAdapter = SMSEMOAHGSMessageAdapter

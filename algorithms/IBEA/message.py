@@ -1,6 +1,5 @@
-from algorithms.HGS.message import HGSMessageAdapter
-from algorithms.IMGA.message import IMGAMessageAdapter, DefaultIMGAMessageAdapter
-from algorithms.base.model import SubPopulation
+from algorithms.HGS.distributed.message import HGSMessageAdapter
+from algorithms.IMGA.message import DefaultIMGAMessageAdapter
 from evotools.ea_utils import paretofront_layers
 
 
@@ -22,3 +21,4 @@ class IBEAHGSMessageAdapter(HGSMessageAdapter):
                 )
             )[0]
         ]
+IBEADHGSMessageAdapter = IBEAHGSMessageAdapter

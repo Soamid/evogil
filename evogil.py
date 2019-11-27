@@ -4,20 +4,25 @@
 Usage:
   evogil.py -h | --help
   evogil.py list
-  evogil.py run <budget> [options]
+  evogil.py run budget <budget> [options]
+  evogil.py run time [(--timeout | -t) <timeout>] [(--step | -s) <step>] [options]
   evogil.py (stats | statistics) [options]
   evogil.py rank
   evogil.py rank_details
   evogil.py table
   evogil.py summary
   evogil.py pictures [options]
-  evogil.py pictures_summary [--selected <algo_name>]
-  evogil.py best_fronts
+  evogil.py pictures_summary [options]
+  evogil.py best_fronts [options]
   evogil.py violin [options]
 
 Commands:
   run
-    Performs benchmarks. Param: budget(s), list of integers separated by comma.
+    Performs benchmarks. Subcommands:
+        budget
+            Run with budget constraints. Param: budget(s), list of integers separated by comma.
+        time
+            Run with timeout constraints. Params: timeout and/or step measured in seconds.
   summary
     Returns number of results for each tuple: algorithm, problem, budget.
   stats
@@ -66,14 +71,15 @@ Options:
         Renice workers. Works on UNIX & derivatives.
   -d <results_dir>, --dir <results_dir>
         Directory where simulation results will be stored. If not specified, serialization.RESULTS_DIR is set.
-
+  -o <plots_dir>
+        Directory where generated plots will be stored. If not specified, pictures.PLOTS_DIR is set.
+  
 Pictures Summary Options:
   --selected <algo_name>
         Select and highlight specified algorithms on plots.
         [default: HGS+SPEA2,HGS+NSGAII,HGS+NSGAIII,HGS+IBEA,HGS+OMOPSO,HGS+SMSEMOA,HGS+JGBL,HGS+NSLS]
 """
 import logging
-import os
 import time
 
 from docopt import docopt
@@ -85,7 +91,8 @@ import simulation.run_parallel
 import statistic.ranking
 import statistic.stats
 import statistic.summary
-from simulation import run_config, log_helper
+from plots import pictures
+from simulation import run_config, log_helper, factory, serialization
 from simulation.timing import system_time, log_time
 
 
@@ -113,13 +120,14 @@ def main_worker():
         "rank": statistic.ranking.rank,
         "table": statistic.ranking.table_rank,
         "rank_details": statistic.ranking.detailed_rank,
-        "pictures": plots.pictures.pictures_from_stats,
+        "pictures": plots.pictures.pictures_time,
         "pictures_summary": plots.pictures.pictures_summary,
         "best_fronts": plots.best_fronts.best_fronts,
         "violin": plots.violin.violin,
         "summary": statistic.summary.analyse_results,
         "list": all_algos_problems,
     }
+    set_default_options(argv)
 
     for k, v in run_dict.items():
         logger.debug("run_dict: k,v = %s,%s", k, v)
@@ -127,6 +135,13 @@ def main_worker():
             logger.debug("run_dict match. argv[k]=%s", argv[k])
             v(argv)
             break
+
+
+def set_default_options(argv):
+    if not argv["--dir"]:
+        argv["--dir"] = serialization.RESULTS_DIR
+    if not argv["-o"]:
+        argv["-o"] = pictures.PLOTS_DIR
 
 
 if __name__ == "__main__":

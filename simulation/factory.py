@@ -3,21 +3,46 @@ from contextlib import suppress
 from functools import partial
 from importlib import import_module
 from itertools import product
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from evotools.ea_utils import gen_population
 from evotools.random_tools import show_partial, show_conf
-from simulation import run_config, serialization
+from simulation import run_config, serialization, worker
 from simulation.model import SimulationCase
 from simulation.run_config import NotViableConfiguration
 
 logger = logging.getLogger(__name__)
 
+BUDGETS_PARAM = "budgets"
 
-def create_simulation(args):
-    budgets = parse_budgets(args)
-    logger.debug("Budgets: %s", budgets)
+TIMEOUT_PARAM = "timeout"
 
+SAMPLING_INTERVAL_PARAM = "sampling_interval"
+
+
+def resolve_configuration(args: Dict[str, str]):
+    worker_dict = {
+        "budget": create_budget_simulation,
+        "time": create_time_bound_simulation,
+    }
+    for factory_name, factory_method in worker_dict.items():
+        if args[factory_name]:
+            return factory_method(args)
+
+
+def create_budget_simulation(args: Dict[str, str]):
+    params = {BUDGETS_PARAM: parse_budgets(args)}
+    return worker.BudgetWorker, create_simulation(args, params)
+
+
+def create_time_bound_simulation(args: Dict[str, str]):
+    timeout = int(args["<timeout>"])
+    sampling_interval = int(args["<step>"])
+    params = {TIMEOUT_PARAM: timeout, SAMPLING_INTERVAL_PARAM: sampling_interval}
+    return worker.TimeWorker, create_simulation(args, params)
+
+
+def create_simulation(args: Dict[str, str], params: Dict[str, Any]):
     order = list(product(run_config.problems, run_config.algorithms))
 
     logger.debug("Available problems * algorithms: %s", order)
@@ -36,10 +61,10 @@ def create_simulation(args):
         SimulationCase(
             simulation_case[0],
             simulation_case[1],
-            budgets,
             run_id,
             args["--renice"],
             resolve_results_dir(args),
+            **params
         )
         for simulation_case in order
         for run_id in range(int(args["-N"]))
@@ -57,6 +82,8 @@ def parse_problems(args):
             if problem.lower() in problems_filter
         ]
         logger.debug("Selected: %s", problems)
+    else:
+        problems = run_config.problems
     return problems
 
 
@@ -73,7 +100,9 @@ def parse_algorithms(args):
 
 
 def parse_budgets(args):
-    return sorted([int(budget) for budget in args["<budget>"].split(",")])
+    budgets = sorted([int(budget) for budget in args["<budget>"].split(",")])
+    logger.debug("Budgets: %s", budgets)
+    return budgets
 
 
 def prepare(algo: str, problem: str):
@@ -135,20 +164,14 @@ def prepare_with_driver(
 
         load_init_population(problem_mod, config)
 
-        try:
-            algo_class(**config)
-        except Exception as e:
-            logger.exception("Class creation error.", exc_info=e)
-            raise e
-        else:
-            logger.debug(
-                "Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
-                algo,
-                problem,
-                show_partial(driver),
-                all_drivers,
-                driver_pos,
-            )
+        logger.debug(
+            "Preparing (algo=%s, problem=%s, driver=%s, all_drivers=%s, driver_pos=%d) done, class obj created",
+            algo,
+            problem,
+            show_partial(driver),
+            all_drivers,
+            driver_pos,
+        )
 
         instance = partial(algo_class, **config)
         logger.debug(
@@ -325,9 +348,13 @@ def prepare_problem_class(problem: str):
 
 
 def prepare_algorithm_class(algo: str):
-    algo_mod = ".".join(["algorithms", algo, algo])
+    algo_mod, algo_class = (
+        run_config.custom_paths[algo]
+        if algo in run_config.custom_paths
+        else (".".join(["algorithms", algo, algo]), algo)
+    )
     algo_mod = import_module(algo_mod)
-    algo_class = getattr(algo_mod, algo)
+    algo_class = getattr(algo_mod, algo_class)
     return algo_class
 
 

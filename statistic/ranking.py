@@ -2,7 +2,8 @@ import collections
 import logging
 import sys
 
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation import serialization
+from simulation.serialization import RESULTS_DIR, BudgetResultsExtractor
 from simulation.timing import log_time, process_time
 from statistic.stats_bootstrap import (
     yield_analysis,
@@ -31,7 +32,7 @@ best_func = {
     "pdi": max,
 }
 
-result_dirs = ["./results_k0", "./results_k1", "./results_k2"]
+result_dirs = ["./results_k0", "./results_k1", "../results_omopso_lpr/results_k2"]
 
 
 def get_weak_winners(scoring, winner, error_rate):
@@ -58,8 +59,8 @@ def table_rank(args):
     for result_set in result_dirs:
         print("***{}***".format(result_set))
         with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-            for problem_name, problem_mod, algorithms in RunResult.each_result(
-                result_set
+            for problem_name, problem_mod, algorithms in serialization.each_result(
+                BudgetResultsExtractor(), result_set
             ):
                 print(result_set, problem_name)
                 scoring = collections.defaultdict(list)
@@ -68,31 +69,33 @@ def table_rank(args):
 
                     for i in range(len(results_data)):
                         original_budget = results_data[i]["budget"]
-                        result = find_acceptable_result_for_budget(
-                            results_data[: i + 1], boot_size
-                        )
-                        if result:
-                            print(
-                                "{} {} {} -> {}".format(
-                                    problem_name,
-                                    algo_name,
-                                    original_budget,
-                                    result["budget"],
+                        if original_budget == 40:
+                            result = results_data[i]
+                            # result = find_acceptable_result_for_budget(
+                            #     results_data[: i + 1], boot_size
+                            # )
+                            if result:
+                                print(
+                                    "{} {} {} -> {}".format(
+                                        problem_name,
+                                        algo_name,
+                                        original_budget,
+                                        result["budget"],
+                                    )
                                 )
-                            )
-                            for metric_name, metric_name_long, data_process in result[
-                                "analysis"
-                            ]:
-                                if metric_name in best_func:
-                                    data_process = list(x() for x in data_process)
-                                    data_analysis = yield_analysis(
-                                        data_process, boot_size
-                                    )
+                                for metric_name, metric_name_long, data_process in result[
+                                    "analysis"
+                                ]:
+                                    if metric_name in best_func:
+                                        data_process = list(x() for x in data_process)
+                                        data_analysis = yield_analysis(
+                                            data_process, boot_size
+                                        )
 
-                                    score = data_analysis["btstrpd"]["metrics"]
-                                    scoring[(original_budget, metric_name)].append(
-                                        (algo_name, score)
-                                    )
+                                        score = data_analysis["btstrpd"]["metrics"]
+                                        scoring[(original_budget, metric_name)].append(
+                                            (algo_name, score)
+                                        )
                 print("****{}****".format(problem_name))
                 for budget, metric_name in sorted(scoring):
                     metric_scoring = scoring[(budget, metric_name)]
@@ -193,8 +196,8 @@ def detailed_rank(args):
         scoring = collections.defaultdict(list)
 
         with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-            for problem_name, problem_mod, algorithms in RunResult.each_result(
-                result_set
+            for problem_name, problem_mod, algorithms in serialization.each_result(
+                BudgetResultsExtractor(), result_set
             ):
                 for algo_name, results in algorithms:
                     for result in results:
@@ -242,7 +245,9 @@ def rank(args):
     scoring = collections.defaultdict(list)
 
     with log_time(process_time, logger, "Preparing data done in {time_res:.3f}"):
-        for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+        for problem_name, problem_mod, algorithms in serialization.each_result(
+            BudgetResultsExtractor(), RESULTS_DIR
+        ):
             for algo_name, results in algorithms:
                 max_budget_result = find_acceptable_result_for_budget(
                     list(results), boot_size

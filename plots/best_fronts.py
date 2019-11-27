@@ -5,11 +5,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import plots
 from evotools import ea_utils
 from metrics import metrics
 from plots.pictures import algos, algos_order
-from simulation.serialization import RunResult, RESULTS_DIR
+from simulation import serialization
+from simulation.serialization import BudgetResultsExtractor
 from statistic.stats_bootstrap import find_acceptable_result_for_budget
 
 PF_PLOTS_DIR = Path("fronts")
@@ -119,7 +119,7 @@ def plot_results(f, best_result, best_result_name, nondominated=set()):
             )
 
 
-def save_plot(ax, f, d_problem):
+def save_plot(ax, f, d_problem, plots_dir):
     box = ax.get_position()
     # ax.set_position([box.x0, box.y0, box.width * 0.80, box.height])
     handles, labels = ax.get_legend_handles_labels()
@@ -128,30 +128,33 @@ def save_plot(ax, f, d_problem):
     handles_order = [handle_d[l] for l in algo_names if l in handle_d]
     # plt.legend(handles_order, algo_names, loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 20}, frameon=False)
 
-    path_pdf = get_path("pdf", d_problem)
-    path_eps = get_path("eps", d_problem)
+    path_pdf = get_path("pdf", d_problem, plots_dir)
+    path_eps = get_path("eps", d_problem, plots_dir)
     with suppress(FileExistsError):
         path_pdf.parent.mkdir(parents=True)
 
-    plt.show()
     plt.savefig(str(path_pdf), bbox_inches="tight")
     plt.savefig(str(path_eps), bbox_inches="tight")
     plt.close(f)
 
 
-def get_path(ext, problem_name):
+def get_path(ext, problem_name, plots_dir):
     return (
-        Path(plots.pictures.PLOTS_DIR)
+        plots_dir
         / PF_PLOTS_DIR
         / "figures_metrics_{}.{}".format(problem_name.name.replace("emoa", "moea"), ext)
     )
 
 
-def best_fronts_color_nondom(args, queue):
+def best_fronts_color_nondom(args):
     boot_size = int(args["--bootstrap"])
+    results_dir = args["--dir"]
+    plots_dir = Path(args["-o"])
     scoring = defaultdict(list)
     global_scoring = defaultdict(list)
-    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+    for problem_name, problem_mod, algorithms in serialization.each_result(
+        BudgetResultsExtractor(), results_dir
+    ):
         for algo_name, results in algorithms:
             best_result = find_acceptable_result_for_budget(list(results), boot_size)
             """:type: RunResultBudget """
@@ -174,12 +177,16 @@ def best_fronts_color_nondom(args, queue):
         )
         for algo_name, best_value in scoring[(problem_name, problem_mod)]:
             plot_results(ax, best_value, algo_name, global_scoring[problem_name])
-        save_plot(ax, f, problem_mod)
+        save_plot(ax, f, problem_mod, plots_dir)
 
 
 def best_fronts(args):
     boot_size = int(args["--bootstrap"])
-    for problem_name, problem_mod, algorithms in RunResult.each_result(RESULTS_DIR):
+    results_dir = args["--dir"]
+    plots_dir = Path(args["-o"])
+    for problem_name, problem_mod, algorithms in serialization.each_result(
+        BudgetResultsExtractor(), results_dir
+    ):
         original_front = problem_mod.pareto_front
         ax, f = plot_problem_front(original_front, multimodal=problem_name == "ZDT3")
 
@@ -189,4 +196,4 @@ def best_fronts(args):
 
             if best_result and algo_name in algos:
                 plot_results(ax, best_result["results"][0], algo_name)
-        save_plot(ax, f, problem_mod)
+        save_plot(ax, f, problem_mod, plots_dir)

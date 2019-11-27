@@ -1,5 +1,5 @@
-from algorithms.HGS.message import HGSMessageAdapter, DefaultHGSMessageAdapter
-from algorithms.IMGA.message import IMGAMessageAdapter, DefaultIMGAMessageAdapter
+from algorithms.HGS.distributed.message import HGSMessageAdapter
+from algorithms.IMGA.message import IMGAMessageAdapter
 from algorithms.base.model import SubPopulation
 
 
@@ -32,3 +32,6 @@ class OMOPSOHGSMessageAdapter(HGSMessageAdapter):
 
     def nominate_delegates(self):
         return self.get_population()
+
+
+OMOPSODHGSMessageAdapter = OMOPSOHGSMessageAdapter

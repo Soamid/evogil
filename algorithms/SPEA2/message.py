@@ -1,4 +1,4 @@
-from algorithms.HGS.message import HGSMessageAdapter
+from algorithms.HGS.distributed.message import HGSMessageAdapter
 from algorithms.IMGA.message import IMGAMessageAdapter
 from algorithms.base.model import SubPopulation
 
@@ -30,3 +30,5 @@ class SPEA2HGSMessageAdapter(HGSMessageAdapter):
 
     def nominate_delegates(self):
         return [x["value"] for x in self.driver.archive]
+
+SPEA2DHGSMessageAdapter = SPEA2HGSMessageAdapter
