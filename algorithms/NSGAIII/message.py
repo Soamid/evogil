@@ -8,3 +8,5 @@ def NSGAIIIIMGAMessageAdapter(driver):
 
 def NSGAIIIHGSMessageAdapter(driver):
     return DefaultHGSMessageAdapter(driver)
+
+NSGAIIIDHGSMessageAdapter = NSGAIIIHGSMessageAdapter

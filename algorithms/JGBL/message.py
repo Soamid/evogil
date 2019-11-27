@@ -7,3 +7,5 @@ def JGBLIMGAMessageAdapter(driver):
 
 def JGBLHGSMessageAdapter(driver):
     return NSGAIIHGSMessageAdapter(driver)
+
+JGBLDHGSMessageAdapter = JGBLHGSMessageAdapter

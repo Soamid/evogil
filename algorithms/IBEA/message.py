@@ -21,3 +21,4 @@ class IBEAHGSMessageAdapter(HGSMessageAdapter):
                 )
             )[0]
         ]
+IBEADHGSMessageAdapter = IBEAHGSMessageAdapter

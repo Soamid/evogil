@@ -30,3 +30,5 @@ class SPEA2HGSMessageAdapter(HGSMessageAdapter):
 
     def nominate_delegates(self):
         return [x["value"] for x in self.driver.archive]
+
+SPEA2DHGSMessageAdapter = SPEA2HGSMessageAdapter

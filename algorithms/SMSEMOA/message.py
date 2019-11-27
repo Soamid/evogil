@@ -32,3 +32,5 @@ class SMSEMOAHGSMessageAdapter(HGSMessageAdapter):
 
     def nominate_delegates(self):
         return [i.value for i in nd_sort(self.driver.individuals)[1]]
+
+SMSEMOADHGSMessageAdapter = SMSEMOAHGSMessageAdapter

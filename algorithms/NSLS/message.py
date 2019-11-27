@@ -8,3 +8,6 @@ def NSLSIMGAMessageAdapter(driver):
 
 def NSLSHGSMessageAdapter(driver):
     return DefaultHGSMessageAdapter(driver)
+
+
+NSLSDHGSMessageAdapter = NSLSHGSMessageAdapter

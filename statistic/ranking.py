@@ -32,7 +32,7 @@ best_func = {
     "pdi": max,
 }
 
-result_dirs = ["./results_k0", "./results_k1", "../results_temp/results_k2"]
+result_dirs = ["./results_k0", "./results_k1", "../results_omopso_lpr/results_k2"]
 
 
 def get_weak_winners(scoring, winner, error_rate):

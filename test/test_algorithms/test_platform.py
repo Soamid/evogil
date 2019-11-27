@@ -8,10 +8,11 @@ from pathlib import Path
 
 import rx.operators as ops
 from rx.scheduler import NewThreadScheduler
+from thespian.actors import ActorSystem
 
 from algorithms.base.driver import StepsRun
 from algorithms.base.model import ProgressMessage
-from simulation import run_config, serializer
+from simulation import run_config, serializer, log_helper
 from simulation.factory import prepare
 
 
@@ -21,6 +22,7 @@ class DriverTest(unittest.TestCase):
     EXPECTED_FORMATS = [".eps", ".pdf"]
 
     def test_create_and_run_all_supported_algorithms(self):
+        sys = ActorSystem("multiprocTCPBase", logDefs=log_helper.EVOGIL_LOG_CONFIG)
         test_cases = run_config.algorithms
         for test_case in test_cases:
             with self.subTest(algorithm=test_case):
@@ -35,6 +37,7 @@ class DriverTest(unittest.TestCase):
                 )
                 self.assertEqual(1, len(result))
                 self.assertIsInstance(result[0], ProgressMessage)
+        sys.shutdown()
 
     def test_smoke(self):
         with (tempfile.TemporaryDirectory(prefix="evogil_smoke_")) as temp_dir:
