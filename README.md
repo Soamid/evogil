@@ -46,20 +46,23 @@ Set of Multi-Objective problems included in evogil for testing purposes:
 
 You can add your own solutions and easily extend evogil possibilities. In order to run evogil simulation for specific algorithm, benchmark and simulation budget, just type (in your evogil location):
 ```
-python evogil.py run 500 -a nsgaii -p zdt1
+python evogil.py run budget 500 -a nsgaii -p zdt1
 ```
 It will run simulation with budget 500 with algorithm NSGAII for problem ZDT1. All simulation results (represented as values of all quality metrics for specified budget) will be stored in pickle format so that you can load them quickly with python.
 
 You can also specify multiple problems and algorithms (if options -a and -p are not specified at all, all algorithms and all problems are run) and even many budget "checkpoints" in which evogil should store outcomes:
 ```
-python evogil.py run 500,1000,1200 -a nsgaii,spea2 -p zdt1,uf2,uf10
+python evogil.py run budget 500,1000,1200 -a nsgaii,spea2 -p zdt1,uf2,uf10
 ```
 
 Complex configurations are also possible with evogil runner - you can specify multi-deme model with subsequent single-deme "driver" by:
 ```
-python evogil.py run 500 -a hgs+nsgaii, hgs+omopso -p zdt1
+python evogil.py run budget 500 -a hgs+nsgaii, hgs+omopso -p zdt1
 ```
 Here we run two HGS simulations, but in first case all HGS nodes will run NSGAII algorithm. The second one will be driven by OMOPSO driver.
+
+## How to extend it?
+Evogil was designed as a framework so you can write your own algorithms, problems or simulation types. For further information, see [Developer's Guide](doc/developer_guide.md).
 
 TODO: notes about serialization, results analysis and plotting.
 
