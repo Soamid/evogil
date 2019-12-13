@@ -42,6 +42,19 @@ Set of Multi-Objective problems included in evogil for testing purposes:
 - kursawe
 - ackley
 
+## How to install it?
+
+Currently whole Evogil project source code has to be downloaded in order to run or extend the framework. In order to setup Evogil:
+1. Clone evogil repository.
+2. Install conda.
+3. Prepare the conda environment from environment.yaml configuration (you can simply run `conda-install.bat`).
+4. Activate created environment by running command: `activate evogil`
+5. Check if everything works, e. g. run: 
+```
+python evogil.py -h
+```
+You can use created conda environment as a Python interpreter in your Python IDE (e.g. PyCharm).
+
 ## How to use it?
 
 You can add your own solutions and easily extend evogil possibilities. In order to run evogil simulation for specific algorithm, benchmark and simulation budget, just type (in your evogil location):
