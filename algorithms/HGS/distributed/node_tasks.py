@@ -30,19 +30,21 @@ class NodeOperationTask(OperationTask):
     def log(self, msg, lvl=logging.DEBUG):
         self.node.log(msg, lvl)
 
+
 class NodeState:
-    def __init__(self, address, level, alive, ripe, center, population_len):
+    def __init__(self, address, level, alive, ripe, center, population_len, sprouts):
         self.address = address
         self.level = level
         self.alive = alive
         self.ripe = ripe
         self.center = center
         self.population_len = population_len
+        self.sprouts = sprouts
 
 
-def create_node_state(address, level, alive, ripe, population):
+def create_node_state(address, level, alive, ripe, population, sprouts):
     center = np.mean(population, axis=0) if population else None
-    return NodeState(address, level, alive, ripe, center, len(population))
+    return NodeState(address, level, alive, ripe, center, len(population), sprouts)
 
 
 class CheckStatusNodeTask(NodeOperationTask):
@@ -53,8 +55,13 @@ class CheckStatusNodeTask(NodeOperationTask):
         steps[NodeOperation.CHECK_STATUS] = self.send_status
 
     def send_status(self, msg: NodeMessage, sender: Actor):
-        state = create_node_state(sender,
-            self.node.level, self.node.alive, self.node.ripe, self.node.population
+        state = create_node_state(
+            sender,
+            self.node.level,
+            self.node.alive,
+            self.node.ripe,
+            self.node.population,
+            self.node.sprouts,
         )
         self.node.send(sender, NodeMessage(NodeOperation.CHECK_STATUS, msg.id, state))
 
@@ -277,8 +284,13 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             )
 
             self.log("releasing new sprout!")
-            new_sprout_state = create_node_state(self.node.myAddress,
-                self.node.level + 1, True, False, candidate_population
+            new_sprout_state = create_node_state(
+                self.node.myAddress,
+                self.node.level + 1,
+                True,
+                False,
+                candidate_population,
+                [],
             )
             self.created_sprouts_states.append(new_sprout_state)
             self.next_lvl_sprouts_states.append(new_sprout_state)
@@ -296,8 +308,13 @@ class ReleaseSproutsNodeTask(NodeOperationTask):
             self.try_relase_next_sprout()
 
     def finish(self):
-        my_state = create_node_state(self.node.myAddress,
-            self.node.level, self.node.alive, self.node.ripe, self.node.population
+        my_state = create_node_state(
+            self.node.myAddress,
+            self.node.level,
+            self.node.alive,
+            self.node.ripe,
+            self.node.population,
+            self.node.sprouts,
         )
         self.node.send(
             self.sender,

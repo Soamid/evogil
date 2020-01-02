@@ -1,6 +1,7 @@
 import itertools
 import logging
 import uuid
+import random
 from typing import Dict, Callable
 
 from thespian.actors import Actor
@@ -350,11 +351,33 @@ class ReviveHgsTask(HgsOperationTask):
         self.sender_task_id = msg.id
 
         if len([state for state in self.hgs.node_states if state.alive]) == 0:
-            ripe_nodes = [state.address for state in self.hgs.node_states if state.ripe]
-            self.ripe_nodes_count = len(ripe_nodes)
+            nodes_states = {str(state.address): state for state in self.hgs.node_states}
 
-            for ripe_node in ripe_nodes:
-                self.hgs.send(ripe_node, NodeMessage(NodeOperation.REVIVE, self.id))
+            for node in nodes_states:
+                alive_nodes = 0
+                sprouts = list(nodes_states[node].sprouts)
+                random.shuffle(sprouts)
+                for sprout in sprouts:
+                    if (
+                        alive_nodes < self.hgs.config.max_sprouts_no
+                        and nodes_states[str(sprout)].ripe
+                    ):
+                        self.hgs.send(
+                            sprout, NodeMessage(NodeOperation.REVIVE, self.id)
+                        )
+                        alive_nodes += 1
+                    else:
+                        break
+                        # Remove sprout from whole tree and send message to parent node
+
+            root_address = str(self.hgs.root)
+            if nodes_states[root_address].ripe:
+                self.hgs.send(root_address, NodeMessage(NodeOperation.REVIVE, self.id))
+            # ripe_nodes = [state.address for state in self.hgs.node_states if state.ripe]
+            # self.ripe_nodes_count = len(ripe_nodes)
+            #
+            # for ripe_node in ripe_nodes:
+            #     self.hgs.send(ripe_node, NodeMessage(NodeOperation.REVIVE, self.id))
             for i in range(self.hgs.config.max_level + 1):
                 self.hgs.config.min_progress_ratio[i] /= 2
 
