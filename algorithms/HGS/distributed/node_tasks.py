@@ -88,6 +88,7 @@ class GetPopulationNodeTask(NodeOperationTask):
 class NewMetaepochNodeTask(NodeOperationTask):
     def __init__(self, node):
         super().__init__(node)
+        self.last_result_data = None
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[NodeOperation.NEW_METAEPOCH] = self.stream_metaepoch_results
@@ -96,18 +97,26 @@ class NewMetaepochNodeTask(NodeOperationTask):
         self.run_metaepoch().pipe(
             ops.do_action(
                 on_completed=lambda: self.node.send(
-                    sender, NodeMessage(NodeOperation.METAEPOCH_END, msg.id)
+                    sender,
+                    NodeMessage(
+                        NodeOperation.METAEPOCH_END, msg.id, self.last_result_data
+                    ),
                 )
             )
         ).subscribe(
+            lambda result: self.update_cost(result)
             # lambda result: self.node.send(
             #     sender, NodeMessage(NodeOperation.NEW_RESULT, msg.id, result)
             # )
         )
 
+    def update_cost(self, result):
+        self.last_result_data = result
+
     def run_metaepoch(self):
         if self.node.alive:
             self.log("ALIVE SO RUN EPOCH")
+            self.metaepoch_cost = self.node.current_cost
             epoch_job = StepsRun(self.node.metaepoch_len)
 
             self.log(
@@ -124,7 +133,7 @@ class NewMetaepochNodeTask(NodeOperationTask):
 
     def fill_node_info(self, driver_message):
         driver_message.level = self.node.level
-        driver_message.epoch_cost = driver_message.cost - self.node.current_cost
+        driver_message.epoch_cost = driver_message.cost - self.metaepoch_cost
         return driver_message
 
     def update_current_cost(self, driver_message):
@@ -161,7 +170,10 @@ class TrimNotProgressingNodeTask(NodeOperationTask):
     def trim_not_progressing(self, msg: NodeMessage, sender: Actor):
         min_progress_ratio = msg.data
         if self.node.old_hypervolume and self.node.old_hypervolume > 0.0:
-            self.log(f'progress: {(self.node.hypervolume / (self.node.old_hypervolume + EPSILON)) - 1.0}, min ratio: {min_progress_ratio}', logging.INFO)
+            self.log(
+                f"progress: {(self.node.hypervolume / (self.node.old_hypervolume + EPSILON)) - 1.0}, min ratio: {min_progress_ratio}",
+                logging.INFO,
+            )
         if (
             self.node.alive
             and self.node.old_hypervolume is not None

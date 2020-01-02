@@ -126,6 +126,7 @@ class ClassicHGS(ComplexDriver):
 
     def run_metaepoch(self):
         node_jobs = []
+
         for node in self.level_nodes[2]:
             node_jobs.append(node.run_metaepoch())
         for node in self.level_nodes[1]:
@@ -133,14 +134,20 @@ class ClassicHGS(ComplexDriver):
         for node in self.level_nodes[0]:
             node_jobs.append(node.run_metaepoch())
             # _plot_node(node, 'r', [[0, 1], [0, 3]])
-        rx.merge(*node_jobs).pipe(
-            ops.subscribe_on(NewThreadScheduler()),
-            ops.do_action(on_next=lambda message: self._update_cost(message)),
-        ).run()
+        node_costs = []
+        for node_job in node_jobs:
+            node_job.pipe(
+                ops.subscribe_on(NewThreadScheduler()),
+                ops.map(lambda message: self._update_cost(message)),
+                ops.sum(),
+                ops.do_action(on_next=lambda cost: node_costs.append(cost))
+            ).run()
+        # self.cost += max(node_costs)
+        self.cost += sum(node_costs)
+
 
     def _update_cost(self, message):
-        print("update cost")
-        self.cost += self.cost_modifiers[message.level] * message.epoch_cost
+        return self.cost_modifiers[message.level] * message.epoch_cost
 
     def trim_sprouts(self):
         self.trim_all(self.level_nodes[2])
@@ -193,6 +200,7 @@ class ClassicHGS(ComplexDriver):
     def revive_root(self):
         if len([x for x in self.nodes if x.alive]) == 0:
             for ripe_node in [x for x in self.nodes if x.ripe]:
+
                 ripe_node.alive = True
                 ripe_node.ripe = False
             for i in range(3):

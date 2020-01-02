@@ -45,6 +45,7 @@ class MetaepochHgsTask(HgsOperationTask):
         self.sender = None
         self.sender_task_id = None
         self.requests_count = None
+        self.metaepoch_costs = []
 
     def configure_steps(self, steps: Dict[OperationType, Callable]):
         steps[HgsOperation.NEW_METAEPOCH] = self.start_metaepoch
@@ -67,14 +68,16 @@ class MetaepochHgsTask(HgsOperationTask):
         self.log(
             f"update cost {msg.data.epoch_cost}, modifier= {self.hgs.config.cost_modifiers[msg.data.level]}"
         )
-        self.hgs.cost += (
-            self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
-        )
 
     def finish_metaepoch(self, msg: NodeMessage, sender: Actor):
         self.nodes_finished += 1
+        if msg.data:
+            self.metaepoch_costs.append(
+                self.hgs.config.cost_modifiers[msg.data.level] * msg.data.epoch_cost
+            )
         if self.nodes_finished == self.requests_count:
             self.log("All nodes have ended their metaepochs")
+            self.hgs.cost += max(self.metaepoch_costs)
             self.hgs.send(
                 self.sender,
                 HgsMessage(
@@ -174,7 +177,7 @@ class PopulationHgsTask(HgsOperationTask):
     def log_hgs_state(self):
         nodes_state_text = "\n".join(
             [
-                f"level {lvl+1} : {len([node for node in self.hgs.node_states if node.level == lvl and node.ripe] )} / {len(self.hgs.level_nodes[lvl])}"
+                f"level {lvl + 1} : {len([node for node in self.hgs.node_states if node.level == lvl and node.ripe])} / {len(self.hgs.level_nodes[lvl])}"
                 for lvl in range(0, self.hgs.config.max_level + 1)
             ]
         )
