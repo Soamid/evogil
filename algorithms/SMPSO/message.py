@@ -5,7 +5,7 @@ from algorithms.base.model import SubPopulation
 
 class SMPSOIMGAMessageAdapter(IMGAMessageAdapter):
     def get_population(self):
-        return self.driver.position
+        return [x.value for x in self.driver.individuals]
 
     def immigrate(self, migrants):
         for migrant in migrants:

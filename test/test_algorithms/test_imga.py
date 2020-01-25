@@ -28,7 +28,7 @@ class ImgaTest(unittest.TestCase):
                 self.assertEqual(len(results), steps_no)
 
     def test_imga_cost_calculation(self):
-        final_driver, problem_mod = prepare("IMGA+NSGAII", "ZDT1")
+        final_driver, problem_mod = prepare("IMGA+SMPSO", "ZDT1")
 
         imga = final_driver()
 

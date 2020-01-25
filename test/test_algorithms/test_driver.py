@@ -20,7 +20,7 @@ class DriverTest(unittest.TestCase):
                 self.assertEqual(driver.step_no, step_no)
 
     def test_default_proxy_is_progress_proxy(self):
-        driver_factory, _ = prepare("NSGAII", "ZDT1")
+        driver_factory, _ = prepare("SMPSO", "ZDT1")
         driver = driver_factory()
 
         for _ in range(3):

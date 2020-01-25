@@ -97,7 +97,7 @@ class SMPSO(Driver):
             #probably might be done better, but i can't speak pytong very well
             l = self.leaders_archive.copy()
             l[:pos] = self.leaders_archive[:pos]
-            l[pos] = self.individuals[i].position
+            l[pos] = self.individuals[i].value
             l[pos+ 1:] = self.leaders_archive[pos:-1]
             self.leaders_archive = l
             #print(leaders_stored_results)
@@ -126,10 +126,10 @@ class SMPSO(Driver):
 
 class Individual:
 
-    def __init__(self, position, dims):
+    def __init__(self, value, dims):
         self.dims = dims
         self.objectives = []
-        self.position = position
+        self.value = value
         self.velocity = [0. for x in range(len(dims))]
         self.pbest = [0. for x in range(len(dims))]
 
@@ -137,14 +137,14 @@ class Individual:
     def initialize(self, search_space_size, delta):
         for d in range(len(self.dims)):
             #self.position[i] = random.uniform(-search_space_size, search_space_size)
-            self.pbest[d] = self.position[d]
+            self.pbest[d] = self.value[d]
             self.velocity[d] = random.uniform(-delta, delta)
 
     def compute_speed(self, w_factor, C1, C2, leaders_archive, constriction_coeff, delta):
         for d in range(len(self.dims)):
             self.velocity[d] = w_factor * self.velocity[d]
-            + C1 * random.uniform(0, 1) * (self.pbest[d] - self.position[d])
-            + C2 * random.uniform(0, 1) * (leaders_archive[0][d] - self.position[d])
+            + C1 * random.uniform(0, 1) * (self.pbest[d] - self.value[d])
+            + C2 * random.uniform(0, 1) * (leaders_archive[0][d] - self.value[d])
             self.velocity[d] = constriction_coeff * self.velocity[d]
             if self.velocity[d] > delta:
                 self.velocity[d] = delta
@@ -153,25 +153,25 @@ class Individual:
 
     def move(self):
         for d in range(len(self.dims)):
-            self.position[d] = self.position[d] + self.velocity[d]
+            self.value[d] = self.value[d] + self.velocity[d]
 
     def trim_position(self, trim_function):
-        self.position = trim_function(self.position)
+        self.value = trim_function(self.value)
 
     def update_objectives(self, fitnesses):
-        self.objectives = [o(self.position) for o in fitnesses]
+        self.objectives = [o(self.value) for o in fitnesses]
 
     def update_personal_best(self, fitnesses):
         val = self.calculate_benchmark()
         best_val = sum([o(self.pbest) for o in fitnesses])
 
         if val < best_val:
-            self.pbest = self.position
+            self.pbest = self.value
 
     def mutate(self, eta, low, up):
         for d in range(len(self.dims)):
             if random.random() <= 0.15:
-                current = self.position[d]
+                current = self.value[d]
                 u = random.random()
                 mut_pow = 1.0 / (eta + 1.)
 
@@ -187,7 +187,10 @@ class Individual:
                     current = current + delta * (up - low)
 
                 current = min(max(current, low), up)
-                self.position[d] = current
+                self.value[d] = current
 
     def calculate_benchmark(self):
         return sum(self.objectives) # Or dominates like in OMOPSO?
+
+    def reset_speed(self):
+        self.speed = [0] * len(self.value)

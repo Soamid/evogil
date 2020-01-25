@@ -6,7 +6,7 @@ from simulation.factory import prepare
 
 class HGSTest(unittest.TestCase):
     def test_steps(self):
-        final_driver, problem_mod = prepare("HGS+NSGAII", "ZDT1")
+        final_driver, problem_mod = prepare("SMPSO", "ZDT1")
         print(final_driver())
 
         hgs = final_driver()

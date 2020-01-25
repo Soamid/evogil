@@ -39,3 +39,5 @@ run_queue.bat
 jmetal_src/
 
 venv/
+
+.vscode/
