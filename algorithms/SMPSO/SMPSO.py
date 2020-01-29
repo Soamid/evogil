@@ -2,6 +2,7 @@ import copy
 import logging
 import random
 import math
+
 from algorithms.base.driver import Driver
 
 
@@ -25,22 +26,16 @@ class SMPSO(Driver):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.population = population
         self.fitnesses = fitnesses
         self.dims = dims
-
+        self.individuals = [Individual(trim_function(x)) for x in population]
         self.mutation_probability = mutation_probability
 
         self.leaders_size = len(population)  # parameter?
         self.mutation_perturbation = mutation_perturbation
-        self.trim_function = trim_function
-        self.fitness_archive = fitness_archive
+        self.crowding_selector = CrowdingTournament()
 
-        self.logger = logging.getLogger(__name__)
-        self.search_space_size = 10
-        self.leaders_archive_size = 5
-
-        #constatns for velocity calcualtions
+        # constatns for velocity calcualtions
         self.w_factor = 1.0
         self.C1 = 2.5
         self.C2 = 2.5
@@ -52,145 +47,289 @@ class SMPSO(Driver):
         self.mutate_low = 1
         self.mutate_up = 1
 
-        #not sure if that below is correct, I assumed same search space for each dimension
+        self.search_space_size = 10
+
+        # not sure if that below is correct, I assumed same search space for each dimension
         upper_limit = self.search_space_size
         lower_limit = -self.search_space_size
         self.delta = (upper_limit - lower_limit) / 2
 
-        self.individuals = [Individual(trim_function(x), range(len(dims))) for x in population]
-        self.leaders_archive = [[0. for x in range(len(dims))] for y in range(self.leaders_archive_size)]
-        self.leaders_stored_results = [math.inf] * self.leaders_archive_size
+        self.trim_function = trim_function
 
-        self.initialize_swarm()
-        self.update_leaders_archive()
+        self.archive = Archive(self.ETA)
+        self.leader_archive = LeaderArchive(self.leaders_size)
+        self.fitness_archive = fitness_archive
 
-    """ Overriden for being able to return final results of algorithm"""
+        self.init()
+
+    @property
+    def population(self):
+        return [x.value for x in self.individuals]
+
+    @population.setter
+    def population(self, pop):
+        self.individuals = [Individual(x) for x in pop]
+
+    def init_personal_best(self):
+        for p in self.individuals:
+            p.best_val = copy.deepcopy(p)
+
+    def init(self):
+        self.logger = logging.getLogger(__name__)
+        self.cost = 0
+        self.gen_no = 0
+        self.cost += self.calculate_objectives()
+        self.init_leaders()
+        self.init_personal_best()
+        self.leader_archive.crowding()
+
+    def init_leaders(self):
+        for p in self.individuals:
+            if self.leader_archive.add(copy.deepcopy(p)):
+                self.archive.add(copy.deepcopy(p))
+
     def finalized_population(self):
-        return self.leaders_archive
+        return [x.value for x in self.archive]
 
-    """ Overriden for being able to run one step of algorithm"""
     def step(self):
+        # print("{}: {} : {}".format(gen_no, len(self.leader_archive.archive), len(self.archive.archive)))
+
         self.compute_speed()
-        self.update_position()
-        self.update_leaders_archive()
-        self.update_particles_memory()
-        #self.logger.debug("{}: {} : {}".format(len(self.leaders_archive)))
+        self.move()
+        self.smpso_mutation()
 
-    def initialize_swarm(self):
-        for i in self.individuals:
-            i.initialize(self.search_space_size, self.delta)
+        for x in self.individuals:
+            x.value = self.trim_function(x.value)
 
-    def get_position_in_leaders_list(self, val):
-        for j in range(self.leaders_archive_size):
-            if val < self.leaders_stored_results[j]:
-                return j
-        return -1
+        self.cost += self.calculate_objectives()
 
-    #can be used also as initializeLeadersArchive
-    def update_leaders_archive(self):
-        for i in range(len(self.population)):
-            val = self.individuals[i].calculate_benchmark()
-            pos = self.get_position_in_leaders_list(val)
-            if pos == -1:
-                continue
-            self.leaders_stored_results = self.leaders_stored_results[:pos] + [val] + self.leaders_stored_results[pos:-1]
-            #probably might be done better, but i can't speak pytong very well
-            l = self.leaders_archive.copy()
-            l[:pos] = self.leaders_archive[:pos]
-            l[pos] = self.individuals[i].value
-            l[pos+ 1:] = self.leaders_archive[pos:-1]
-            self.leaders_archive = l
-            #print(leaders_stored_results)
-            #print(leaders_archive)
+        self.update_leaders()
+        self.update_personal_best()
+
+        self.leader_archive.crowding()
+
+        self.logger.debug(
+            "{}: {} : {}".format(
+                self.gen_no, len(self.leader_archive.archive), len(self.archive.archive)
+            )
+        )
+        self.gen_no += 1
+
+    def update_personal_best(self):
+        for p in self.individuals:
+            # print("new: {}, best: {}".format(p.objectives, p.best_val.objectives))
+            if p.dominates(p.best_val):
+                # print("new best: {}".format(p.objectives))
+                p.best_val = copy.deepcopy(p)
+
+    def update_leaders(self):
+        for p in self.individuals:
+            new_ind = copy.deepcopy(p)
+            if self.leader_archive.add(new_ind):
+                self.archive.add(copy.deepcopy(p))
+
+    def calculate_objectives(self):
+        objectives_cost = 0
+        for p in self.individuals:
+            if (self.fitness_archive is not None) and (p.value in self.fitness_archive):
+                p.objectives = self.fitness_archive[p.value]
+                objectives_cost = 0
+            else:
+                p.objectives = [o(p.value) for o in self.fitnesses]
+                objectives_cost = len(self.individuals)
+        return objectives_cost
+
+    def move(self):
+        for p in self.individuals:
+            for i in range(len(self.dims)):
+                new_x = p.value[i] + p.speed[i]
+                bounded_x = max(new_x, self.dims[i][0])
+                bounded_x = min(bounded_x, self.dims[i][1])
+
+                if bounded_x != new_x:
+                    p.speed[i] *= -1
+
+                p.value[i] = bounded_x
 
     def compute_speed(self):
         for i in self.individuals:
-            i.compute_speed(self.w_factor, self.C1, self.C2, self.leaders_archive, self.constriction_coeff, self.delta)
+            best_global = (
+                self.crowding_selector(self.leader_archive)
+                if len(self.leader_archive.archive) > 1
+                else self.leader_archive.archive[0]
+            )
 
-    def update_position(self):
-        for i in self.individuals:
-            i.move()
+            for d in range(len(self.dims)):
+                i.speed[d] = self.w_factor * i.speed[d]
+                + self.C1 * random.uniform(0, 1) * (i.best_val.value[d] - i.value[d])
+                + self.C2 * random.uniform(0, 1) * (best_global.value[d] - i.value[d])
+                i.speed[d] = self.constriction_coeff * i.speed[d]
+                if i.speed[d] > self.delta:
+                    i.speed[d] = self.delta
+                elif i.speed[d] <= -self.delta:
+                    i.speed[d] = -self.delta
 
-    """ Polynomial mutation on 15% of particles """
-    def mutate(self):
-        for i in self.individuals:
-            i.mutate(self.eta, self.mutate_low, self.mutate_up)
+    def smpso_mutation(self):
+        pop_len = len(self.individuals)
+        pop_part = int(pop_len / 3)
+        polynomial_mutation = PolynomialMutation(
+            self.mutation_probability,
+            self.mutation_perturbation,
+            self.dims,
+            self.eta,
+            self.mutate_low,
+            self.mutate_up
+        )
+        map(polynomial_mutation, self.individuals[0:pop_part])
+        #map(non_uniform_mutation, self.individuals[pop_part : 2 * pop_part])
 
-    """To apply and recalculate objective values after moved"""
-    def update_particles_memory(self):
-        for i in self.individuals:
-            i.trim_position(self.trim_function)
-            i.update_objectives(self.fitnesses)
-            i.update_personal_best(self.fitnesses)
+
+class Mutation(object):
+    def __init__(self, mutation_probability, mutation_perturbation, dims):
+        self.dims = dims
+        self.mutation_perturbation = mutation_perturbation
+        self.mutation_probability = mutation_probability
+
+    def do_mutation(self, p, index):
+        return 0
+
+    def __call__(self, p):
+        for i in range(len(self.dims)):
+            if random.random() < self.mutation_probability:
+                mutation = self.do_mutation(p, i)
+                p.value[i] += min(max(mutation, self.low), self.up)
+
+class PolynomialMutation(Mutation):
+    def __init__(
+        self, eta, low, up, mutation_probability, mutation_perturbation, dims
+    ):
+        super().__init__(mutation_probability, mutation_perturbation, dims)
+        self.eta = eta
+        self.low = low
+        self.up = up
+
+    def do_mutation(self, p, d):
+        current = p.value[d]
+        u = random.random()
+        mut_pow = 1.0 / (self.eta + 1.)
+
+        if u <= 0.5:
+            xy = 1.0 - ((current - self.low) / (self.up - self.low))
+            val = 2.0 * u + (1.0 - 2.0 * u) * xy ** (self.eta + 1)
+            delta = val ** mut_pow - 1.0
+            current = current + delta * (self.up - self.low)
+        else:
+            xy = 1.0 - ((self.up - current) / (self.up - self.low))
+            val = 2.0 * (1.0 - u) + 2.0 * (u - 0.5) * xy ** (self.eta + 1)
+            delta = 1.0 - val ** mut_pow
+            current = current + delta * (self.up - self.low)
+
+        return current
+
+class CrowdingTournament:
+    def __init__(self, tournament_size=2):
+        self.tournament_size = tournament_size
+
+    def __call__(self, pool):
+        sub_pool = random.sample(pool.archive, self.tournament_size)
+        return min(sub_pool, key=lambda x: x.crowd_val)
 
 
 class Individual:
-
-    def __init__(self, value, dims):
-        self.dims = dims
-        self.objectives = []
+    def __init__(self, value):
         self.value = value
-        self.velocity = [0. for x in range(len(dims))]
-        self.pbest = [0. for x in range(len(dims))]
+        self.best_val = None
+        self.crowd_val = 0
+        self.objectives = []
+        self.reset_speed()
 
-    """This wasn't described, but without any initialization velocities will stay equal to 0 forever"""
-    def initialize(self, search_space_size, delta):
-        for d in range(len(self.dims)):
-            #self.position[i] = random.uniform(-search_space_size, search_space_size)
-            self.pbest[d] = self.value[d]
-            self.velocity[d] = random.uniform(-delta, delta)
+    def __deepcopy__(self, memo):
+        dup = Individual(copy.deepcopy(self.value, memo))
+        dup.best_val = copy.deepcopy(self.best_val, memo)
+        dup.speed = copy.deepcopy(self.speed, memo)
+        dup.crowd_val = self.crowd_val
+        dup.objectives = copy.deepcopy(self.objectives, memo)
+        return dup
 
-    def compute_speed(self, w_factor, C1, C2, leaders_archive, constriction_coeff, delta):
-        for d in range(len(self.dims)):
-            self.velocity[d] = w_factor * self.velocity[d]
-            + C1 * random.uniform(0, 1) * (self.pbest[d] - self.value[d])
-            + C2 * random.uniform(0, 1) * (leaders_archive[0][d] - self.value[d])
-            self.velocity[d] = constriction_coeff * self.velocity[d]
-            if self.velocity[d] > delta:
-                self.velocity[d] = delta
-            elif self.velocity[d] <= -delta:
-                self.velocity[d] = -delta
+    def dominates(self, p2, eta=0):
+        at_least_one = False
+        for i in range(len(self.objectives)):
+            if p2.objectives[i] < self.objectives[i] / (1 + eta):
+                return False
+            elif p2.objectives[i] > self.objectives[i] / (1 + eta):
+                at_least_one = True
 
-    def move(self):
-        for d in range(len(self.dims)):
-            self.value[d] = self.value[d] + self.velocity[d]
-
-    def trim_position(self, trim_function):
-        self.value = trim_function(self.value)
-
-    def update_objectives(self, fitnesses):
-        self.objectives = [o(self.value) for o in fitnesses]
-
-    def update_personal_best(self, fitnesses):
-        val = self.calculate_benchmark()
-        best_val = sum([o(self.pbest) for o in fitnesses])
-
-        if val < best_val:
-            self.pbest = self.value
-
-    def mutate(self, eta, low, up):
-        for d in range(len(self.dims)):
-            if random.random() <= 0.15:
-                current = self.value[d]
-                u = random.random()
-                mut_pow = 1.0 / (eta + 1.)
-
-                if u <= 0.5:
-                    xy = 1.0 - ((current - low) / (up - low))
-                    val = 2.0 * u + (1.0 - 2.0 * u) * xy ** (eta + 1)
-                    delta = val ** mut_pow - 1.0
-                    current = current + delta * (up - low)
-                else:
-                    xy = 1.0 - ((up - current) / (up - low))
-                    val = 2.0 * (1.0 - u) + 2.0 * (u - 0.5) * xy ** (eta + 1)
-                    delta = 1.0 - val ** mut_pow
-                    current = current + delta * (up - low)
-
-                current = min(max(current, low), up)
-                self.value[d] = current
-
-    def calculate_benchmark(self):
-        return sum(self.objectives) # Or dominates like in OMOPSO?
+        return at_least_one
 
     def reset_speed(self):
         self.speed = [0] * len(self.value)
+
+    def equal_obj(self, p):
+        for i in range(len(self.objectives)):
+            if self.objectives[i] != p.objectives[i]:
+                return False
+        return True
+
+class Archive(object):
+    def __init__(self, eta=0.0):
+        self.archive = []
+        self.eta = eta
+
+    def __iter__(self):
+        return self.archive.__iter__()
+
+    def add(self, p):
+
+        for l in self.archive:
+            if l.dominates(p, self.eta):
+                return False
+            elif p.dominates(l, self.eta):
+                self.archive.remove(l)
+            elif l.equal_obj(p):
+                return False
+
+        self.archive.append(p)
+        return True
+
+
+class LeaderArchive(Archive):
+    def __init__(self, size):
+        super().__init__()
+        self.size = size
+
+    def add(self, p):
+        added = super().add(p)
+        if added and len(self.archive) > self.size:
+            self.prune()
+        return added
+
+    def prune(self):
+        self.crowding()
+        worst_res = max(self.archive, key=lambda x: x.crowd_val)
+        self.archive.remove(worst_res)
+
+    def crowding(self):
+        for p in self.archive:
+            p.crowd_val = 0
+
+        obj_n = len(self.archive[0].objectives)
+
+        archive_len = len(self.archive)
+        for i in range(obj_n):
+            self.archive.sort(key=lambda x: x.objectives[i])
+            obj_min = self.archive[0].objectives[i]
+            obj_max = self.archive[archive_len - 1].objectives[i]
+
+            self.archive[0].crowd_val = float("inf")
+            self.archive[archive_len - 1].crowd_val = float("inf")
+
+            for j in range(1, archive_len - 1):
+                if obj_max - obj_min > 0:
+                    dist = (
+                        self.archive[j].objectives[i]
+                        - self.archive[j - 1].objectives[i]
+                    )
+                    dist /= obj_max - obj_min
+                    self.archive[j].crowd_val += dist
+                else:
+                    self.archive[j].crowd_val = float("inf")
