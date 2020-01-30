@@ -42,6 +42,7 @@ NSGAII_LS = []  # '--'
 NSGAIII_LS = [5, 2]  # '-- --'
 IBEA_LS = [2, 2]  # '.....'
 OMOPSO_LS = [10, 2, 5, 2]  # '-.'
+SMPSO_LS = [5, 1, 3, 1]  # '.....'
 JGBL_LS = [2, 10]  # ':  :  :'
 NSLS_LS = [4, 30]  # ':    :     :'
 
@@ -49,6 +50,7 @@ SPEA2_M = "o"
 NSGAII_M = "*"
 IBEA_M = "^"
 OMOPSO_M = ">"
+SMPSO_M = "S"
 NSGAIII_M = "v"
 JGBL_M = "<"
 NSLS_M = "x"
@@ -75,7 +77,7 @@ for meta in metaalgorithms:
 print(algos)
 
 
-algos_order = ["NSGAII", "IBEA", "OMOPSO", "NSGAIII", "JGBL", "NSLS"]
+algos_order = ["NSGAII", "IBEA", "OMOPSO", "NSGAIII", "JGBL", "NSLS", "SMPSO"]
 
 algos_base = list(algos_order)
 for meta in run_config.metaalgorithms:
@@ -85,12 +87,13 @@ print(algos_order)
 algos_groups_configuration_all_together = {tuple(algos_order): ("",)}
 
 algos_groups_configuration_splitted = {
-    ("SPEA2", "NSGAII", "IBEA", "OMOPSO", "NSGAIII", "SMSEMOA", "JGBL", "NSLS"): (0, 1),
+    ("SPEA2", "NSGAII", "IBEA", "OMOPSO", "SMPSO", "NSGAIII", "SMSEMOA", "JGBL", "NSLS"): (0, 1),
     (
         "IMGA+SPEA2",
         "IMGA+NSGAII",
         "IMGA+IBEA",
         "IMGA+OMOPSO",
+        "IMGA+SMPSO",
         "IMGA+NSGAIII",
         "IMGA+SMSEMOA",
         "IMGA+JGBL",
@@ -101,6 +104,7 @@ algos_groups_configuration_splitted = {
         "HGS+NSGAII",
         "HGS+IBEA",
         "HGS+OMOPSO",
+        "HGS+SMPSO",
         "HGS+NSGAIII",
         "HGS+SMSEMOA",
         "HGS+JGBL",
@@ -115,6 +119,7 @@ algos_groups_configuration_tres_caballeros = {
     ("NSGAIII", "IMGA+NSGAIII", "HGS+NSGAIII"): ("_nsgaiii",),
     ("SMSEMOA", "IMGA+SMSEMOA", "HGS+SMSEMOA"): ("_smsemoa",),
     ("OMOPSO", "IMGA+OMOPSO", "HGS+OMOPSO"): ("_omopso",),
+    ("SMPSO", "IMGA+SMPSO", "HGS+SMPSO"): ("_smpso",),
     ("JGBL", "IMGA+JGBL", "HGS+JGBL"): ("_jgbl",),
     ("NSLS", "IMGA+NSLS", "HGS+NSLS"): ("_nsls",),
 }
