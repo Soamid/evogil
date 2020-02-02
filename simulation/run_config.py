@@ -74,6 +74,16 @@ algo_base = {
         "sproutiveness": 3,
         "metaepoch_len": [5,5,5],
         "min_progress_ratio": [0.0, 0.00001, 0.0001],
+    },
+    "SMPSO": {
+        "w_factor": 1.0,
+        "C1": 2.5,
+        "C2": 2.5,
+        "mutation_probability": 0.3,
+        "mutation_eta": 0.5,
+        "mutate_low": 1.0,
+        "mutate_up": 1.0,
+        "search_space_size": 10
     }
 }
 
