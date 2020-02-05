@@ -1,6 +1,6 @@
 from itertools import product
 
-drivers = ["SPEA2", "IBEA", "NSGAII", "OMOPSO", "NSGAIII", "JGBL", "SMSEMOA", "NSLS"]
+drivers = ["SPEA2", "IBEA", "NSGAII", "OMOPSO", "NSGAIII", "JGBL", "SMSEMOA", "NSLS", "SMPSO"]
 
 metaalgorithms = ["IMGA", "HGS", "DHGS"]
 
@@ -75,6 +75,16 @@ algo_base = {
         "metaepoch_len": [5,5,5],
         "min_progress_ratio": [0.0, 0.00001, 0.0001],
     },
+    "SMPSO": {
+        "w_factor": 1.0,
+        "C1": 2.5,
+        "C2": 2.5,
+        "mutation_probability": 0.3,
+        "mutation_eta": 0.5,
+        "mutate_low": 1.0,
+        "mutate_up": 1.0,
+        "search_space_size": 10
+    }
 }
 
 cust_base = {}
@@ -117,6 +127,10 @@ def init_alg___JGBL(algo_config, problem_mod):
 
 
 def init_alg___OMOPSO(algo_config, problem_mod):
+    standard_variance(algo_config, problem_mod)
+
+
+def init_alg___SMPSO(algo_config, problem_mod):
     standard_variance(algo_config, problem_mod)
 
 
