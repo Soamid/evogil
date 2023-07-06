@@ -3,4 +3,4 @@ docopt==0.6.2
 floatextras==0.0.3
 matplotlib==2.2.2
 git+git://https://github.com/ReactiveX/RxPY@master#egg=rx
-scipy==1.0.1
+scipy==1.10.0
